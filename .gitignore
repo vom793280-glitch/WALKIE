@@ -1,0 +1,26 @@
+*.iml
+
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Android Studio
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# Local machine configuration
+local.properties
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Android build/captures
+/captures/
+/.externalNativeBuild/
+/.cxx/
