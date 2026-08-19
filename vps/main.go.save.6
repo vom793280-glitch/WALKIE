@@ -1,0 +1,95 @@
+package main
+
+import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/binary"
+	"fmt"
+	"log"
+	"net"
+	"os"
+	"sync"
+	"time"
+)
+const (
+	listenAddr = ":50000"
+
+	channelPassword = "CHANGE_THIS_PASSWORD_2026"
+
+	maxClients = 32
+
+	clientTimeout = 45 * time.Second
+
+	maxPacketSize = 1500
+)
+
+const （
+        packetHello byte = 1
+        packetHeartbeat byte = 2
+	packetAudio byte = 3
+        packetGoodbye byte = 4
+)
+
+const headerSize = 30
+
+type Client struct {
+   Addr *net.UDPAddr
+   SessionID uint64
+   UserName string
+   LastSeen time.Time
+}
+
+type Server struct {
+	conn    *net.UDPConn
+	mu      sync.RWMutex
+	clients map[string]*Client
+	gcm     cipher.AEAD
+	key     []byte
+}
+func main() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+
+	key := sha256.Sum256([]byte(channelPassword))
+
+	block, err := aes.NewCipher(key[:])
+	if err != nil {
+		log.Fatal("创建 AES:", err)
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		log.Fatal("创建 GCM:", err)
+	}
+
+	addr, err := net.ResolveUDPAddr("udp", listenAddr)
+        if err != nil {
+		log.Fatal("监听 UDP 地址失败:", err)
+	}
+
+
+        conn, err := net.ListenUDP("udp", addr)
+        if err != nil {
+		log.Fatal("监听 UDP 失败:", err）
+        }
+
+	defer conn.Close()
+
+	server := &Server{
+		conn:    conn,
+		clients: make(map[string]*Client),
+		gcm:     gcm,
+		key:     key[:],
+	}
+	
+	_ = server
+
+	log.Println("==============================")
+	log.Println("私人公网对讲服务器")
+	log.Println("UDP监听:", listenAddr)
+	log.Println("加密方式: AES-256-GCM")
+	log.Println("服务器已启动，等待手机连接...")
+	log.Println("==============================")
+}
+

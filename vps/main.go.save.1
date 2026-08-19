@@ -1,0 +1,121 @@
+package main import ( "crypto/aes" "crypto/cipher" "crypto/rand" "crypto/sha256" "encoding/binary" "fmt" "log" "net" "os" "sync" "time" ) const ( listenAddr = ":50000"
+	// ========================================================= 重要： 这里是“旅行对讲频道密码”。 后面 Android 手机也必须使用完全相同的密码。
+	//
+	// 请把下面这个密码改成你自己的。 建议至少 12 位，包含大小写字母和数字。 =========================================================
+	channelPassword = "CHANGE_THIS_PASSWORD_2026"
+	// 最多允许同时在线的手机数量
+	maxClients = 32
+	// 超过这个时间没有心跳，就认为手机掉线
+	clientTimeout = 45 * time.Second
+	// UDP 单个数据包最大长度
+	maxPacketSize = 1500 ) const ( packetHello byte = 1 packetHeartbeat byte = 2 packetAudio byte = 3 packetGoodbye byte = 4 )
+// 数据包头： 4字节 Magic 1字节 Version 1字节 Type 8字节 SessionID 4字节 Sequence 12字节 AES-GCM Nonce
+const headerSize = 30 type Client struct { Addr *net.UDPAddr SessionID uint64 UserName string LastSeen time.Time
+}
+type Server struct { conn *net.UDPConn mu sync.RWMutex clients map[string]*Client gcm cipher.AEAD key []byte
+}
+func main() { log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+	// --------------------------------------------------------- 根据频道密码生成 32 字节 AES-256 密钥 ---------------------------------------------------------
+	key := sha256.Sum256([]byte(channelPassword)) block, err := aes.NewCipher(key[:]) if err != nil { log.Fatal("创建 AES: ", err)
+	}
+	gcm, err := cipher.NewGCM(block) if err != nil { log.Fatal("创建 GCM: ", err)
+	}
+	addr, err := net.ResolveUDPAddr("udp", listenAddr) if err != nil { log.Fatal("解析 UDP 地址失败: ", err)
+	}
+	conn, err := net.ListenUDP("udp", addr) if err != nil { log.Fatal("监听 UDP 50000 失败: ", err)
+	}
+	defer conn.Close() server := &Server{ conn: conn, clients: make(map[string]*Client), gcm: gcm, key: key[:],
+	}
+	log.Println("======================================") log.Println(" 私人公网对讲服务器") log.Println("======================================") log.Println("UDP监听:", listenAddr) log.Println("最大在线人数:", maxClients) 
+	log.Println("客户端超时:", clientTimeout) log.Println("加密方式: AES-256-GCM") log.Println("服务器已启动，等待手机连接...") log.Println("======================================")
+	// 后台定时清理掉线客户端
+	go server.cleanupLoop() buffer := make([]byte, maxPacketSize) for { n, addr, err := conn.ReadFromUDP(buffer) if err != nil { log.Println("UDP接收错误:", err) continue
+		}
+		if n < headerSize { continue
+		}
+		// 每个数据包复制一份。 因为下一次 ReadFromUDP 会复用 buffer。
+		packet := make([]byte, n) copy(packet, buffer[:n]) go server.handlePacket(packet, addr)
+	}
+}
+func (s *Server) handlePacket(packet []byte, addr *net.UDPAddr) { if len(packet) < headerSize { return
+	}
+	// --------------------------------------------------------- 检查 Magic ---------------------------------------------------------
+	if string(packet[0:4]) != "WK01" { return
+	}
+	// Version
+	if packet[4] != 1 { return
+	}
+	packetType := packet[5]
+	// Session ID
+	sessionID := binary.BigEndian.Uint64(packet[6:14])
+	// Sequence 当前服务器主要用于防止乱包和调试。 音频顺序主要由 Android 客户端的播放缓冲处理。
+	_ = binary.BigEndian.Uint32(packet[14:18]) nonce := packet[18:30] ciphertext := packet[30:]
+	// --------------------------------------------------------- AES-GCM 验证并解密 ---------------------------------------------------------
+	plaintext, err := s.gcm.Open(nil, nonce, ciphertext, packet[:18]) if err != nil {
+		// 密码不对、数据被修改、数据格式错误都会到这里
+		return
+	}
+	switch packetType { case packetHello: s.handleHello(sessionID, addr, plaintext) case packetHeartbeat: s.handleHeartbeat(sessionID, addr) case packetAudio: s.handleAudio(sessionID, addr, packet) case packetGoodbye: 
+		s.handleGoodbye(sessionID, addr)
+	}
+}
+func (s *Server) handleHello(sessionID uint64, addr *net.UDPAddr, data []byte) {
+	// HELLO 内容： 1字节用户名长度 N字节用户名 8字节客户端时间戳
+	if len(data) < 1+8 { return
+	}
+	nameLen := int(data[0]) if nameLen < 1 || nameLen > 32 { return
+	}
+	if len(data) < 1+nameLen+8 { return
+	}
+	userName := string(data[1 : 1+nameLen])
+	// 客户端时间戳
+	_ = int64(binary.BigEndian.Uint64(data[1+nameLen:])) key := addr.String() s.mu.Lock() defer s.mu.Unlock()
+	// 如果这个地址已经存在，更新它
+	if client, ok := s.clients[key]; ok { client.SessionID = sessionID client.UserName = userName client.LastSeen = time.Now() log.Printf("客户端重新连接: %s (%s)", userName, addr) return
+	}
+	// 限制人数
+	if len(s.clients) >= maxClients { log.Printf("拒绝新客户端 %s：人数已达到上限", addr) return
+	}
+	s.clients[key] = &Client{ Addr: addr, SessionID: sessionID, UserName: userName, LastSeen: time.Now(),
+	}
+	log.Printf( "客户端加入: %s 地址=%s 当前在线=%d", userName, addr, len(s.clients), )
+}
+func (s *Server) handleHeartbeat(sessionID uint64, addr *net.UDPAddr) { key := addr.String() s.mu.Lock() defer s.mu.Unlock() client, ok := s.clients[key] if !ok { return
+	}
+	if client.SessionID != sessionID { return
+	}
+	client.LastSeen = time.Now()
+}
+func (s *Server) handleAudio(sessionID uint64, addr *net.UDPAddr, packet []byte) { key := addr.String() s.mu.RLock() client, ok := s.clients[key] if !ok || client.SessionID != sessionID { s.mu.RUnlock() return
+	}
+	// 先把发送者地址复制出来。 之后把原始加密语音包转发给其他在线客户端。
+	targets := make([]*net.UDPAddr, 0, len(s.clients)) for clientKey, other := range s.clients { if clientKey == key { continue
+		}
+		if time.Since(other.LastSeen) > clientTimeout { continue
+		}
+		targets = append(targets, other.Addr)
+	}
+	s.mu.RUnlock()
+	// --------------------------------------------------------- 转发音频
+	//
+	// 注意： 服务器不解码、不修改 Opus。 后面的 Android 手机收到以后自己解码。 ---------------------------------------------------------
+	for _, target := range targets { _, err := s.conn.WriteToUDP(packet, target) if err != nil { log.Printf("转发失败 -> %s: %v", target, err)
+		}
+	}
+}
+func (s *Server) handleGoodbye(sessionID uint64, addr *net.UDPAddr) { key := addr.String() s.mu.Lock() defer s.mu.Unlock() client, ok := s.clients[key] if !ok { return
+	}
+	if client.SessionID != sessionID { return
+	}
+	log.Printf("客户端主动离开: %s (%s)", client.UserName, addr) delete(s.clients, key)
+}
+func (s *Server) cleanupLoop() { ticker := time.NewTicker(10 * time.Second) defer ticker.Stop() for range ticker.C { now := time.Now() s.mu.Lock() for key, client := range s.clients { if now.Sub(client.LastSeen) > clientTimeout { 
+				log.Printf(
+					"客户端超时掉线: %s (%s)", client.UserName, client.Addr, ) delete(s.clients, key)
+			}
+		}
+		s.mu.Unlock()
+	}
+}
+// ------------------------------------------------------------- 保留这个函数，后续 Android 客户端协议扩展时使用。 -------------------------------------------------------------
+func randomSessionID() uint64 { var b [8]byte if _, err := rand.Read(b[:]); err != nil { return
