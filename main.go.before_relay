@@ -1,0 +1,160 @@
+package main
+
+import (
+	"log"
+	"net"
+	"sync"
+	"time"
+)
+
+const (
+	listenAddr   = ":50000"
+	maxClients   = 32
+	clientTimeout = 60 * time.Second
+)
+
+type Client struct {
+	Addr     *net.UDPAddr
+	LastSeen time.Time
+}
+
+type Server struct {
+	conn    *net.UDPConn
+	mu      sync.Mutex
+	clients map[string]*Client
+}
+
+func main() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+
+	addr, err := net.ResolveUDPAddr("udp", listenAddr)
+	if err != nil {
+		log.Fatal("解析 UDP 地址失败:", err)
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		log.Fatal("监听 UDP 50000 失败:", err)
+	}
+
+	defer conn.Close()
+
+	server := &Server{
+		conn:    conn,
+		clients: make(map[string]*Client),
+	}
+
+	log.Println("==============================")
+	log.Println("私人公网对讲服务器")
+	log.Println("==============================")
+	log.Println("UDP监听:", listenAddr)
+	log.Println("最大在线人数:", maxClients)
+	log.Println("客户端超时:", clientTimeout)
+	log.Println("服务器已启动，等待手机连接...")
+	log.Println("==============================")
+
+	buffer := make([]byte, 2048)
+
+	for {
+		n, remoteAddr, err := conn.ReadFromUDP(buffer)
+		if err != nil {
+			log.Println("读取 UDP 失败:", err)
+			continue
+		}
+
+		if n == 0 {
+			continue
+		}
+
+		server.handlePacket(buffer[:n], remoteAddr)
+	}
+}
+
+func (s *Server) handlePacket(data []byte, remoteAddr *net.UDPAddr) {
+
+	address := remoteAddr.String()
+
+	s.mu.Lock()
+
+	client, exists := s.clients[address]
+
+	if !exists {
+
+		if len(s.clients) >= maxClients {
+			s.mu.Unlock()
+
+			log.Println("客户端已满，拒绝:", address)
+
+			return
+		}
+
+		client = &Client{
+			Addr:     remoteAddr,
+			LastSeen: time.Now(),
+		}
+
+		s.clients[address] = client
+
+		log.Println("新客户端:", address)
+
+	} else {
+
+		client.LastSeen = time.Now()
+
+	}
+
+	s.mu.Unlock()
+
+	if len(data) == 12 &&
+		string(data) == "WALKIE_HELLO" {
+
+		log.Println("收到连接测试:", address)
+
+		return
+	}
+
+	s.broadcast(data, address)
+
+	log.Printf(
+		"收到音频数据: %d 字节，来自 %s",
+		len(data),
+		address,
+	)
+}
+
+func (s *Server) broadcast(data []byte, sender string) {
+
+	s.mu.Lock()
+
+	defer s.mu.Unlock()
+
+	now := time.Now()
+
+	for address, client := range s.clients {
+
+		if now.Sub(client.LastSeen) > clientTimeout {
+
+			delete(s.clients, address)
+
+			log.Println("客户端超时:", address)
+
+			continue
+		}
+
+		if address == sender {
+			continue
+		}
+
+		_, err := s.conn.WriteToUDP(
+			data,
+			client.Addr,
+		)
+		if err != nil {
+			log.Println(
+				"转发失败:",
+				address,
+				err,
+			)
+		}
+	}
+}
