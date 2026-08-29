@@ -6,11 +6,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -23,22 +25,27 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,17 +57,39 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.walkie.ui.theme.WalkieTheme
 
-private const val WALKIE_VERSION = "V11"
+private const val WALKIE_VERSION = "V20"
+
+private const val DEFAULT_SERVER_IP = "38.146.29.169"
+
+private const val UI_PREFS =
+    "walkie_session_v20"
+
+private const val UI_PREF_NICKNAME =
+    "nickname"
+
+data class ChannelUiInfo(
+    val name: String,
+    val onlineCount: Int = 0,
+    val isPrivate: Boolean = false,
+    val requirePassword: Boolean = false
+)
 
 class MainActivity : ComponentActivity() {
 
-    private var connectionState by mutableStateOf(false)
+    /*
+     * ============================================================
+     * UI 状态
+     * ============================================================
+     */
+
+    private var connectionState by mutableStateOf(
+        false
+    )
 
     private var talkStatus by mutableStateOf(
         WalkieService.TALK_STATUS_NONE
@@ -70,11 +99,17 @@ class MainActivity : ComponentActivity() {
         "public"
     )
 
-    private var currentChannelOnlineCount by mutableStateOf(0)
+    private var currentOnlineCount by mutableStateOf(
+        0
+    )
 
-    private var currentChannelPrivate by mutableStateOf(false)
+    private var currentPrivate by mutableStateOf(
+        false
+    )
 
-    private var currentChannelRequirePassword by mutableStateOf(false)
+    private var nickname by mutableStateOf(
+        ""
+    )
 
     private var channelList by mutableStateOf(
         listOf(
@@ -84,23 +119,91 @@ class MainActivity : ComponentActivity() {
         )
     )
 
-    private var channelMessage by mutableStateOf("")
+    private var channelMessage by mutableStateOf(
+        ""
+    )
 
-    private var pttSpeaking by mutableStateOf(false)
+    private var nicknameDialog by mutableStateOf(
+        false
+    )
 
-    private var createChannelDialog by mutableStateOf(false)
+    private var nicknameInput by mutableStateOf(
+        ""
+    )
 
-    private var joinPasswordDialog by mutableStateOf(false)
+    private var createChannelDialog by mutableStateOf(
+        false
+    )
 
-    private var joinPasswordChannel by mutableStateOf("")
+    private var deleteChannelDialog by mutableStateOf(
+        false
+    )
 
-    private var joinPassword by mutableStateOf("")
+    private var joinPasswordDialog by mutableStateOf(
+        false
+    )
 
-    private var deleteChannelDialog by mutableStateOf(false)
+    private var joinPasswordChannel by mutableStateOf(
+        ""
+    )
+
+    private var joinPassword by mutableStateOf(
+        ""
+    )
+
+    /*
+     * 网络状态直接显示在首页。
+     */
+    private var networkType by mutableStateOf(
+        "检测中"
+    )
 
     /*
      * ============================================================
-     * 麦克风权限
+     * 系统返回
+     *
+     * 不使用 Compose BackHandler。
+     * 页面返回交给 Activity 统一处理。
+     * ============================================================
+     */
+
+    private var currentPage by mutableStateOf(
+        "home"
+    )
+
+    private val systemBackCallback =
+        object : OnBackPressedCallback(true) {
+
+            override fun handleOnBackPressed() {
+
+                if (
+                    currentPage !=
+                    "home"
+                ) {
+
+                    currentPage =
+                        "home"
+
+                    return
+                }
+
+                /*
+                 * 首页才真正交给系统返回。
+                 */
+                isEnabled =
+                    false
+
+                onBackPressedDispatcher
+                    .onBackPressed()
+
+                isEnabled =
+                    true
+            }
+        }
+
+    /*
+     * ============================================================
+     * 权限
      * ============================================================
      */
 
@@ -113,34 +216,27 @@ class MainActivity : ComponentActivity() {
                 "WALKIE $WALKIE_VERSION: 麦克风权限=$granted"
             )
 
-            if (granted) {
+            if (
+                granted
+            ) {
+
                 requestNotificationPermissionIfNeeded()
             }
         }
 
-    /*
-     * ============================================================
-     * 通知权限
-     * ============================================================
-     */
-
     private val requestNotification =
         registerForActivityResult(
             ActivityResultContracts.RequestPermission()
-        ) { granted ->
-
-            println(
-                "WALKIE $WALKIE_VERSION: 通知权限=$granted"
-            )
+        ) {
         }
 
     /*
      * ============================================================
-     * 广播
+     * BroadcastReceiver
      * ============================================================
      */
 
-    private val connectionReceiver =
+    private val receiver =
         object : BroadcastReceiver() {
 
             override fun onReceive(
@@ -148,11 +244,15 @@ class MainActivity : ComponentActivity() {
                 intent: Intent?
             ) {
 
-                if (intent == null) {
-                    return
-                }
+                when (
+                    intent?.action
+                ) {
 
-                when (intent.action) {
+                    /*
+                     * ------------------------------------------------
+                     * 连接状态
+                     * ------------------------------------------------
+                     */
 
                     WalkieService.ACTION_CONNECTION_STATUS -> {
 
@@ -165,194 +265,176 @@ class MainActivity : ComponentActivity() {
                         connectionState =
                             connected
 
-                        println(
-                            "WALKIE $WALKIE_VERSION: 连接状态=$connected"
-                        )
-
-                        if (!connected) {
+                        if (
+                            !connected
+                        ) {
 
                             talkStatus =
                                 WalkieService.TALK_STATUS_NONE
 
-                            pttSpeaking = false
-
-                            currentChannel = "public"
-
-                            currentChannelOnlineCount = 0
-
-                            currentChannelPrivate = false
-
-                            currentChannelRequirePassword = false
-
-                            channelList =
-                                listOf(
-                                    ChannelUiInfo(
-                                        name = "public"
-                                    )
-                                )
+                            currentOnlineCount =
+                                0
                         }
+
+                        updateNetworkType()
+
+                        println(
+                            "WALKIE $WALKIE_VERSION: " +
+                                    "连接状态=$connected"
+                        )
                     }
+
+                    /*
+                     * ------------------------------------------------
+                     * 抢麦
+                     * ------------------------------------------------
+                     */
 
                     WalkieService.ACTION_TALK_STATUS -> {
 
-                        val status =
+                        talkStatus =
                             intent.getStringExtra(
                                 WalkieService.EXTRA_TALK_STATUS
                             )
                                 ?: WalkieService.TALK_STATUS_NONE
 
-                        talkStatus =
-                            status
-
-                        if (
-                            status ==
-                            WalkieService.TALK_STATUS_BUSY ||
-                            status ==
-                            WalkieService.TALK_STATUS_RELEASED
-                        ) {
-
-                            pttSpeaking = false
-                        }
-
                         println(
-                            "WALKIE $WALKIE_VERSION: TALK STATUS=$status"
+                            "WALKIE $WALKIE_VERSION: " +
+                                    "TALK STATUS=$talkStatus"
                         )
                     }
+
+                    /*
+                     * ------------------------------------------------
+                     * 频道列表
+                     *
+                     * 收到这个广播说明：
+                     *
+                     * Activity -> Service
+                     * Service -> UDP服务器
+                     * UDP服务器 -> Service
+                     * Service -> Activity
+                     *
+                     * 整个链路已经正常。
+                     *
+                     * 所以即使 Activity 之前显示“未连接”，
+                     * 收到这里也直接恢复为在线。
+                     * ------------------------------------------------
+                     */
 
                     WalkieService.ACTION_CHANNEL_LIST -> {
 
-                        val infoStrings =
+                        val infos =
                             intent.getStringArrayListExtra(
                                 WalkieService.EXTRA_CHANNEL_INFO
-                            )
+                            ).orEmpty()
 
-                        if (!infoStrings.isNullOrEmpty()) {
-
-                            val parsed =
-                                infoStrings.mapNotNull {
-                                    parseChannelInfo(it)
+                        val parsed =
+                            infos
+                                .mapNotNull {
+                                    parseChannel(it)
+                                }
+                                .distinctBy {
+                                    it.name
+                                }
+                                .sortedBy {
+                                    it.name
                                 }
 
-                            if (parsed.isNotEmpty()) {
+                        if (
+                            parsed.isNotEmpty()
+                        ) {
 
-                                channelList =
-                                    parsed
-                                        .distinctBy {
-                                            it.name
-                                        }
-                                        .sortedBy {
-                                            it.name
-                                        }
-                            }
+                            channelList =
+                                parsed
 
-                        } else {
+                            connectionState =
+                                true
 
-                            val names =
-                                intent.getStringArrayListExtra(
-                                    WalkieService.EXTRA_CHANNEL_LIST
-                                )
-                                    ?: arrayListOf()
-
-                            if (names.isNotEmpty()) {
-
-                                channelList =
-                                    names
-                                        .distinct()
-                                        .map {
-                                            ChannelUiInfo(
-                                                name = it
-                                            )
-                                        }
-                                        .sortedBy {
-                                            it.name
-                                        }
-                            }
+                            updateNetworkType()
                         }
 
                         println(
-                            "WALKIE $WALKIE_VERSION: 频道列表=$channelList"
+                            "WALKIE $WALKIE_VERSION: " +
+                                    "频道列表=$parsed"
                         )
                     }
+
+                    /*
+                     * ------------------------------------------------
+                     * 当前频道
+                     * ------------------------------------------------
+                     */
 
                     WalkieService.ACTION_CHANNEL_STATUS -> {
 
-                        val channel =
+                        currentChannel =
                             intent.getStringExtra(
                                 WalkieService.EXTRA_CURRENT_CHANNEL
                             )
+                                ?: currentChannel
 
-                        if (!channel.isNullOrBlank()) {
-                            currentChannel =
-                                channel
-                        }
-
-                        currentChannelOnlineCount =
+                        currentOnlineCount =
                             intent.getIntExtra(
                                 WalkieService.EXTRA_CHANNEL_ONLINE_COUNT,
-                                currentChannelOnlineCount
+                                currentOnlineCount
                             )
+                                .coerceAtLeast(0)
 
-                        currentChannelPrivate =
+                        currentPrivate =
                             intent.getBooleanExtra(
                                 WalkieService.EXTRA_CHANNEL_PRIVATE,
-                                currentChannelPrivate
+                                currentPrivate
                             )
 
-                        currentChannelRequirePassword =
-                            intent.getBooleanExtra(
-                                WalkieService.EXTRA_CHANNEL_REQUIRE_PASSWORD,
-                                currentChannelRequirePassword
-                            )
-
-                        val message =
+                        channelMessage =
                             intent.getStringExtra(
                                 WalkieService.EXTRA_CHANNEL_MESSAGE
                             )
+                                ?: ""
 
-                        if (!message.isNullOrBlank()) {
-                            channelMessage = message
-                        }
+                        connectionState =
+                            true
 
-                        updateCurrentChannelInList()
+                        updateNetworkType()
 
                         println(
-                            "WALKIE $WALKIE_VERSION: 频道状态=$currentChannel 人数=$currentChannelOnlineCount"
+                            "WALKIE $WALKIE_VERSION: " +
+                                    "频道=$currentChannel " +
+                                    "人数=$currentOnlineCount"
                         )
                     }
 
+                    /*
+                     * ------------------------------------------------
+                     * 删除频道
+                     * ------------------------------------------------
+                     */
+
                     WalkieService.ACTION_CHANNEL_DELETED -> {
 
-                        val deletedChannel =
+                        val deleted =
                             intent.getStringExtra(
                                 WalkieService.EXTRA_DELETED_CHANNEL
                             )
 
-                        println(
-                            "WALKIE $WALKIE_VERSION: 频道删除=$deletedChannel"
-                        )
-
                         if (
-                            deletedChannel.isNullOrBlank() ||
-                            deletedChannel == currentChannel
+                            deleted ==
+                            currentChannel
                         ) {
 
                             currentChannel =
                                 "public"
 
-                            currentChannelOnlineCount =
+                            currentOnlineCount =
                                 0
 
-                            currentChannelPrivate =
-                                false
-
-                            currentChannelRequirePassword =
+                            currentPrivate =
                                 false
                         }
 
                         channelMessage =
-                            "频道已删除：${deletedChannel ?: ""}"
-
-                        requestChannelList()
+                            "频道已删除：${deleted ?: ""}"
                     }
                 }
             }
@@ -372,10 +454,35 @@ class MainActivity : ComponentActivity() {
             savedInstanceState
         )
 
-        enableEdgeToEdge()
+        /*
+         * 注册系统返回。
+         */
+        onBackPressedDispatcher.addCallback(
+            this,
+            systemBackCallback
+        )
+
+        /*
+         * 读取本地昵称。
+         */
+        nickname =
+            getSharedPreferences(
+                UI_PREFS,
+                MODE_PRIVATE
+            )
+                .getString(
+                    UI_PREF_NICKNAME,
+                    ""
+                )
+                ?: ""
+
+        updateNetworkType()
 
         requestPermissionsIfNeeded()
 
+        /*
+         * 注册广播。
+         */
         val filter =
             IntentFilter().apply {
 
@@ -402,117 +509,205 @@ class MainActivity : ComponentActivity() {
 
         ContextCompat.registerReceiver(
             this,
-            connectionReceiver,
+            receiver,
             filter,
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
+
+        /*
+         * ========================================================
+         * Compose
+         * ========================================================
+         */
 
         setContent {
 
             WalkieTheme {
 
-                WalkieScreen(
+                Surface(
+                    modifier =
+                        Modifier.fillMaxSize(),
 
-                    connected =
-                        connectionState,
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .background
+                ) {
 
-                    talkStatus =
-                        talkStatus,
+                    WalkieV20Screen(
 
-                    currentChannel =
-                        currentChannel,
+                        connected =
+                            connectionState,
 
-                    currentChannelOnlineCount =
-                        currentChannelOnlineCount,
+                        talkStatus =
+                            talkStatus,
 
-                    currentChannelPrivate =
-                        currentChannelPrivate,
+                        nickname =
+                            nickname,
 
-                    channels =
-                        channelList,
+                        currentChannel =
+                            currentChannel,
 
-                    channelMessage =
-                        channelMessage,
+                        currentOnlineCount =
+                            currentOnlineCount,
 
-                    createChannelDialog =
-                        createChannelDialog,
+                        currentPrivate =
+                            currentPrivate,
 
-                    joinPasswordDialog =
-                        joinPasswordDialog,
+                        channels =
+                            channelList,
 
-                    joinPasswordChannel =
-                        joinPasswordChannel,
+                        networkType =
+                            networkType,
 
-                    joinPassword =
-                        joinPassword,
+                        page =
+                            currentPage,
 
-                    deleteChannelDialog =
-                        deleteChannelDialog,
+                        nicknameDialog =
+                            nicknameDialog,
 
-                    onConnect = {
-                        startWalkieService(it)
-                    },
-
-                    onDisconnect = {
-                        stopWalkieService()
-                    },
-
-                    onRefreshChannels = {
-                        requestChannelList()
-                    },
-
-                    onJoinChannel = {
-                        joinChannelClicked(it)
-                    },
-
-                    onOpenCreateChannel = {
-                        createChannelDialog = true
-                    },
-
-                    onDismissCreateChannel = {
-                        createChannelDialog = false
-                    },
-
-                    onCreateChannel = {
-                            name,
-                            privateChannel,
-                            password ->
+                        nicknameInput =
+                            nicknameInput,
 
                         createChannelDialog =
-                            false
+                            createChannelDialog,
 
-                        createChannel(
-                            name,
-                            privateChannel,
-                            password
-                        )
-                    },
-
-                    onDismissJoinPassword = {
+                        deleteChannelDialog =
+                            deleteChannelDialog,
 
                         joinPasswordDialog =
-                            false
+                            joinPasswordDialog,
 
                         joinPasswordChannel =
-                            ""
+                            joinPasswordChannel,
 
                         joinPassword =
-                            ""
-                    },
+                            joinPassword,
 
-                    onPasswordChanged = {
-                        joinPassword = it
-                    },
+                        onPageChanged = {
 
-                    onConfirmJoinPassword = {
+                            currentPage =
+                                it
+                        },
 
-                        if (
-                            joinPasswordChannel.isNotBlank() &&
-                            joinPassword.isNotBlank()
-                        ) {
+                        onConnect = {
+
+                            connectServer()
+                        },
+
+                        onDisconnect = {
+
+                            disconnectServer()
+                        },
+
+                        onOpenNickname = {
+
+                            nicknameInput =
+                                nickname
+
+                            nicknameDialog =
+                                true
+                        },
+
+                        onDismissNickname = {
+
+                            nicknameDialog =
+                                false
+                        },
+
+                        onNicknameChanged = {
+
+                            nicknameInput =
+                                it.take(20)
+                        },
+
+                        onSaveNickname = {
+
+                            saveNickname()
+                        },
+
+                        onRefresh = {
+
+                            requestChannelList()
+                        },
+
+                        onSelectChannel = {
+
+                            selectChannel(it)
+                        },
+
+                        onOpenCreate = {
+
+                            createChannelDialog =
+                                true
+                        },
+
+                        onDismissCreate = {
+
+                            createChannelDialog =
+                                false
+                        },
+
+                        onCreateChannel = {
+                                name,
+                                privateChannel,
+                                password ->
+
+                            createChannelDialog =
+                                false
+
+                            createChannel(
+                                name,
+                                privateChannel,
+                                password
+                            )
+                        },
+
+                        onOpenDelete = {
+
+                            if (
+                                currentChannel !=
+                                "public"
+                            ) {
+
+                                deleteChannelDialog =
+                                    true
+                            }
+                        },
+
+                        onDismissDelete = {
+
+                            deleteChannelDialog =
+                                false
+                        },
+
+                        onConfirmDelete = {
+
+                            deleteChannelDialog =
+                                false
+
+                            deleteCurrentChannel()
+                        },
+
+                        onDismissPassword = {
 
                             joinPasswordDialog =
                                 false
+
+                            joinPasswordChannel =
+                                ""
+
+                            joinPassword =
+                                ""
+                        },
+
+                        onPasswordChanged = {
+
+                            joinPassword =
+                                it
+                        },
+
+                        onConfirmPassword = {
 
                             val channel =
                                 joinPasswordChannel
@@ -520,53 +715,71 @@ class MainActivity : ComponentActivity() {
                             val password =
                                 joinPassword
 
-                            joinPasswordChannel =
-                                ""
+                            if (
+                                channel.isNotBlank() &&
+                                password.isNotBlank()
+                            ) {
 
-                            joinPassword =
-                                ""
+                                joinPasswordDialog =
+                                    false
 
-                            sendJoinChannel(
-                                channel,
-                                password
-                            )
+                                joinPasswordChannel =
+                                    ""
+
+                                joinPassword =
+                                    ""
+
+                                sendJoin(
+                                    channel,
+                                    password
+                                )
+                            }
+                        },
+
+                        onStartSpeaking = {
+
+                            startSpeaking()
+                        },
+
+                        onStopSpeaking = {
+
+                            stopSpeaking()
                         }
-                    },
-
-                    onOpenDeleteChannel = {
-
-                        if (
-                            currentChannel !=
-                            "public"
-                        ) {
-
-                            deleteChannelDialog =
-                                true
-                        }
-                    },
-
-                    onDismissDeleteChannel = {
-                        deleteChannelDialog = false
-                    },
-
-                    onConfirmDeleteChannel = {
-
-                        deleteChannelDialog =
-                            false
-
-                        deleteCurrentChannel()
-                    },
-
-                    onStartSpeaking = {
-                        startSpeaking()
-                    },
-
-                    onStopSpeaking = {
-                        stopSpeaking()
-                    }
-                )
+                    )
+                }
             }
         }
+    }
+
+    /*
+     * ============================================================
+     * onResume
+     *
+     * 关键修复：
+     *
+     * 不再要求 connectionState=true 才发送频道请求。
+     *
+     * 因为 Activity 刚创建的时候：
+     *
+     * connectionState=false
+     *
+     * 但 Service 可能实际上还在线。
+     *
+     * 所以必须主动问 Service。
+     * ============================================================
+     */
+
+    override fun onResume() {
+
+        super.onResume()
+
+        updateNetworkType()
+
+        /*
+         * 无论 Activity 自己认为在线还是离线，
+         * 都主动询问 Service。
+         */
+        requestChannelList()
     }
 
     /*
@@ -588,10 +801,10 @@ class MainActivity : ComponentActivity() {
                 Manifest.permission.RECORD_AUDIO
             )
 
-            return
-        }
+        } else {
 
-        requestNotificationPermissionIfNeeded()
+            requestNotificationPermissionIfNeeded()
+        }
     }
 
     private fun requestNotificationPermissionIfNeeded() {
@@ -617,38 +830,70 @@ class MainActivity : ComponentActivity() {
 
     /*
      * ============================================================
-     * 启动服务
+     * 网络
      * ============================================================
      */
 
-    private fun startWalkieService(
-        serverIp: String
-    ) {
+    private fun updateNetworkType() {
 
-        if (
-            checkSelfPermission(
-                Manifest.permission.RECORD_AUDIO
-            ) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
+        try {
 
-            requestMicrophone.launch(
-                Manifest.permission.RECORD_AUDIO
-            )
+            val connectivityManager =
+                getSystemService(
+                    Context.CONNECTIVITY_SERVICE
+                ) as ConnectivityManager
 
-            return
+            val network =
+                connectivityManager.activeNetwork
+
+            val capabilities =
+                network?.let {
+
+                    connectivityManager
+                        .getNetworkCapabilities(
+                            it
+                        )
+                }
+
+            networkType =
+                when {
+
+                    capabilities == null ->
+                        "无网络"
+
+                    capabilities.hasTransport(
+                        NetworkCapabilities.TRANSPORT_WIFI
+                    ) ->
+                        "Wi-Fi"
+
+                    capabilities.hasTransport(
+                        NetworkCapabilities.TRANSPORT_CELLULAR
+                    ) ->
+                        "移动数据"
+
+                    capabilities.hasTransport(
+                        NetworkCapabilities.TRANSPORT_ETHERNET
+                    ) ->
+                        "有线网络"
+
+                    else ->
+                        "网络已连接"
+                }
+
+        } catch (_: Exception) {
+
+            networkType =
+                "未知"
         }
+    }
 
-        val ip =
-            serverIp.trim()
+    /*
+     * ============================================================
+     * 连接
+     * ============================================================
+     */
 
-        if (ip.isBlank()) {
-            return
-        }
-
-        println(
-            "WALKIE $WALKIE_VERSION: 连接服务器=$ip"
-        )
+    private fun connectServer() {
 
         val intent =
             Intent(
@@ -661,40 +906,44 @@ class MainActivity : ComponentActivity() {
 
                 putExtra(
                     WalkieService.EXTRA_SERVER_IP,
-                    ip
+                    DEFAULT_SERVER_IP
                 )
             }
 
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
-        ) {
+        try {
 
-            startForegroundService(
-                intent
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.O
+            ) {
+
+                startForegroundService(
+                    intent
+                )
+
+            } else {
+
+                @Suppress("DEPRECATION")
+                startService(
+                    intent
+                )
+            }
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "请求连接兄弟服务器"
             )
 
-        } else {
+        } catch (e: Exception) {
 
-            @Suppress("DEPRECATION")
-            startService(
-                intent
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "连接失败=${e.message}"
             )
         }
     }
 
-    /*
-     * ============================================================
-     * 断开
-     * ============================================================
-     */
-
-    private fun stopWalkieService() {
-
-        pttSpeaking = false
-
-        talkStatus =
-            WalkieService.TALK_STATUS_NONE
+    private fun disconnectServer() {
 
         val intent =
             Intent(
@@ -706,23 +955,72 @@ class MainActivity : ComponentActivity() {
                     WalkieService.ACTION_STOP
             }
 
-        @Suppress("DEPRECATION")
-        startService(
-            intent
+        try {
+
+            @Suppress("DEPRECATION")
+            startService(
+                intent
+            )
+
+        } catch (_: Exception) {
+        }
+    }
+
+    /*
+     * ============================================================
+     * 昵称
+     * ============================================================
+     */
+
+    private fun saveNickname() {
+
+        val value =
+            nicknameInput.trim()
+
+        if (
+            value.isBlank()
+        ) {
+
+            return
+        }
+
+        nickname =
+            value
+
+        getSharedPreferences(
+            UI_PREFS,
+            MODE_PRIVATE
+        )
+            .edit()
+            .putString(
+                UI_PREF_NICKNAME,
+                value
+            )
+            .apply()
+
+        nicknameDialog =
+            false
+
+        println(
+            "WALKIE $WALKIE_VERSION: " +
+                    "昵称=$value"
         )
     }
 
     /*
      * ============================================================
-     * 请求频道列表
+     * 频道列表
+     *
+     * 注意：
+     * 这里故意不能写：
+     *
+     * if (!connectionState) return
+     *
+     * 因为本函数就是用来恢复连接显示的。
      * ============================================================
      */
 
     private fun requestChannelList() {
-
-        if (!connectionState) {
-            return
-        }
 
         val intent =
             Intent(
@@ -734,23 +1032,36 @@ class MainActivity : ComponentActivity() {
                     WalkieService.ACTION_CHANNEL_LIST
             }
 
-        @Suppress("DEPRECATION")
-        startService(
-            intent
-        )
+        try {
+
+            @Suppress("DEPRECATION")
+            startService(
+                intent
+            )
+
+        } catch (e: Exception) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "请求频道列表失败=${e.message}"
+            )
+        }
     }
 
     /*
      * ============================================================
-     * 点击频道
+     * 切换频道
      * ============================================================
      */
 
-    private fun joinChannelClicked(
+    private fun selectChannel(
         channel: ChannelUiInfo
     ) {
 
-        if (!connectionState) {
+        if (
+            !connectionState
+        ) {
+
             return
         }
 
@@ -758,10 +1069,12 @@ class MainActivity : ComponentActivity() {
             channel.name ==
             currentChannel
         ) {
+
             return
         }
 
         if (
+            channel.isPrivate ||
             channel.requirePassword
         ) {
 
@@ -776,35 +1089,24 @@ class MainActivity : ComponentActivity() {
 
         } else {
 
-            sendJoinChannel(
+            sendJoin(
                 channel.name,
                 ""
             )
         }
     }
 
-    /*
-     * ============================================================
-     * 加入频道
-     * ============================================================
-     */
-
-    private fun sendJoinChannel(
+    private fun sendJoin(
         channel: String,
         password: String
     ) {
 
         if (
-            !connectionState ||
-            channel.isBlank()
+            !connectionState
         ) {
+
             return
         }
-
-        pttSpeaking = false
-
-        talkStatus =
-            WalkieService.TALK_STATUS_NONE
 
         val intent =
             Intent(
@@ -826,10 +1128,15 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-        @Suppress("DEPRECATION")
-        startService(
-            intent
-        )
+        try {
+
+            @Suppress("DEPRECATION")
+            startService(
+                intent
+            )
+
+        } catch (_: Exception) {
+        }
     }
 
     /*
@@ -839,29 +1146,25 @@ class MainActivity : ComponentActivity() {
      */
 
     private fun createChannel(
-        channel: String,
+        name: String,
         privateChannel: Boolean,
         password: String
     ) {
 
-        if (!connectionState) {
+        if (
+            !connectionState
+        ) {
+
             return
         }
 
-        val name =
-            channel.trim()
-
-        val cleanPassword =
-            password.trim()
-
-        if (name.isBlank()) {
-            return
-        }
+        val cleanName =
+            name.trim()
 
         if (
-            privateChannel &&
-            cleanPassword.isBlank()
+            cleanName.isBlank()
         ) {
+
             return
         }
 
@@ -876,12 +1179,12 @@ class MainActivity : ComponentActivity() {
 
                 putExtra(
                     WalkieService.EXTRA_CHANNEL_NAME,
-                    name
+                    cleanName
                 )
 
                 putExtra(
                     WalkieService.EXTRA_CHANNEL_PASSWORD,
-                    cleanPassword
+                    password.trim()
                 )
 
                 putExtra(
@@ -890,15 +1193,20 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-        @Suppress("DEPRECATION")
-        startService(
-            intent
-        )
+        try {
+
+            @Suppress("DEPRECATION")
+            startService(
+                intent
+            )
+
+        } catch (_: Exception) {
+        }
     }
 
     /*
      * ============================================================
-     * 删除当前频道
+     * 删除频道
      * ============================================================
      */
 
@@ -906,15 +1214,12 @@ class MainActivity : ComponentActivity() {
 
         if (
             !connectionState ||
-            currentChannel.isBlank() ||
-            currentChannel == "public"
+            currentChannel ==
+            "public"
         ) {
+
             return
         }
-
-        println(
-            "WALKIE $WALKIE_VERSION: ★删除频道=$currentChannel★"
-        )
 
         val intent =
             Intent(
@@ -931,25 +1236,31 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-        @Suppress("DEPRECATION")
-        startService(
-            intent
-        )
+        try {
+
+            @Suppress("DEPRECATION")
+            startService(
+                intent
+            )
+
+        } catch (_: Exception) {
+        }
     }
 
     /*
      * ============================================================
-     * PTT
+     * PTT 开始
      * ============================================================
      */
 
     private fun startSpeaking() {
 
-        if (!connectionState) {
+        if (
+            !connectionState
+        ) {
+
             return
         }
-
-        pttSpeaking = true
 
         val intent =
             Intent(
@@ -961,15 +1272,24 @@ class MainActivity : ComponentActivity() {
                     WalkieService.ACTION_SPEAK_START
             }
 
-        @Suppress("DEPRECATION")
-        startService(
-            intent
-        )
+        try {
+
+            @Suppress("DEPRECATION")
+            startService(
+                intent
+            )
+
+        } catch (_: Exception) {
+        }
     }
 
-    private fun stopSpeaking() {
+    /*
+     * ============================================================
+     * PTT 停止
+     * ============================================================
+     */
 
-        pttSpeaking = false
+    private fun stopSpeaking() {
 
         val intent =
             Intent(
@@ -981,10 +1301,15 @@ class MainActivity : ComponentActivity() {
                     WalkieService.ACTION_SPEAK_STOP
             }
 
-        @Suppress("DEPRECATION")
-        startService(
-            intent
-        )
+        try {
+
+            @Suppress("DEPRECATION")
+            startService(
+                intent
+            )
+
+        } catch (_: Exception) {
+        }
     }
 
     /*
@@ -993,93 +1318,58 @@ class MainActivity : ComponentActivity() {
      * ============================================================
      */
 
-    private fun parseChannelInfo(
-        text: String
+    private fun parseChannel(
+        value: String
     ): ChannelUiInfo? {
 
-        val fields =
-            text.split(",")
+        val parts =
+            value.split(",")
 
         val name =
-            fields.getOrNull(0)
+            parts
+                .getOrNull(0)
                 ?.trim()
-                ?: return null
+                .orEmpty()
 
-        if (name.isBlank()) {
+        if (
+            name.isBlank()
+        ) {
+
             return null
         }
 
         val type =
-            fields.getOrNull(1)
+            parts
+                .getOrNull(1)
                 ?.trim()
                 ?.uppercase()
                 ?: "PUBLIC"
 
+        val privateChannel =
+            type ==
+                    "PRIVATE"
+
         val count =
-            fields.getOrNull(2)
+            parts
+                .getOrNull(2)
                 ?.trim()
                 ?.toIntOrNull()
                 ?.coerceAtLeast(0)
                 ?: 0
 
-        val isPrivate =
-            type == "PRIVATE"
-
         return ChannelUiInfo(
             name =
                 name,
+
             onlineCount =
                 count,
+
             isPrivate =
-                isPrivate,
+                privateChannel,
+
             requirePassword =
-                isPrivate
+                privateChannel
         )
-    }
-
-    /*
-     * ============================================================
-     * 更新当前频道
-     * ============================================================
-     */
-
-    private fun updateCurrentChannelInList() {
-
-        val list =
-            channelList.toMutableList()
-
-        val index =
-            list.indexOfFirst {
-                it.name ==
-                        currentChannel
-            }
-
-        val info =
-            ChannelUiInfo(
-                name =
-                    currentChannel,
-                onlineCount =
-                    currentChannelOnlineCount,
-                isPrivate =
-                    currentChannelPrivate,
-                requirePassword =
-                    currentChannelRequirePassword
-            )
-
-        if (index >= 0) {
-
-            list[index] =
-                info
-
-        } else {
-
-            list.add(info)
-        }
-
-        channelList =
-            list.sortedBy {
-                it.name
-            }
     }
 
     override fun onDestroy() {
@@ -1087,104 +1377,75 @@ class MainActivity : ComponentActivity() {
         try {
 
             unregisterReceiver(
-                connectionReceiver
+                receiver
             )
 
         } catch (_: Exception) {
         }
 
+        systemBackCallback.remove()
+
         super.onDestroy()
     }
 }
 
-data class ChannelUiInfo(
-    val name: String,
-    val onlineCount: Int = 0,
-    val isPrivate: Boolean = false,
-    val requirePassword: Boolean = false
-) {
-
-    fun displayName(
-        current: Boolean
-    ): String {
-
-        val mark =
-            if (current) {
-                "✓ "
-            } else {
-                ""
-            }
-
-        val icon =
-            if (isPrivate) {
-                "🔒"
-            } else {
-                "🌐"
-            }
-
-        return "$mark$icon $name    👥 ${onlineCount}人"
-    }
-}
+/*
+ * ================================================================
+ * V20 主界面
+ * ================================================================
+ */
 
 @Composable
-fun WalkieScreen(
+private fun WalkieV20Screen(
     connected: Boolean,
     talkStatus: String,
+    nickname: String,
     currentChannel: String,
-    currentChannelOnlineCount: Int,
-    currentChannelPrivate: Boolean,
+    currentOnlineCount: Int,
+    currentPrivate: Boolean,
     channels: List<ChannelUiInfo>,
-    channelMessage: String,
+    networkType: String,
+    page: String,
+    nicknameDialog: Boolean,
+    nicknameInput: String,
     createChannelDialog: Boolean,
-
+    deleteChannelDialog: Boolean,
     joinPasswordDialog: Boolean,
     joinPasswordChannel: String,
     joinPassword: String,
-
-    deleteChannelDialog: Boolean,
-
-    onConnect: (String) -> Unit,
+    onPageChanged: (String) -> Unit,
+    onConnect: () -> Unit,
     onDisconnect: () -> Unit,
-    onRefreshChannels: () -> Unit,
-    onJoinChannel: (ChannelUiInfo) -> Unit,
-
-    onOpenCreateChannel: () -> Unit,
-    onDismissCreateChannel: () -> Unit,
+    onOpenNickname: () -> Unit,
+    onDismissNickname: () -> Unit,
+    onNicknameChanged: (String) -> Unit,
+    onSaveNickname: () -> Unit,
+    onRefresh: () -> Unit,
+    onSelectChannel: (ChannelUiInfo) -> Unit,
+    onOpenCreate: () -> Unit,
+    onDismissCreate: () -> Unit,
     onCreateChannel: (
         String,
         Boolean,
         String
     ) -> Unit,
-
-    onDismissJoinPassword: () -> Unit,
+    onOpenDelete: () -> Unit,
+    onDismissDelete: () -> Unit,
+    onConfirmDelete: () -> Unit,
+    onDismissPassword: () -> Unit,
     onPasswordChanged: (String) -> Unit,
-    onConfirmJoinPassword: () -> Unit,
-
-    onOpenDeleteChannel: () -> Unit,
-    onDismissDeleteChannel: () -> Unit,
-    onConfirmDeleteChannel: () -> Unit,
-
+    onConfirmPassword: () -> Unit,
     onStartSpeaking: () -> Unit,
     onStopSpeaking: () -> Unit
 ) {
 
-    var serverIp by remember {
-        mutableStateOf(
-            "38.146.29.169"
-        )
-    }
-
-    var pressing by remember {
-        mutableStateOf(false)
-    }
-
-    var speakingStarted by remember {
-        mutableStateOf(false)
-    }
-
-    var channelMenuExpanded by remember {
-        mutableStateOf(false)
-    }
+    /*
+     * ============================================================
+     * Compose 内部状态
+     *
+     * 全部 remember。
+     * ============================================================
+     */
 
     var newChannelName by remember {
         mutableStateOf("")
@@ -1198,6 +1459,15 @@ fun WalkieScreen(
         mutableStateOf("")
     }
 
+    var pressing by remember {
+        mutableStateOf(false)
+    }
+
+    /*
+     * PTT 使用 rememberUpdatedState。
+     *
+     * pointerInput 的 key 仍然固定为 Unit。
+     */
     val currentConnected =
         rememberUpdatedState(
             connected
@@ -1208,27 +1478,104 @@ fun WalkieScreen(
             talkStatus
         )
 
-    val currentStartSpeaking =
+    val startSpeak =
         rememberUpdatedState(
             onStartSpeaking
         )
 
-    val currentStopSpeaking =
+    val stopSpeak =
         rememberUpdatedState(
             onStopSpeaking
         )
 
-    val talkAllowed =
-        talkStatus ==
-                WalkieService.TALK_STATUS_ALLOWED
+    /*
+     * ============================================================
+     * 昵称弹窗
+     * ============================================================
+     */
 
-    val requesting =
-        talkStatus ==
-                WalkieService.TALK_STATUS_REQUESTING
+    if (
+        nicknameDialog
+    ) {
 
-    val busy =
-        talkStatus ==
-                WalkieService.TALK_STATUS_BUSY
+        AlertDialog(
+
+            onDismissRequest =
+                onDismissNickname,
+
+            title = {
+
+                Text(
+                    "设置昵称"
+                )
+            },
+
+            text = {
+
+                OutlinedTextField(
+
+                    value =
+                        nicknameInput,
+
+                    onValueChange =
+                        onNicknameChanged,
+
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    singleLine =
+                        true,
+
+                    label = {
+
+                        Text(
+                            "我的昵称"
+                        )
+                    },
+
+                    supportingText = {
+
+                        Text(
+                            "最多 20 个字符"
+                        )
+                    }
+                )
+            },
+
+            confirmButton = {
+
+                Button(
+
+                    onClick =
+                        onSaveNickname,
+
+                    enabled =
+                        nicknameInput
+                            .trim()
+                            .isNotBlank()
+
+                ) {
+
+                    Text(
+                        "保存"
+                    )
+                }
+            },
+
+            dismissButton = {
+
+                TextButton(
+                    onClick =
+                        onDismissNickname
+                ) {
+
+                    Text(
+                        "取消"
+                    )
+                }
+            }
+        )
+    }
 
     /*
      * ============================================================
@@ -1236,21 +1583,20 @@ fun WalkieScreen(
      * ============================================================
      */
 
-    if (createChannelDialog) {
+    if (
+        createChannelDialog
+    ) {
 
         AlertDialog(
 
-            onDismissRequest = {
-
-                newChannelName = ""
-                newChannelPrivate = false
-                newChannelPassword = ""
-
-                onDismissCreateChannel()
-            },
+            onDismissRequest =
+                onDismissCreate,
 
             title = {
-                Text("创建频道")
+
+                Text(
+                    "创建频道"
+                )
             },
 
             text = {
@@ -1258,104 +1604,93 @@ fun WalkieScreen(
                 Column {
 
                     OutlinedTextField(
+
                         value =
                             newChannelName,
 
                         onValueChange = {
 
-                            if (
-                                it.length <= 24
-                            ) {
-
-                                newChannelName =
-                                    it
-                            }
+                            newChannelName =
+                                it.take(24)
                         },
 
                         modifier =
                             Modifier.fillMaxWidth(),
 
-                        singleLine = true,
+                        singleLine =
+                            true,
 
                         label = {
-                            Text("频道名称")
+
+                            Text(
+                                "频道名称"
+                            )
                         }
                     )
 
                     Spacer(
-                        modifier =
-                            Modifier.height(12.dp)
+                        Modifier.height(
+                            10.dp
+                        )
                     )
 
-                    Row(
+                    OutlinedButton(
+
+                        onClick = {
+
+                            newChannelPrivate =
+                                !newChannelPrivate
+                        },
+
                         modifier =
-                            Modifier.fillMaxWidth(),
-                        verticalAlignment =
-                            Alignment.CenterVertically
+                            Modifier.fillMaxWidth()
+
                     ) {
 
                         Text(
-                            if (newChannelPrivate) {
+
+                            if (
+                                newChannelPrivate
+                            ) {
                                 "🔒 私密频道"
                             } else {
                                 "🌐 公开频道"
-                            },
-                            modifier =
-                                Modifier.weight(1f)
-                        )
-
-                        OutlinedButton(
-
-                            onClick = {
-
-                                newChannelPrivate =
-                                    !newChannelPrivate
-
-                                if (!newChannelPrivate) {
-                                    newChannelPassword = ""
-                                }
                             }
-                        ) {
-
-                            Text(
-                                if (newChannelPrivate) {
-                                    "改为公开"
-                                } else {
-                                    "设密码"
-                                }
-                            )
-                        }
+                        )
                     }
 
-                    if (newChannelPrivate) {
+                    if (
+                        newChannelPrivate
+                    ) {
 
                         Spacer(
-                            modifier =
-                                Modifier.height(10.dp)
+                            Modifier.height(
+                                8.dp
+                            )
                         )
 
                         OutlinedTextField(
+
                             value =
                                 newChannelPassword,
 
                             onValueChange = {
 
-                                if (
-                                    it.length <= 32
-                                ) {
-
-                                    newChannelPassword =
-                                        it
-                                }
+                                newChannelPassword =
+                                    it.take(32)
                             },
 
                             modifier =
                                 Modifier.fillMaxWidth(),
 
-                            singleLine = true,
+                            singleLine =
+                                true,
 
                             label = {
-                                Text("频道密码")
+
+                                Text(
+                                    "频道密码"
+                                )
                             }
                         )
                     }
@@ -1368,32 +1703,25 @@ fun WalkieScreen(
 
                     onClick = {
 
-                        val name =
-                            newChannelName.trim()
-
-                        val password =
-                            newChannelPassword.trim()
-
-                        if (name.isBlank()) {
-                            return@Button
-                        }
-
-                        if (
-                            newChannelPrivate &&
-                            password.isBlank()
-                        ) {
-                            return@Button
-                        }
-
                         onCreateChannel(
-                            name,
+
+                            newChannelName
+                                .trim(),
+
                             newChannelPrivate,
-                            password
+
+                            newChannelPassword
+                                .trim()
                         )
 
-                        newChannelName = ""
-                        newChannelPrivate = false
-                        newChannelPassword = ""
+                        newChannelName =
+                            ""
+
+                        newChannelPassword =
+                            ""
+
+                        newChannelPrivate =
+                            false
                     },
 
                     enabled =
@@ -1408,7 +1736,9 @@ fun WalkieScreen(
                                         )
                 ) {
 
-                    Text("创建")
+                    Text(
+                        "创建"
+                    )
                 }
             },
 
@@ -1416,17 +1746,14 @@ fun WalkieScreen(
 
                 TextButton(
 
-                    onClick = {
+                    onClick =
+                        onDismissCreate
 
-                        newChannelName = ""
-                        newChannelPrivate = false
-                        newChannelPassword = ""
-
-                        onDismissCreateChannel()
-                    }
                 ) {
 
-                    Text("取消")
+                    Text(
+                        "取消"
+                    )
                 }
             }
         )
@@ -1434,20 +1761,24 @@ fun WalkieScreen(
 
     /*
      * ============================================================
-     * 加入私密频道密码
+     * 加入密码频道
      * ============================================================
      */
 
-    if (joinPasswordDialog) {
+    if (
+        joinPasswordDialog
+    ) {
 
         AlertDialog(
 
-            onDismissRequest = {
-                onDismissJoinPassword()
-            },
+            onDismissRequest =
+                onDismissPassword,
 
             title = {
-                Text("🔒 输入频道密码")
+
+                Text(
+                    "🔒 输入频道密码"
+                )
             },
 
             text = {
@@ -1455,14 +1786,17 @@ fun WalkieScreen(
                 Column {
 
                     Text(
+
                         "频道：$joinPasswordChannel",
+
                         fontWeight =
                             FontWeight.Bold
                     )
 
                     Spacer(
-                        modifier =
-                            Modifier.height(10.dp)
+                        Modifier.height(
+                            10.dp
+                        )
                     )
 
                     OutlinedTextField(
@@ -1470,17 +1804,20 @@ fun WalkieScreen(
                         value =
                             joinPassword,
 
-                        onValueChange = {
-                            onPasswordChanged(it)
-                        },
+                        onValueChange =
+                            onPasswordChanged,
 
                         modifier =
                             Modifier.fillMaxWidth(),
 
-                        singleLine = true,
+                        singleLine =
+                            true,
 
                         label = {
-                            Text("密码")
+
+                            Text(
+                                "密码"
+                            )
                         }
                     )
                 }
@@ -1490,27 +1827,32 @@ fun WalkieScreen(
 
                 Button(
 
-                    onClick = {
-                        onConfirmJoinPassword()
-                    },
+                    onClick =
+                        onConfirmPassword,
 
                     enabled =
                         joinPassword.isNotBlank()
+
                 ) {
 
-                    Text("加入")
+                    Text(
+                        "加入"
+                    )
                 }
             },
 
             dismissButton = {
 
                 TextButton(
-                    onClick = {
-                        onDismissJoinPassword()
-                    }
+
+                    onClick =
+                        onDismissPassword
+
                 ) {
 
-                    Text("取消")
+                    Text(
+                        "取消"
+                    )
                 }
             }
         )
@@ -1518,51 +1860,58 @@ fun WalkieScreen(
 
     /*
      * ============================================================
-     * 删除频道确认
+     * 删除频道
      * ============================================================
      */
 
-    if (deleteChannelDialog) {
+    if (
+        deleteChannelDialog
+    ) {
 
         AlertDialog(
 
-            onDismissRequest = {
-                onDismissDeleteChannel()
-            },
+            onDismissRequest =
+                onDismissDelete,
 
             title = {
-                Text("删除频道")
+
+                Text(
+                    "删除频道"
+                )
             },
 
             text = {
 
                 Text(
-                    "确定要删除「$currentChannel」吗？\n\n删除后频道无法恢复，频道内用户会自动回到 public。"
+                    "确定删除「$currentChannel」吗？删除后无法恢复。"
                 )
             },
 
             confirmButton = {
 
                 Button(
-
-                    onClick = {
-                        onConfirmDeleteChannel()
-                    }
+                    onClick =
+                        onConfirmDelete
                 ) {
 
-                    Text("确定删除")
+                    Text(
+                        "确定删除"
+                    )
                 }
             },
 
             dismissButton = {
 
                 TextButton(
-                    onClick = {
-                        onDismissDeleteChannel()
-                    }
+
+                    onClick =
+                        onDismissDelete
+
                 ) {
 
-                    Text("取消")
+                    Text(
+                        "取消"
+                    )
                 }
             }
         )
@@ -1570,45 +1919,406 @@ fun WalkieScreen(
 
     /*
      * ============================================================
-     * 主界面
+     * 页面
      * ============================================================
      */
+
+    Scaffold(
+
+        bottomBar = {
+
+            PttBottomBar(
+
+                connected =
+                    connected,
+
+                talkStatus =
+                    talkStatus,
+
+                pressing =
+                    pressing,
+
+                currentConnected =
+                    currentConnected,
+
+                currentTalkStatus =
+                    currentTalkStatus,
+
+                startSpeak =
+                    startSpeak,
+
+                stopSpeak =
+                    stopSpeak,
+
+                pressingState = {
+
+                    pressing =
+                        it
+                }
+            )
+        }
+
+    ) { innerPadding ->
+
+        when (
+            page
+        ) {
+
+            "home" -> {
+
+                HomePage(
+
+                    modifier =
+                        Modifier.padding(
+                            innerPadding
+                        ),
+
+                    connected =
+                        connected,
+
+                    nickname =
+                        nickname,
+
+                    currentChannel =
+                        currentChannel,
+
+                    currentOnlineCount =
+                        currentOnlineCount,
+
+                    currentPrivate =
+                        currentPrivate,
+
+                    networkType =
+                        networkType,
+
+                    onConnect =
+                        onConnect,
+
+                    onDisconnect =
+                        onDisconnect,
+
+                    onOpenNickname =
+                        onOpenNickname,
+
+                    onOpenUsers = {
+
+                        onPageChanged(
+                            "users"
+                        )
+                    },
+
+                    onOpenChannels = {
+
+                        onPageChanged(
+                            "channels"
+                        )
+                    },
+
+                    onOpenSettings = {
+
+                        onPageChanged(
+                            "settings"
+                        )
+                    }
+                )
+            }
+
+            "users" -> {
+
+                UsersPage(
+
+                    modifier =
+                        Modifier.padding(
+                            innerPadding
+                        ),
+
+                    connected =
+                        connected,
+
+                    currentChannel =
+                        currentChannel,
+
+                    currentOnlineCount =
+                        currentOnlineCount,
+
+                    onBack = {
+
+                        onPageChanged(
+                            "home"
+                        )
+                    }
+                )
+            }
+
+            "channels" -> {
+
+                ChannelsPage(
+
+                    modifier =
+                        Modifier.padding(
+                            innerPadding
+                        ),
+
+                    connected =
+                        connected,
+
+                    currentChannel =
+                        currentChannel,
+
+                    currentPrivate =
+                        currentPrivate,
+
+                    channels =
+                        channels,
+
+                    onBack = {
+
+                        onPageChanged(
+                            "home"
+                        )
+                    },
+
+                    onRefresh =
+                        onRefresh,
+
+                    onSelectChannel =
+                        onSelectChannel,
+
+                    onOpenCreate =
+                        onOpenCreate,
+
+                    onOpenDelete =
+                        onOpenDelete
+                )
+            }
+
+            "settings" -> {
+
+                SettingsPage(
+
+                    modifier =
+                        Modifier.padding(
+                            innerPadding
+                        ),
+
+                    nickname =
+                        nickname,
+
+                    onBack = {
+
+                        onPageChanged(
+                            "home"
+                        )
+                    },
+
+                    onOpenNickname =
+                        onOpenNickname
+                )
+            }
+
+            else -> {
+
+                onPageChanged(
+                    "home"
+                )
+            }
+        }
+    }
+}
+
+/*
+ * ================================================================
+ * 首页
+ * ================================================================
+ */
+
+@Composable
+private fun HomePage(
+    modifier: Modifier,
+    connected: Boolean,
+    nickname: String,
+    currentChannel: String,
+    currentOnlineCount: Int,
+    currentPrivate: Boolean,
+    networkType: String,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit,
+    onOpenNickname: () -> Unit,
+    onOpenUsers: () -> Unit,
+    onOpenChannels: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
 
     Column(
 
         modifier =
-            Modifier
+            modifier
                 .fillMaxSize()
-                .padding(20.dp),
+                .verticalScroll(
+                    rememberScrollState()
+                )
+                .padding(
+                    horizontal = 16.dp,
+                    vertical = 14.dp
+                ),
 
-        horizontalAlignment =
-            Alignment.CenterHorizontally
+        verticalArrangement =
+            Arrangement.spacedBy(
+                11.dp
+            )
     ) {
 
-        Spacer(
+        /*
+         * 顶部
+         */
+
+        Row(
+
             modifier =
-                Modifier.height(28.dp)
-        )
+                Modifier.fillMaxWidth(),
 
-        Text(
-            text = "WALKIE",
-            fontSize = 34.sp,
-            fontWeight =
-                FontWeight.Bold
-        )
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
 
-        Text(
-            text =
-                "公网对讲机 V11",
-            fontSize = 16.sp,
-            color =
-                Color.Gray
-        )
+            Column(
 
-        Spacer(
+                modifier =
+                    Modifier.weight(1f)
+            ) {
+
+                Text(
+
+                    "兄弟对讲机",
+
+                    fontSize =
+                        28.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+                Text(
+
+                    "V20 · 实时语音通信",
+
+                    fontSize =
+                        13.sp,
+
+                    color =
+                        Color.Gray
+                )
+            }
+
+            StatusPill(
+                connected =
+                    connected
+            )
+        }
+
+        /*
+         * ========================================================
+         * 我的昵称
+         * ========================================================
+         */
+
+        Card(
+
             modifier =
-                Modifier.height(20.dp)
-        )
+                Modifier.fillMaxWidth(),
+
+            shape =
+                RoundedCornerShape(
+                    20.dp
+                )
+        ) {
+
+            Row(
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                Box(
+
+                    modifier =
+                        Modifier
+                            .size(52.dp)
+                            .clip(
+                                CircleShape
+                            )
+                            .background(
+                                MaterialTheme
+                                    .colorScheme
+                                    .primaryContainer
+                            ),
+
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+                        "👤",
+                        fontSize =
+                            24.sp
+                    )
+                }
+
+                Spacer(
+                    Modifier.width(
+                        12.dp
+                    )
+                )
+
+                Column(
+
+                    modifier =
+                        Modifier.weight(1f)
+                ) {
+
+                    Text(
+
+                        "我的昵称",
+
+                        fontSize =
+                            12.sp,
+
+                        color =
+                            Color.Gray
+                    )
+
+                    Text(
+
+                        nickname.ifBlank {
+                            "未设置昵称"
+                        },
+
+                        fontSize =
+                            19.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+
+                OutlinedButton(
+
+                    onClick =
+                        onOpenNickname
+
+                ) {
+
+                    Text(
+                        "修改"
+                    )
+                }
+            }
+        }
 
         /*
          * ========================================================
@@ -1622,110 +2332,124 @@ fun WalkieScreen(
                 Modifier.fillMaxWidth(),
 
             shape =
-                RoundedCornerShape(16.dp),
+                RoundedCornerShape(
+                    20.dp
+                ),
 
             colors =
                 CardDefaults.cardColors(
+
                     containerColor =
-                        MaterialTheme
-                            .colorScheme
-                            .surfaceVariant
+                        if (
+                            connected
+                        ) {
+
+                            MaterialTheme
+                                .colorScheme
+                                .primaryContainer
+
+                        } else {
+
+                            MaterialTheme
+                                .colorScheme
+                                .surfaceVariant
+                        }
                 )
         ) {
 
-            Column(
+            Row(
+
                 modifier =
-                    Modifier.padding(16.dp)
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+
+                verticalAlignment =
+                    Alignment.CenterVertically
             ) {
 
-                Text(
-                    "服务器",
-                    fontSize = 18.sp,
-                    fontWeight =
-                        FontWeight.Bold
-                )
-
-                Spacer(
-                    modifier =
-                        Modifier.height(8.dp)
-                )
-
-                OutlinedTextField(
-
-                    value =
-                        serverIp,
-
-                    onValueChange = {
-                        serverIp = it
-                    },
+                Column(
 
                     modifier =
-                        Modifier.fillMaxWidth(),
-
-                    label = {
-                        Text("服务器 IP")
-                    },
-
-                    singleLine = true
-                )
-
-                Spacer(
-                    modifier =
-                        Modifier.height(10.dp)
-                )
-
-                Row(
-
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
-                    horizontalArrangement =
-                        Arrangement.spacedBy(10.dp)
+                        Modifier.weight(1f)
                 ) {
 
-                    Button(
+                    Text(
 
-                        onClick = {
-                            onConnect(
-                                serverIp.trim()
-                            )
+                        "兄弟服务器",
+
+                        fontSize =
+                            12.sp,
+
+                        color =
+                            Color.Gray
+                    )
+
+                    Text(
+
+                        if (
+                            connected
+                        ) {
+                            "已连接"
+                        } else {
+                            "未连接"
                         },
 
-                        modifier =
-                            Modifier.weight(1f)
-                    ) {
+                        fontSize =
+                            20.sp,
 
-                        Text("连接")
-                    }
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+
+                    Text(
+
+                        networkType,
+
+                        fontSize =
+                            12.sp,
+
+                        color =
+                            Color.Gray
+                    )
+                }
+
+                if (
+                    connected
+                ) {
 
                     OutlinedButton(
 
-                        onClick = {
+                        onClick =
+                            onDisconnect
 
-                            pressing = false
-                            speakingStarted = false
-
-                            onDisconnect()
-                        },
-
-                        modifier =
-                            Modifier.weight(1f)
                     ) {
 
-                        Text("断开")
+                        Text(
+                            "断开"
+                        )
+                    }
+
+                } else {
+
+                    Button(
+
+                        onClick =
+                            onConnect
+
+                    ) {
+
+                        Text(
+                            "连接"
+                        )
                     }
                 }
             }
         }
 
-        Spacer(
-            modifier =
-                Modifier.height(14.dp)
-        )
-
         /*
          * ========================================================
-         * 频道
+         * 当前频道
          * ========================================================
          */
 
@@ -1735,50 +2459,53 @@ fun WalkieScreen(
                 Modifier.fillMaxWidth(),
 
             shape =
-                RoundedCornerShape(16.dp)
+                RoundedCornerShape(
+                    20.dp
+                )
         ) {
 
             Column(
-                modifier =
-                    Modifier.padding(16.dp)
+
+                Modifier.padding(
+                    16.dp
+                )
             ) {
 
                 Row(
-                    modifier =
-                        Modifier.fillMaxWidth(),
+
                     verticalAlignment =
                         Alignment.CenterVertically
                 ) {
 
                     Column(
+
                         modifier =
                             Modifier.weight(1f)
                     ) {
 
                         Text(
+
                             "当前频道",
-                            fontSize = 14.sp,
+
+                            fontSize =
+                                12.sp,
+
                             color =
                                 Color.Gray
                         )
 
-                        Spacer(
-                            modifier =
-                                Modifier.height(3.dp)
-                        )
-
                         Text(
-                            text =
-                                if (
-                                    currentChannelPrivate
-                                ) {
 
-                                    "🔒 $currentChannel"
+                            if (
+                                currentPrivate
+                            ) {
 
-                                } else {
+                                "🔒 $currentChannel"
 
-                                    "🌐 $currentChannel"
-                                },
+                            } else {
+
+                                "🌐 $currentChannel"
+                            },
 
                             fontSize =
                                 22.sp,
@@ -1786,328 +2513,898 @@ fun WalkieScreen(
                             fontWeight =
                                 FontWeight.Bold
                         )
+                    }
+
+                    Column(
+
+                        horizontalAlignment =
+                            Alignment.End
+                    ) {
 
                         Text(
-                            text =
-                                "在线人数：${currentChannelOnlineCount}人",
+
+                            "在线",
 
                             fontSize =
-                                14.sp,
+                                12.sp,
 
                             color =
                                 Color.Gray
                         )
-                    }
-
-                    OutlinedButton(
-
-                        onClick = {
-                            onRefreshChannels()
-                        },
-
-                        enabled =
-                            connected
-                    ) {
-
-                        Text("刷新")
-                    }
-                }
-
-                Spacer(
-                    modifier =
-                        Modifier.height(10.dp)
-                )
-
-                Box(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                ) {
-
-                    OutlinedButton(
-
-                        onClick = {
-                            channelMenuExpanded =
-                                true
-                        },
-
-                        enabled =
-                            connected,
-
-                        modifier =
-                            Modifier.fillMaxWidth()
-                    ) {
 
                         Text(
-                            "切换频道"
+
+                            "$currentOnlineCount",
+
+                            fontSize =
+                                29.sp,
+
+                            fontWeight =
+                                FontWeight.Bold
                         )
-                    }
-
-                    DropdownMenu(
-
-                        expanded =
-                            channelMenuExpanded,
-
-                        onDismissRequest = {
-                            channelMenuExpanded =
-                                false
-                        }
-                    ) {
-
-                        if (channels.isEmpty()) {
-
-                            DropdownMenuItem(
-
-                                text = {
-                                    Text(
-                                        "暂无频道"
-                                    )
-                                },
-
-                                onClick = {
-                                    channelMenuExpanded =
-                                        false
-                                }
-                            )
-
-                        } else {
-
-                            channels.forEach { channel ->
-
-                                DropdownMenuItem(
-
-                                    text = {
-
-                                        Text(
-                                            channel.displayName(
-                                                channel.name ==
-                                                        currentChannel
-                                            )
-                                        )
-                                    },
-
-                                    onClick = {
-
-                                        channelMenuExpanded =
-                                            false
-
-                                        onJoinChannel(
-                                            channel
-                                        )
-                                    }
-                                )
-                            }
-                        }
                     }
                 }
 
                 Spacer(
-                    modifier =
-                        Modifier.height(8.dp)
+                    Modifier.height(
+                        10.dp
+                    )
                 )
 
                 Button(
 
-                    onClick = {
-                        onOpenCreateChannel()
-                    },
+                    onClick =
+                        onOpenChannels,
 
                     enabled =
                         connected,
 
                     modifier =
                         Modifier.fillMaxWidth()
+
                 ) {
 
                     Text(
-                        "＋ 创建频道"
-                    )
-                }
-
-                Spacer(
-                    modifier =
-                        Modifier.height(8.dp)
-                )
-
-                OutlinedButton(
-
-                    onClick = {
-                        onOpenDeleteChannel()
-                    },
-
-                    enabled =
-                        connected &&
-                                currentChannel != "public",
-
-                    modifier =
-                        Modifier.fillMaxWidth()
-                ) {
-
-                    Text(
-                        "删除当前频道"
-                    )
-                }
-
-                if (
-                    channelMessage.isNotBlank()
-                ) {
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(7.dp)
-                    )
-
-                    Text(
-                        text =
-                            channelMessage,
-
-                        fontSize =
-                            13.sp,
-
-                        color =
-                            Color.Gray
+                        "频道管理"
                     )
                 }
             }
         }
 
-        Spacer(
-            modifier =
-                Modifier.height(14.dp)
-        )
-
         /*
          * ========================================================
-         * 连接状态
+         * 第一排：在线人员 + 网络状态
+         *
+         * 网络状态直接显示在首页，
+         * 不再做网络二级页面。
          * ========================================================
          */
 
         Row(
-            verticalAlignment =
-                Alignment.CenterVertically
+
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    10.dp
+                )
         ) {
+
+            FeatureCard(
+
+                icon =
+                    "👥",
+
+                title =
+                    "在线人员",
+
+                value =
+                    "$currentOnlineCount 人",
+
+                onClick =
+                    onOpenUsers,
+
+                modifier =
+                    Modifier.weight(1f)
+            )
+
+            FeatureCard(
+
+                icon =
+                    "📶",
+
+                title =
+                    "网络状态",
+
+                value =
+                    networkType,
+
+                onClick = {},
+
+                modifier =
+                    Modifier.weight(1f),
+
+                enabled =
+                    false
+            )
+        }
+
+        /*
+         * 第二排
+         */
+
+        Row(
+
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    10.dp
+                )
+        ) {
+
+            FeatureCard(
+
+                icon =
+                    "⚙️",
+
+                title =
+                    "设置",
+
+                value =
+                    "昵称与应用信息",
+
+                onClick =
+                    onOpenSettings,
+
+                modifier =
+                    Modifier.weight(1f)
+            )
+
+            FeatureCard(
+
+                icon =
+                    "🎙",
+
+                title =
+                    "实时通话",
+
+                value =
+
+                    if (
+                        connected
+                    ) {
+
+                        "按住底部说话"
+
+                    } else {
+
+                        "连接后使用"
+                    },
+
+                onClick = {},
+
+                modifier =
+                    Modifier.weight(1f),
+
+                enabled =
+                    false
+            )
+        }
+
+        /*
+         * 在线提示
+         */
+
+        if (
+            connected
+        ) {
+
+            Card(
+
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                shape =
+                    RoundedCornerShape(
+                        18.dp
+                    )
+            ) {
+
+                Row(
+
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(15.dp),
+
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
+
+                    Text(
+                        "●",
+                        fontSize =
+                            15.sp
+                    )
+
+                    Spacer(
+                        Modifier.width(
+                            8.dp
+                        )
+                    )
+
+                    Column {
+
+                        Text(
+
+                            "服务器连接正常",
+
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+
+                        Text(
+
+                            "当前频道：$currentChannel",
+
+                            fontSize =
+                                12.sp,
+
+                            color =
+                                Color.Gray
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(
+            Modifier.height(
+                6.dp
+            )
+        )
+    }
+}
+
+/*
+ * ================================================================
+ * 在线人员
+ * ================================================================
+ */
+
+@Composable
+private fun UsersPage(
+    modifier: Modifier,
+    connected: Boolean,
+    currentChannel: String,
+    currentOnlineCount: Int,
+    onBack: () -> Unit
+) {
+
+    Column(
+
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(
+                    rememberScrollState()
+                )
+                .padding(16.dp),
+
+        verticalArrangement =
+            Arrangement.spacedBy(
+                12.dp
+            )
+    ) {
+
+        PageHeader(
+
+            title =
+                "在线人员",
+
+            subtitle =
+                "频道：$currentChannel",
+
+            onBack =
+                onBack
+        )
+
+        InfoCard(
+
+            title =
+                "当前在线人数",
+
+            value =
+
+                if (
+                    connected
+                ) {
+
+                    "$currentOnlineCount 人"
+
+                } else {
+
+                    "未连接"
+                },
+
+            extra =
+                "当前 V19 服务器提供的是频道在线人数"
+        )
+
+        Card(
+
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            shape =
+                RoundedCornerShape(
+                    18.dp
+                )
+        ) {
+
+            Column(
+
+                Modifier.padding(
+                    16.dp
+                )
+            ) {
+
+                Text(
+
+                    "在线成员",
+
+                    fontSize =
+                        17.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+                Spacer(
+                    Modifier.height(
+                        8.dp
+                    )
+                )
+
+                Text(
+
+                    "当前服务端协议还没有返回逐个用户昵称的接口，" +
+                            "所以这里暂时显示频道总人数。",
+
+                    fontSize =
+                        13.sp,
+
+                    color =
+                        Color.Gray
+                )
+            }
+        }
+    }
+}
+
+/*
+ * ================================================================
+ * 频道
+ * ================================================================
+ */
+
+@Composable
+private fun ChannelsPage(
+    modifier: Modifier,
+    connected: Boolean,
+    currentChannel: String,
+    currentPrivate: Boolean,
+    channels: List<ChannelUiInfo>,
+    onBack: () -> Unit,
+    onRefresh: () -> Unit,
+    onSelectChannel: (ChannelUiInfo) -> Unit,
+    onOpenCreate: () -> Unit,
+    onOpenDelete: () -> Unit
+) {
+
+    Column(
+
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(
+                    rememberScrollState()
+                )
+                .padding(16.dp),
+
+        verticalArrangement =
+            Arrangement.spacedBy(
+                10.dp
+            )
+    ) {
+
+        PageHeader(
+
+            title =
+                "频道",
+
+            subtitle =
+                "切换和管理频道",
+
+            onBack =
+                onBack
+        )
+
+        Row(
+
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    8.dp
+                )
+        ) {
+
+            Button(
+
+                onClick =
+                    onOpenCreate,
+
+                enabled =
+                    connected,
+
+                modifier =
+                    Modifier.weight(1f)
+
+            ) {
+
+                Text(
+                    "＋ 创建"
+                )
+            }
+
+            OutlinedButton(
+
+                onClick =
+                    onRefresh,
+
+                enabled =
+                    connected,
+
+                modifier =
+                    Modifier.weight(1f)
+
+            ) {
+
+                Text(
+                    "刷新"
+                )
+            }
+        }
+
+        OutlinedButton(
+
+            onClick =
+                onOpenDelete,
+
+            enabled =
+                connected &&
+                        currentChannel !=
+                        "public",
+
+            modifier =
+                Modifier.fillMaxWidth()
+
+        ) {
+
+            Text(
+                "删除当前频道"
+            )
+        }
+
+        if (
+            channels.isEmpty()
+        ) {
+
+            EmptyCard(
+                "暂无频道"
+            )
+        }
+
+        channels.forEach {
+
+                channel ->
+
+            Card(
+
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                shape =
+                    RoundedCornerShape(
+                        16.dp
+                    )
+            ) {
+
+                Row(
+
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(15.dp),
+
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
+
+                    Column(
+
+                        modifier =
+                            Modifier.weight(1f)
+                    ) {
+
+                        Text(
+
+                            if (
+                                channel.isPrivate
+                            ) {
+
+                                "🔒 ${channel.name}"
+
+                            } else {
+
+                                "🌐 ${channel.name}"
+                            },
+
+                            fontSize =
+                                18.sp,
+
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+
+                        Text(
+
+                            "在线 ${channel.onlineCount} 人",
+
+                            fontSize =
+                                12.sp,
+
+                            color =
+                                Color.Gray
+                        )
+                    }
+
+                    if (
+                        channel.name ==
+                        currentChannel
+                    ) {
+
+                        Text(
+
+                            "当前",
+
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+
+                    } else {
+
+                        OutlinedButton(
+
+                            onClick = {
+
+                                onSelectChannel(
+                                    channel
+                                )
+                            },
+
+                            enabled =
+                                connected
+
+                        ) {
+
+                            Text(
+
+                                if (
+                                    channel.isPrivate ||
+                                    channel.requirePassword
+                                ) {
+
+                                    "加入"
+
+                                } else {
+
+                                    "切换"
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        InfoCard(
+
+            title =
+                "当前频道",
+
+            value =
+
+                if (
+                    currentPrivate
+                ) {
+
+                    "🔒 $currentChannel"
+
+                } else {
+
+                    "🌐 $currentChannel"
+                }
+        )
+    }
+}
+
+/*
+ * ================================================================
+ * 设置
+ * ================================================================
+ */
+
+@Composable
+private fun SettingsPage(
+    modifier: Modifier,
+    nickname: String,
+    onBack: () -> Unit,
+    onOpenNickname: () -> Unit
+) {
+
+    Column(
+
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(
+                    rememberScrollState()
+                )
+                .padding(16.dp),
+
+        verticalArrangement =
+            Arrangement.spacedBy(
+                12.dp
+            )
+    ) {
+
+        PageHeader(
+
+            title =
+                "设置",
+
+            subtitle =
+                "账号与应用信息",
+
+            onBack =
+                onBack
+        )
+
+        Card(
+
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            shape =
+                RoundedCornerShape(
+                    18.dp
+                )
+        ) {
+
+            Column(
+
+                Modifier.padding(
+                    16.dp
+                )
+            ) {
+
+                Text(
+
+                    "昵称",
+
+                    fontSize =
+                        12.sp,
+
+                    color =
+                        Color.Gray
+                )
+
+                Text(
+
+                    nickname.ifBlank {
+                        "未设置"
+                    },
+
+                    fontSize =
+                        20.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+                Spacer(
+                    Modifier.height(
+                        10.dp
+                    )
+                )
+
+                OutlinedButton(
+
+                    onClick =
+                        onOpenNickname,
+
+                    modifier =
+                        Modifier.fillMaxWidth()
+
+                ) {
+
+                    Text(
+                        "修改昵称"
+                    )
+                }
+            }
+        }
+
+        InfoCard(
+
+            title =
+                "服务器",
+
+            value =
+                "兄弟服务器",
+
+            extra =
+                "服务器地址已隐藏"
+        )
+
+        InfoCard(
+
+            title =
+                "版本",
+
+            value =
+                "V20"
+        )
+
+        Text(
+
+            "当前界面不会显示服务器 IP。",
+
+            fontSize =
+                12.sp,
+
+            color =
+                Color.Gray
+        )
+    }
+}
+
+/*
+ * ================================================================
+ * PTT 底部按钮
+ * ================================================================
+ */
+
+@Composable
+private fun PttBottomBar(
+    connected: Boolean,
+    talkStatus: String,
+    pressing: Boolean,
+    currentConnected: State<Boolean>,
+    currentTalkStatus: State<String>,
+    startSpeak: State<() -> Unit>,
+    stopSpeak: State<() -> Unit>,
+    pressingState: (Boolean) -> Unit
+) {
+
+    Surface(
+
+        shadowElevation =
+            8.dp
+    ) {
+
+        Column(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(
+                        horizontal = 16.dp,
+                        vertical = 10.dp
+                    ),
+
+            horizontalAlignment =
+                Alignment.CenterHorizontally
+        ) {
+
+            Text(
+
+                when {
+
+                    !connected ->
+                        "连接服务器后即可讲话"
+
+                    talkStatus ==
+                            WalkieService.TALK_STATUS_ALLOWED ->
+                        "正在讲话 · 松开结束"
+
+                    talkStatus ==
+                            WalkieService.TALK_STATUS_REQUESTING ->
+                        "正在抢麦…请保持按住"
+
+                    talkStatus ==
+                            WalkieService.TALK_STATUS_BUSY ->
+                        "频道正在通话"
+
+                    pressing ->
+                        "讲话请求已发送"
+
+                    else ->
+                        "按住说话"
+                },
+
+                fontSize =
+                    14.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Spacer(
+                Modifier.height(
+                    7.dp
+                )
+            )
 
             Box(
 
                 modifier =
                     Modifier
-                        .size(14.dp)
-                        .clip(CircleShape)
+                        .fillMaxWidth()
+                        .height(76.dp)
+                        .clip(
+                            RoundedCornerShape(
+                                22.dp
+                            )
+                        )
                         .background(
 
-                            if (
-                                connected
-                            ) {
+                            when {
 
-                                Color.Green
+                                !connected ->
+                                    Color(0xFF9E9E9E)
 
-                            } else {
+                                talkStatus ==
+                                        WalkieService.TALK_STATUS_ALLOWED ->
+                                    Color(0xFFD32F2F)
 
-                                Color.Red
+                                talkStatus ==
+                                        WalkieService.TALK_STATUS_REQUESTING ->
+                                    Color(0xFFF57C00)
+
+                                talkStatus ==
+                                        WalkieService.TALK_STATUS_BUSY ->
+                                    Color(0xFF616161)
+
+                                pressing ->
+                                    Color(0xFFC62828)
+
+                                else ->
+                                    MaterialTheme
+                                        .colorScheme
+                                        .primary
                             }
                         )
-            )
+                        .pointerInput(Unit) {
 
-            Spacer(
-                modifier =
-                    Modifier.size(8.dp)
-            )
-
-            Text(
-                if (
-                    connected
-                ) {
-
-                    "已连接"
-
-                } else {
-
-                    "未连接"
-                }
-            )
-        }
-
-        Spacer(
-            modifier =
-                Modifier.height(12.dp)
-        )
-
-        Text(
-
-            text = when {
-
-                !connected ->
-                    "等待连接服务器"
-
-                talkAllowed ->
-                    "正在讲话..."
-
-                requesting ->
-                    "正在抢麦..."
-
-                busy ->
-                    "当前有人讲话"
-
-                else ->
-                    "按住讲话"
-            },
-
-            fontSize =
-                19.sp,
-
-            fontWeight =
-                FontWeight.Bold
-        )
-
-        Spacer(
-            modifier =
-                Modifier.height(12.dp)
-        )
-
-        /*
-         * ========================================================
-         * PTT
-         * ========================================================
-         */
-
-        Box(
-
-            modifier =
-                Modifier
-                    .size(210.dp)
-                    .clip(CircleShape)
-                    .background(
-
-                        when {
-
-                            !connected ->
-                                Color.Gray
-
-                            talkAllowed ->
-                                Color.Red
-
-                            busy ->
-                                Color.DarkGray
-
-                            requesting ->
-                                Color(0xFFFF9800)
-
-                            pressing ->
-                                Color.Red
-
-                            else ->
-                                MaterialTheme
-                                    .colorScheme
-                                    .primary
-                        }
-                    )
-                    .pointerInput(Unit) {
-
-                        awaitEachGesture {
-
-                            var localSpeaking =
-                                false
-
-                            try {
+                            awaitEachGesture {
 
                                 val down =
                                     awaitFirstDown(
@@ -2117,116 +3414,487 @@ fun WalkieScreen(
 
                                 down.consume()
 
+                                val canStart =
+                                    currentConnected.value &&
+                                            currentTalkStatus.value !=
+                                            WalkieService.TALK_STATUS_BUSY &&
+                                            currentTalkStatus.value !=
+                                            WalkieService.TALK_STATUS_ALLOWED
+
                                 if (
-                                    !currentConnected.value
+                                    !canStart
                                 ) {
+
+                                    pressingState(
+                                        false
+                                    )
+
                                     return@awaitEachGesture
                                 }
 
-                                if (
-                                    currentTalkStatus.value ==
-                                    WalkieService.TALK_STATUS_BUSY
-                                ) {
-                                    return@awaitEachGesture
-                                }
-
-                                if (
-                                    currentTalkStatus.value ==
-                                    WalkieService.TALK_STATUS_ALLOWED
-                                ) {
-                                    return@awaitEachGesture
-                                }
-
-                                pressing =
+                                /*
+                                 * 一旦手指按下，
+                                 * 开始请求抢麦。
+                                 *
+                                 * pointerInput 固定为 Unit，
+                                 * 因此状态改变不会取消当前手势。
+                                 */
+                                pressingState(
                                     true
-
-                                speakingStarted =
-                                    true
-
-                                localSpeaking =
-                                    true
-
-                                currentStartSpeaking.value()
-
-                                println(
-                                    "WALKIE V11: ★PTT DOWN★ channel=$currentChannel"
                                 )
 
-                                val pointerId =
-                                    down.id
+                                startSpeak
+                                    .value
+                                    .invoke()
 
-                                var finished =
-                                    false
+                                try {
 
-                                while (
-                                    !finished
-                                ) {
-
-                                    val event =
-                                        awaitPointerEvent()
-
-                                    val change =
-                                        event.changes
-                                            .firstOrNull {
-                                                it.id ==
-                                                        pointerId
-                                            }
-
-                                    if (
-                                        change == null
+                                    while (
+                                        true
                                     ) {
 
-                                        finished =
-                                            true
+                                        val event =
+                                            awaitPointerEvent()
 
-                                        continue
-                                    }
+                                        val change =
+                                            event
+                                                .changes
+                                                .firstOrNull {
+                                                    it.id ==
+                                                            down.id
+                                                }
 
-                                    if (
-                                        !change.pressed
-                                    ) {
+                                        if (
+                                            change ==
+                                            null ||
+                                            !change.pressed
+                                        ) {
+
+                                            change?.consume()
+
+                                            break
+                                        }
 
                                         change.consume()
-
-                                        finished =
-                                            true
-
-                                        continue
                                     }
 
-                                    change.consume()
-                                }
+                                } finally {
 
-                            } catch (
-                                e: Exception
-                            ) {
-
-                                println(
-                                    "WALKIE V11: PTT异常=${e.message}"
-                                )
-
-                            } finally {
-
-                                pressing =
-                                    false
-
-                                if (
-                                    localSpeaking &&
-                                    speakingStarted
-                                ) {
-
-                                    speakingStarted =
+                                    pressingState(
                                         false
-
-                                    currentStopSpeaking.value()
-
-                                    println(
-                                        "WALKIE V11: ★PTT STOP★"
                                     )
+
+                                    stopSpeak
+                                        .value
+                                        .invoke()
                                 }
                             }
-                        }
-                    },
+                        },
+
+                contentAlignment =
+                    Alignment.Center
+
+            ) {
+
+                Row(
+
+                    verticalAlignment =
+                        Alignment.CenterVertically,
+
+                    horizontalArrangement =
+                        Arrangement.Center
+                ) {
+
+                    Text(
+
+                        "🎙",
+
+                        fontSize =
+                            30.sp
+                    )
+
+                    Spacer(
+                        Modifier.width(
+                            12.dp
+                        )
+                    )
+
+                    Text(
+
+                        when {
+
+                            !connected ->
+                                "连接后使用"
+
+                            talkStatus ==
+                                    WalkieService.TALK_STATUS_ALLOWED ->
+                                "松开结束讲话"
+
+                            talkStatus ==
+                                    WalkieService.TALK_STATUS_REQUESTING ->
+                                "抢麦中 · 不要松开"
+
+                            talkStatus ==
+                                    WalkieService.TALK_STATUS_BUSY ->
+                                "忙线"
+
+                            else ->
+                                "按住说话"
+                        },
+
+                        fontSize =
+                            22.sp,
+
+                        fontWeight =
+                            FontWeight.Bold,
+
+                        color =
+                            Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+/*
+ * ================================================================
+ * 功能卡片
+ * ================================================================
+ */
+
+@Composable
+private fun FeatureCard(
+    icon: String,
+    title: String,
+    value: String,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    enabled: Boolean = true
+) {
+
+    Card(
+
+        modifier =
+            modifier,
+
+        shape =
+            RoundedCornerShape(
+                18.dp
+            ),
+
+        colors =
+            CardDefaults.cardColors(
+
+                containerColor =
+                    MaterialTheme
+                        .colorScheme
+                        .surfaceVariant
+            )
+    ) {
+
+        Column(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp)
+        ) {
+
+            Text(
+
+                icon,
+
+                fontSize =
+                    24.sp
+            )
+
+            Spacer(
+                Modifier.height(
+                    4.dp
+                )
+            )
+
+            Text(
+
+                title,
+
+                fontSize =
+                    16.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Text(
+
+                value,
+
+                fontSize =
+                    12.sp,
+
+                color =
+                    Color.Gray
+            )
+
+            Spacer(
+                Modifier.height(
+                    8.dp
+                )
+            )
+
+            Button(
+
+                onClick =
+                    onClick,
+
+                enabled =
+                    enabled,
+
+                modifier =
+                    Modifier.fillMaxWidth()
+
+            ) {
+
+                Text(
+                    "打开"
+                )
+            }
+        }
+    }
+}
+
+/*
+ * ================================================================
+ * 页面标题
+ * ================================================================
+ */
+
+@Composable
+private fun PageHeader(
+    title: String,
+    subtitle: String,
+    onBack: () -> Unit
+) {
+
+    Row(
+
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        verticalAlignment =
+            Alignment.CenterVertically
+    ) {
+
+        TextButton(
+
+            onClick =
+                onBack
+
+        ) {
+
+            Text(
+                "‹ 返回"
+            )
+        }
+
+        Column(
+
+            modifier =
+                Modifier.weight(1f)
+        ) {
+
+            Text(
+
+                title,
+
+                fontSize =
+                    24.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Text(
+
+                subtitle,
+
+                fontSize =
+                    12.sp,
+
+                color =
+                    Color.Gray
+            )
+        }
+    }
+}
+
+/*
+ * ================================================================
+ * 在线状态
+ * ================================================================
+ */
+
+@Composable
+private fun StatusPill(
+    connected: Boolean
+) {
+
+    Card(
+
+        shape =
+            RoundedCornerShape(
+                50.dp
+            ),
+
+        colors =
+            CardDefaults.cardColors(
+
+                containerColor =
+                    if (
+                        connected
+                    ) {
+
+                        MaterialTheme
+                            .colorScheme
+                            .primaryContainer
+
+                    } else {
+
+                        MaterialTheme
+                            .colorScheme
+                            .surfaceVariant
+                    }
+            )
+    ) {
+
+        Text(
+
+            if (
+                connected
+            ) {
+
+                "🟢 在线"
+
+            } else {
+
+                "🔴 离线"
+            },
+
+            modifier =
+                Modifier.padding(
+                    horizontal = 12.dp,
+                    vertical = 7.dp
+                ),
+
+            fontWeight =
+                FontWeight.Bold
+        )
+    }
+}
+
+/*
+ * ================================================================
+ * 信息卡
+ * ================================================================
+ */
+
+@Composable
+private fun InfoCard(
+    title: String,
+    value: String,
+    extra: String = ""
+) {
+
+    Card(
+
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        shape =
+            RoundedCornerShape(
+                18.dp
+            )
+    ) {
+
+        Column(
+
+            Modifier.padding(
+                16.dp
+            )
+        ) {
+
+            Text(
+
+                title,
+
+                fontSize =
+                    12.sp,
+
+                color =
+                    Color.Gray
+            )
+
+            Text(
+
+                value,
+
+                fontSize =
+                    18.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            if (
+                extra.isNotBlank()
+            ) {
+
+                Text(
+
+                    extra,
+
+                    fontSize =
+                        12.sp,
+
+                    color =
+                        Color.Gray
+                )
+            }
+        }
+    }
+}
+
+/*
+ * ================================================================
+ * 空页面
+ * ================================================================
+ */
+
+@Composable
+private fun EmptyCard(
+    text: String
+) {
+
+    Card(
+
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        shape =
+            RoundedCornerShape(
+                18.dp
+            )
+    ) {
+
+        Box(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        30.dp
+                    ),
 
             contentAlignment =
                 Alignment.Center
@@ -2234,58 +3902,11 @@ fun WalkieScreen(
 
             Text(
 
-                text = when {
-
-                    !connected ->
-                        "未连接"
-
-                    talkAllowed ->
-                        "松开"
-
-                    requesting ->
-                        "抢麦中"
-
-                    busy ->
-                        "有人讲话"
-
-                    pressing ->
-                        "讲话中"
-
-                    else ->
-                        "按住\n讲话"
-                },
-
-                fontSize =
-                    27.sp,
-
-                fontWeight =
-                    FontWeight.Bold,
+                text,
 
                 color =
-                    Color.White,
-
-                textAlign =
-                    TextAlign.Center
+                    Color.Gray
             )
         }
-
-        Spacer(
-            modifier =
-                Modifier.height(14.dp)
-        )
-
-        Text(
-            text =
-                "WALKIE V11 · $currentChannel · ${currentChannelOnlineCount}人",
-
-            fontSize =
-                14.sp,
-
-            color =
-                Color.Gray,
-
-            textAlign =
-                TextAlign.Center
-        )
     }
 }

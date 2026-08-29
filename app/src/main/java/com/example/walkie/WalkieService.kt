@@ -7,7 +7,9 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.AudioFormat
@@ -18,8 +20,12 @@ import android.media.MediaRecorder
 import android.media.audiofx.AcousticEchoCanceler
 import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,16 +40,16 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketException
 import java.net.SocketTimeoutException
+import java.util.UUID
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
-import kotlin.math.max
 import kotlin.math.min
 
 class WalkieService : Service() {
 
     companion object {
 
-        private const val WALKIE_VERSION = "V11"
+        private const val WALKIE_VERSION = "V20"
 
         const val ACTION_START =
             "com.example.walkie.ACTION_START"
@@ -83,6 +89,9 @@ class WalkieService : Service() {
 
         const val EXTRA_SERVER_IP =
             "com.example.walkie.EXTRA_SERVER_IP"
+
+        const val EXTRA_DEVICE_ID =
+            "com.example.walkie.EXTRA_DEVICE_ID"
 
         const val EXTRA_CONNECTED =
             "com.example.walkie.EXTRA_CONNECTED"
@@ -147,32 +156,79 @@ class WalkieService : Service() {
         private const val SAMPLE_RATE =
             16000
 
+        /*
+         * 20ms PCM
+         * 16000 Hz * 20ms = 320 samples
+         * 320 * 2 = 640 bytes
+         */
         private const val AUDIO_PACKET_SIZE =
-            960
+            640
 
         private const val KEEP_ALIVE_INTERVAL =
             5000L
 
         private const val SOCKET_RECEIVE_TIMEOUT =
-            1000
+            500
 
         private const val SERVER_ACTIVITY_TIMEOUT =
-            60000L
+            30000L
 
         private const val INITIAL_RECONNECT_INTERVAL =
-            1000L
+            300L
 
         private const val MAX_RECONNECT_INTERVAL =
-            5000L
+            1500L
 
+        /*
+         * ============================================================
+         * V19 播放缓冲
+         * ============================================================
+         *
+         * 重点修改：
+         *
+         * V18 = 5包再起播
+         * V19 = 2包再起播
+         *
+         * 每包约20ms。
+         *
+         * 2包约40ms。
+         *
+         * 目的是减少讲话开头被等待缓冲时间吃掉的问题。
+         */
         private const val PLAYBACK_QUEUE_CAPACITY =
-            10
+            40
 
         private const val PLAYBACK_START_BUFFER_PACKETS =
             2
 
+        /*
+         * UNDERRUN 后只等待3包再恢复，
+         * 不把等待时间做得过长。
+         */
+        private const val PLAYBACK_RECOVERY_BUFFER_PACKETS =
+            3
+
+        /*
+         * 超过24包就丢最旧数据，
+         * 防止弱网恢复后延迟越积越大。
+         */
+        private const val PLAYBACK_MAX_QUEUE_PACKETS =
+            24
+
         private const val PLAYBACK_GAIN =
-            1.50f
+            1.0f
+
+        private const val MAX_OPUS_PACKET_SIZE =
+            1208
+
+        private const val MAX_DECODED_PCM_SAMPLES =
+            4096
+
+        private const val DEVICE_PREFS_NAME =
+            "walkie_device_identity"
+
+        private const val DEVICE_ID_KEY =
+            "device_id"
 
         private const val MSG_HELLO =
             "WALKIE_HELLO"
@@ -232,99 +288,773 @@ class WalkieService : Service() {
                     Dispatchers.IO
         )
 
-    @Volatile
-    private var udpSocket: DatagramSocket? = null
+    private lateinit var devicePreferences:
+            SharedPreferences
 
     @Volatile
-    private var serverAddress: InetAddress? = null
+    private var deviceId =
+        ""
 
     @Volatile
-    private var serverIp: String? = null
-
-    private var networkJob: Job? = null
-    private var recordJob: Job? = null
-    private var playbackJob: Job? = null
+    private var udpSocket:
+            DatagramSocket? =
+        null
 
     @Volatile
-    private var audioTrack: AudioTrack? = null
+    private var serverAddress:
+            InetAddress? =
+        null
 
     @Volatile
-    private var audioRecord: AudioRecord? = null
+    private var serverIp:
+            String? =
+        null
 
-    private var noiseSuppressor: NoiseSuppressor? = null
+    @Volatile
+    private var isConnected =
+        false
 
-    private var automaticGainControl:
-            AutomaticGainControl? = null
+    @Volatile
+    private var isNetworkAvailable =
+        true
 
-    private var acousticEchoCanceler:
-            AcousticEchoCanceler? = null
+    @Volatile
+    private var activeNetwork:
+            Network? =
+        null
+
+    private var networkCallback:
+            ConnectivityManager.NetworkCallback? =
+        null
+
+    private var networkJob:
+            Job? =
+        null
+
+    private var channelRefreshJob:
+            Job? =
+        null
+
+    private var backgroundDiagnosticJob:
+            Job? =
+        null
+
+    @Volatile
+    private var backgroundHeartbeatCount =
+        0L
+
+    @Volatile
+    private var udpKeepAliveCount =
+        0L
+
+    @Volatile
+    private var udpReceiveCount =
+        0L
+
+    /*
+     * ============================================================
+     * 播放
+     * ============================================================
+     */
+
+    @Volatile
+    private var audioTrack:
+            AudioTrack? =
+        null
+
+    private var playbackJob:
+            Job? =
+        null
 
     private val playbackQueue =
         ArrayBlockingQueue<ByteArray>(
             PLAYBACK_QUEUE_CAPACITY
         )
 
-    @Volatile
-    private var isConnected = false
+    private val audioTrackLock =
+        Any()
+
+    private val playbackWorkerLock =
+        Any()
 
     @Volatile
-    private var talkRequesting = false
+    private var playbackWorkerStarting =
+        false
 
     @Volatile
-    private var talkAllowed = false
+    private var playbackRecoveryRequested =
+        false
 
     @Volatile
-    private var isSpeaking = false
+    private var lastUnderrunCount =
+        0
+
+    /*
+     * ============================================================
+     * 录音
+     * ============================================================
+     */
 
     @Volatile
-    private var shuttingDown = false
+    private var audioRecord:
+            AudioRecord? =
+        null
+
+    private var recordJob:
+            Job? =
+        null
+
+    private val audioRecordLock =
+        Any()
+
+    private var noiseSuppressor:
+            NoiseSuppressor? =
+        null
+
+    private var automaticGainControl:
+            AutomaticGainControl? =
+        null
+
+    private var acousticEchoCanceler:
+            AcousticEchoCanceler? =
+        null
+
+    /*
+     * ============================================================
+     * Opus
+     * ============================================================
+     */
+
+    private var opusEncoder:
+            OpusEncoder? =
+        null
+
+    private var opusDecoder:
+            OpusDecoder? =
+        null
+
+    /*
+     * ============================================================
+     * 状态
+     * ============================================================
+     */
 
     @Volatile
-    private var lastKeepAliveTime = 0L
+    private var talkRequesting =
+        false
 
     @Volatile
-    private var lastServerActivityTime = 0L
+    private var talkAllowed =
+        false
 
     @Volatile
-    private var currentChannel = "public"
+    private var isSpeaking =
+        false
 
     @Volatile
-    private var currentChannelOnlineCount = 0
+    private var shuttingDown =
+        false
 
     @Volatile
-    private var currentChannelPrivate = false
+    private var lastKeepAliveTime =
+        0L
 
     @Volatile
-    private var currentChannelRequirePassword = false
+    private var lastServerActivityTime =
+        0L
 
     @Volatile
-    private var channelSwitching = false
+    private var currentChannel =
+        "public"
+
+    @Volatile
+    private var reconnectChannel =
+        ""
+
+    @Volatile
+    private var reconnectChannelPassword =
+        ""
+
+    @Volatile
+    private var currentChannelOnlineCount =
+        0
+
+    @Volatile
+    private var currentChannelPrivate =
+        false
+
+    @Volatile
+    private var currentChannelRequirePassword =
+        false
+
+    @Volatile
+    private var channelSwitching =
+        false
 
     @Volatile
     private var cachedChannelInfoList =
         ArrayList<ChannelInfo>()
 
-    private var pendingCreateChannelName = ""
+    private var pendingCreateChannelName =
+        ""
 
-    private var pendingCreateChannelPassword = ""
+    private var pendingCreateChannelPassword =
+        ""
+
+    private var wakeLock:
+            PowerManager.WakeLock? =
+        null
+
+    /*
+     * ============================================================
+     * Service
+     * ============================================================
+     */
 
     override fun onCreate() {
 
         super.onCreate()
 
-        createNotificationChannel()
+        devicePreferences =
+            getSharedPreferences(
+                DEVICE_PREFS_NAME,
+                Context.MODE_PRIVATE
+            )
 
-        startForeground(
-            NOTIFICATION_ID,
-            createNotification()
+        deviceId =
+            loadOrCreateDeviceId()
+
+        println(
+            "WALKIE $WALKIE_VERSION: Service启动 DeviceID=${deviceLogId()}"
         )
 
-        setupSpeakerOutput()
+        initializeOpus()
+
+        createNotificationChannel()
+
+        startWalkieForeground()
+
+        acquireWakeLock()
+
+        /*
+         * 只在Service启动时初始化通信音频环境。
+         */
+        configureCommunicationAudioOnce()
+
+        registerNetworkCallback()
+
+        startBackgroundDiagnostic()
 
         println(
             "WALKIE $WALKIE_VERSION: Service started"
         )
     }
+
+    /*
+     * ============================================================
+     * 前台服务
+     * ============================================================
+     */
+
+    private fun startWalkieForeground() {
+
+        try {
+
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q
+            ) {
+
+                startForeground(
+                    NOTIFICATION_ID,
+                    createNotification(),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                )
+
+            } else {
+
+                startForeground(
+                    NOTIFICATION_ID,
+                    createNotification()
+                )
+            }
+
+            println(
+                "WALKIE $WALKIE_VERSION: 前台服务启动成功"
+            )
+
+        } catch (e: Exception) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: 前台服务启动失败=${e.message}"
+            )
+        }
+    }
+
+    /*
+     * ============================================================
+     * DeviceID
+     * ============================================================
+     */
+
+    private fun loadOrCreateDeviceId():
+            String {
+
+        val saved =
+            try {
+
+                devicePreferences
+                    .getString(
+                        DEVICE_ID_KEY,
+                        null
+                    )
+                    ?.trim()
+
+            } catch (_: Exception) {
+
+                null
+            }
+
+        if (
+            !saved.isNullOrBlank()
+        ) {
+
+            return saved
+        }
+
+        val newId =
+            "WALKIE-" +
+                    UUID.randomUUID()
+                        .toString()
+                        .replace(
+                            "-",
+                            ""
+                        )
+                        .uppercase()
+
+        try {
+
+            devicePreferences
+                .edit()
+                .putString(
+                    DEVICE_ID_KEY,
+                    newId
+                )
+                .apply()
+
+        } catch (_: Exception) {
+        }
+
+        return newId
+    }
+
+    private fun deviceLogId():
+            String {
+
+        return if (
+            deviceId.length > 8
+        ) {
+
+            deviceId.take(8) +
+                    "..."
+
+        } else {
+
+            deviceId
+        }
+    }
+
+    /*
+     * ============================================================
+     * Opus
+     * ============================================================
+     */
+
+    private fun initializeOpus() {
+
+        try {
+
+            opusEncoder =
+                OpusEncoder()
+
+            println(
+                "WALKIE $WALKIE_VERSION: OpusEncoder初始化完成"
+            )
+
+        } catch (e: Throwable) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: OpusEncoder初始化失败=${e.message}"
+            )
+
+            opusEncoder = null
+        }
+
+        try {
+
+            opusDecoder =
+                OpusDecoder()
+
+            println(
+                "WALKIE $WALKIE_VERSION: OpusDecoder初始化完成"
+            )
+
+        } catch (e: Throwable) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: OpusDecoder初始化失败=${e.message}"
+            )
+
+            opusDecoder = null
+        }
+    }
+
+    /*
+     * ============================================================
+     * 后台诊断
+     * ============================================================
+     */
+
+    private fun startBackgroundDiagnostic() {
+
+        if (
+            backgroundDiagnosticJob?.isActive == true
+        ) {
+
+            return
+        }
+
+        backgroundDiagnosticJob =
+            serviceScope.launch {
+
+                while (
+                    serviceScope.isActive &&
+                    !shuttingDown
+                ) {
+
+                    delay(5000L)
+
+                    backgroundHeartbeatCount++
+
+                    println(
+                        "WALKIE BG: alive " +
+                                "count=$backgroundHeartbeatCount " +
+                                "connected=$isConnected " +
+                                "keepalive=$udpKeepAliveCount " +
+                                "rx=$udpReceiveCount " +
+                                "queue=${playbackQueue.size} " +
+                                "device=${deviceLogId()}"
+                    )
+                }
+            }
+    }
+
+    private fun stopBackgroundDiagnostic() {
+
+        backgroundDiagnosticJob?.cancel()
+
+        backgroundDiagnosticJob =
+            null
+    }
+
+    /*
+     * ============================================================
+     * 音频通信路由
+     * ============================================================
+     */
+
+    private fun configureCommunicationAudioOnce() {
+
+        try {
+
+            val audioManager =
+                getSystemService(
+                    Context.AUDIO_SERVICE
+                ) as AudioManager
+
+            @Suppress("DEPRECATION")
+            audioManager.mode =
+                AudioManager.MODE_IN_COMMUNICATION
+
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.S
+            ) {
+
+                val speaker =
+                    audioManager
+                        .availableCommunicationDevices
+                        .firstOrNull {
+                            it.type ==
+                                    AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+                        }
+
+                if (
+                    speaker != null
+                ) {
+
+                    try {
+
+                        val result =
+                            audioManager
+                                .setCommunicationDevice(
+                                    speaker
+                                )
+
+                        println(
+                            "WALKIE AUDIO: 初始化通信扬声器 result=$result"
+                        )
+
+                    } catch (e: Exception) {
+
+                        println(
+                            "WALKIE AUDIO: 设置通信扬声器失败=${e.message}"
+                        )
+                    }
+
+                } else {
+
+                    println(
+                        "WALKIE AUDIO: 未找到通信扬声器"
+                    )
+                }
+
+            } else {
+
+                @Suppress("DEPRECATION")
+                audioManager.isSpeakerphoneOn =
+                    true
+
+                println(
+                    "WALKIE AUDIO: 旧系统扬声器已开启"
+                )
+            }
+
+        } catch (e: Exception) {
+
+            println(
+                "WALKIE AUDIO: 初始化音频路由异常=${e.message}"
+            )
+        }
+    }
+
+    /*
+     * 兼容旧代码。
+     *
+     * V19 不在录音结束、AudioTrack创建等地方
+     * 反复修改 AudioManager.mode。
+     */
+    private fun setupSpeakerOutput() {
+    }
+
+    private fun findBuiltInSpeaker():
+            AudioDeviceInfo? {
+
+        return try {
+
+            if (
+                Build.VERSION.SDK_INT <
+                Build.VERSION_CODES.M
+            ) {
+
+                null
+
+            } else {
+
+                val audioManager =
+                    getSystemService(
+                        Context.AUDIO_SERVICE
+                    ) as AudioManager
+
+                audioManager
+                    .getDevices(
+                        AudioManager.GET_DEVICES_OUTPUTS
+                    )
+                    .firstOrNull {
+                        it.type ==
+                                AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+                    }
+            }
+
+        } catch (_: Exception) {
+
+            null
+        }
+    }
+
+    /*
+     * ============================================================
+     * 网络
+     * ============================================================
+     */
+
+    private fun registerNetworkCallback() {
+
+        if (
+            networkCallback != null
+        ) {
+
+            return
+        }
+
+        val connectivityManager =
+            getSystemService(
+                Context.CONNECTIVITY_SERVICE
+            ) as ConnectivityManager
+
+        networkCallback =
+            object :
+                ConnectivityManager.NetworkCallback() {
+
+                override fun onAvailable(
+                    network: Network
+                ) {
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: 网络可用=$network"
+                    )
+
+                    activeNetwork =
+                        network
+
+                    isNetworkAvailable =
+                        true
+
+                    val ip =
+                        serverIp
+
+                    if (
+                        !shuttingDown &&
+                        !ip.isNullOrBlank()
+                    ) {
+
+                        serviceScope.launch {
+
+                            delay(150L)
+
+                            if (
+                                shuttingDown
+                            ) {
+
+                                return@launch
+                            }
+
+                            if (
+                                isConnected &&
+                                udpSocket?.isClosed == false
+                            ) {
+
+                                return@launch
+                            }
+
+                            closeSocket()
+
+                            networkJob?.cancel()
+
+                            networkJob =
+                                null
+
+                            startConnection(ip)
+                        }
+                    }
+                }
+
+                override fun onLost(
+                    network: Network
+                ) {
+
+                    if (
+                        activeNetwork !=
+                        network
+                    ) {
+
+                        return
+                    }
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: 当前网络丢失=$network"
+                    )
+
+                    activeNetwork =
+                        null
+
+                    isNetworkAvailable =
+                        false
+
+                    setConnected(false)
+
+                    closeSocket()
+                }
+
+                override fun onCapabilitiesChanged(
+                    network: Network,
+                    networkCapabilities: NetworkCapabilities
+                ) {
+
+                    if (
+                        activeNetwork ==
+                        network
+                    ) {
+
+                        println(
+                            "WALKIE $WALKIE_VERSION: 网络能力变化"
+                        )
+                    }
+                }
+            }
+
+        try {
+
+            connectivityManager
+                .registerDefaultNetworkCallback(
+                    networkCallback!!
+                )
+
+        } catch (e: Exception) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: 网络监听失败=${e.message}"
+            )
+
+            networkCallback =
+                null
+        }
+    }
+
+    private fun unregisterNetworkCallback() {
+
+        val callback =
+            networkCallback
+                ?: return
+
+        try {
+
+            val connectivityManager =
+                getSystemService(
+                    Context.CONNECTIVITY_SERVICE
+                ) as ConnectivityManager
+
+            connectivityManager
+                .unregisterNetworkCallback(
+                    callback
+                )
+
+        } catch (_: Exception) {
+        }
+
+        networkCallback =
+            null
+
+        activeNetwork =
+            null
+    }
+
+    /*
+     * ============================================================
+     * onStartCommand
+     * ============================================================
+     */
 
     override fun onStartCommand(
         intent: Intent?,
@@ -332,21 +1062,56 @@ class WalkieService : Service() {
         startId: Int
     ): Int {
 
-        when (intent?.action) {
+        when (
+            intent?.action
+        ) {
 
             ACTION_START -> {
 
-                shuttingDown = false
+                shuttingDown =
+                    false
 
-                val ip =
+                val incomingIp =
                     intent.getStringExtra(
                         EXTRA_SERVER_IP
                     )
 
-                if (!ip.isNullOrBlank()) {
+                val incomingDeviceId =
+                    intent.getStringExtra(
+                        EXTRA_DEVICE_ID
+                    )?.trim()
+
+                if (
+                    !incomingDeviceId.isNullOrBlank()
+                ) {
+
+                    deviceId =
+                        incomingDeviceId
+
+                    try {
+
+                        devicePreferences
+                            .edit()
+                            .putString(
+                                DEVICE_ID_KEY,
+                                deviceId
+                            )
+                            .apply()
+
+                    } catch (_: Exception) {
+                    }
+                }
+
+                println(
+                    "WALKIE $WALKIE_VERSION: ACTION_START device=${deviceLogId()}"
+                )
+
+                if (
+                    !incomingIp.isNullOrBlank()
+                ) {
 
                     startConnection(
-                        ip.trim()
+                        incomingIp.trim()
                     )
                 }
             }
@@ -354,6 +1119,7 @@ class WalkieService : Service() {
             ACTION_STOP -> {
 
                 stopAll()
+
                 stopSelf()
             }
 
@@ -384,7 +1150,9 @@ class WalkieService : Service() {
                         EXTRA_CHANNEL_PASSWORD
                     ) ?: ""
 
-                if (!channel.isNullOrBlank()) {
+                if (
+                    !channel.isNullOrBlank()
+                ) {
 
                     joinChannel(
                         channel.trim(),
@@ -411,7 +1179,9 @@ class WalkieService : Service() {
                         false
                     )
 
-                if (!channel.isNullOrBlank()) {
+                if (
+                    !channel.isNullOrBlank()
+                ) {
 
                     createChannel(
                         channel.trim(),
@@ -428,7 +1198,9 @@ class WalkieService : Service() {
                         EXTRA_CHANNEL_NAME
                     )
 
-                if (!channel.isNullOrBlank()) {
+                if (
+                    !channel.isNullOrBlank()
+                ) {
 
                     deleteChannel(
                         channel.trim()
@@ -442,65 +1214,6 @@ class WalkieService : Service() {
 
     /*
      * ============================================================
-     * 请求频道列表
-     * ============================================================
-     */
-
-    private fun requestChannelList() {
-
-        if (!isConnected) {
-            return
-        }
-
-        println(
-            "WALKIE $WALKIE_VERSION: ★请求频道列表★"
-        )
-
-        sendMessageAsync(
-            MSG_CHANNEL_LIST
-        )
-    }
-
-    /*
-     * ============================================================
-     * 删除频道
-     * ============================================================
-     */
-
-    private fun deleteChannel(
-        channel: String
-    ) {
-
-        if (!isConnected) {
-            return
-        }
-
-        if (channel.isBlank()) {
-            return
-        }
-
-        if (
-            channel == "public"
-        ) {
-
-            broadcastChannelStatus(
-                "public 频道不能删除"
-            )
-
-            return
-        }
-
-        println(
-            "WALKIE $WALKIE_VERSION: ★发送删除频道=$channel★"
-        )
-
-        sendMessageAsync(
-            "WALKIE_DELETE_CHANNEL:$channel"
-        )
-    }
-
-    /*
-     * ============================================================
      * 连接
      * ============================================================
      */
@@ -509,16 +1222,18 @@ class WalkieService : Service() {
         ip: String
     ) {
 
-        serverIp = ip
+        serverIp =
+            ip
 
         if (
             networkJob?.isActive == true
         ) {
+
             return
         }
 
         println(
-            "WALKIE $WALKIE_VERSION: 开始连接 $ip:$SERVER_PORT"
+            "WALKIE $WALKIE_VERSION: 开始连接 $ip:$SERVER_PORT device=${deviceLogId()}"
         )
 
         networkJob =
@@ -528,7 +1243,7 @@ class WalkieService : Service() {
                     INITIAL_RECONNECT_INTERVAL
 
                 while (
-                    isActive &&
+                    serviceScope.isActive &&
                     !shuttingDown
                 ) {
 
@@ -541,29 +1256,51 @@ class WalkieService : Service() {
 
                     } catch (e: Exception) {
 
-                        println(
-                            "WALKIE $WALKIE_VERSION: 网络异常=${e.message}"
-                        )
+                        if (
+                            !shuttingDown
+                        ) {
+
+                            println(
+                                "WALKIE $WALKIE_VERSION: 网络异常=${e.message}"
+                            )
+                        }
                     }
 
                     if (
-                        !isActive ||
+                        !serviceScope.isActive ||
                         shuttingDown
                     ) {
+
                         break
                     }
 
                     cleanupConnection()
+
+                    if (
+                        !isNetworkAvailable
+                    ) {
+
+                        delay(1000L)
+
+                        continue
+                    }
 
                     delay(
                         reconnectDelay
                     )
 
                     reconnectDelay =
-                        min(
-                            reconnectDelay * 2,
+                        if (
+                            reconnectDelay * 2L >
                             MAX_RECONNECT_INTERVAL
-                        )
+                        ) {
+
+                            MAX_RECONNECT_INTERVAL
+
+                        } else {
+
+                            reconnectDelay * 2L
+                        }
                 }
             }
     }
@@ -579,9 +1316,7 @@ class WalkieService : Service() {
     ) {
 
         val address =
-            InetAddress.getByName(
-                ip
-            )
+            InetAddress.getByName(ip)
 
         serverAddress =
             address
@@ -593,18 +1328,14 @@ class WalkieService : Service() {
             SOCKET_RECEIVE_TIMEOUT
 
         try {
-
             socket.receiveBufferSize =
-                64 * 1024
-
+                128 * 1024
         } catch (_: Exception) {
         }
 
         try {
-
             socket.sendBufferSize =
                 64 * 1024
-
         } catch (_: Exception) {
         }
 
@@ -617,12 +1348,10 @@ class WalkieService : Service() {
 
         try {
 
-            setupSpeakerOutput()
-
             createAudioPlayer()
 
             sendMessageNow(
-                MSG_HELLO
+                "$MSG_HELLO:$deviceId"
             )
 
             val now =
@@ -635,9 +1364,7 @@ class WalkieService : Service() {
                 now
 
             val buffer =
-                ByteArray(
-                    4096
-                )
+                ByteArray(4096)
 
             while (
                 serviceScope.isActive &&
@@ -658,6 +1385,12 @@ class WalkieService : Service() {
                         MSG_KEEP_ALIVE
                     )
 
+                    udpKeepAliveCount++
+
+                    println(
+                        "WALKIE UDP: keepalive count=$udpKeepAliveCount"
+                    )
+
                     lastKeepAliveTime =
                         currentTime
                 }
@@ -665,9 +1398,13 @@ class WalkieService : Service() {
                 if (
                     isConnected &&
                     currentTime -
-                    lastServerActivityTime >
+                    lastServerActivityTime >=
                     SERVER_ACTIVITY_TIMEOUT
                 ) {
+
+                    println(
+                        "WALKIE UDP: server timeout"
+                    )
 
                     throw SocketException(
                         "server activity timeout"
@@ -682,6 +1419,9 @@ class WalkieService : Service() {
                             buffer.size
                         )
 
+                    packet.length =
+                        buffer.size
+
                     socket.receive(
                         packet
                     )
@@ -689,12 +1429,27 @@ class WalkieService : Service() {
                     val length =
                         packet.length
 
-                    if (length <= 0) {
+                    if (
+                        length <= 0
+                    ) {
+
                         continue
                     }
 
+                    udpReceiveCount++
+
                     lastServerActivityTime =
                         System.currentTimeMillis()
+
+                    if (
+                        udpReceiveCount % 20L ==
+                        0L
+                    ) {
+
+                        println(
+                            "WALKIE UDP: rx count=$udpReceiveCount bytes=$length"
+                        )
+                    }
 
                     val text =
                         String(
@@ -709,13 +1464,53 @@ class WalkieService : Service() {
                         MSG_CONNECTED
                     ) {
 
-                        if (!isConnected) {
+                        if (
+                            !isConnected
+                        ) {
 
-                            setConnected(
-                                true
+                            setConnected(true)
+
+                            println(
+                                "WALKIE $WALKIE_VERSION: ★连接成功★ device=${deviceLogId()} channel=$reconnectChannel"
                             )
 
                             requestChannelList()
+
+                            startChannelRefreshWorker()
+
+                            if (
+                                reconnectChannel.isNotBlank() &&
+                                reconnectChannel !=
+                                "public"
+                            ) {
+
+                                val channelToRestore =
+                                    reconnectChannel
+
+                                val passwordToRestore =
+                                    reconnectChannelPassword
+
+                                serviceScope.launch {
+
+                                    delay(250L)
+
+                                    if (
+                                        isConnected &&
+                                        !shuttingDown
+                                    ) {
+
+                                        joinChannel(
+                                            channelToRestore,
+                                            passwordToRestore
+                                        )
+                                    }
+                                }
+
+                            } else {
+
+                                currentChannel =
+                                    "public"
+                            }
                         }
 
                         continue
@@ -725,6 +1520,7 @@ class WalkieService : Service() {
                         text ==
                         MSG_KEEP_ALIVE
                     ) {
+
                         continue
                     }
 
@@ -734,9 +1530,7 @@ class WalkieService : Service() {
                         )
                     ) {
 
-                        handleChannelList(
-                            text
-                        )
+                        handleChannelList(text)
 
                         continue
                     }
@@ -747,9 +1541,7 @@ class WalkieService : Service() {
                         )
                     ) {
 
-                        handleChannelJoined(
-                            text
-                        )
+                        handleChannelJoined(text)
 
                         continue
                     }
@@ -760,9 +1552,7 @@ class WalkieService : Service() {
                         )
                     ) {
 
-                        handleChannelCreated(
-                            text
-                        )
+                        handleChannelCreated(text)
 
                         continue
                     }
@@ -773,9 +1563,7 @@ class WalkieService : Service() {
                         )
                     ) {
 
-                        handleChannelDeleted(
-                            text
-                        )
+                        handleChannelDeleted(text)
 
                         continue
                     }
@@ -786,9 +1574,7 @@ class WalkieService : Service() {
                         )
                     ) {
 
-                        handleChannelError(
-                            text
-                        )
+                        handleChannelError(text)
 
                         continue
                     }
@@ -799,9 +1585,7 @@ class WalkieService : Service() {
                         )
                     ) {
 
-                        handleChannelLeft(
-                            text
-                        )
+                        handleChannelLeft(text)
 
                         continue
                     }
@@ -826,6 +1610,9 @@ class WalkieService : Service() {
                                 TALK_STATUS_ALLOWED
                             )
 
+                            /*
+                             * 抢麦成功以后立即启动录音。
+                             */
                             startRecording()
                         }
 
@@ -879,13 +1666,43 @@ class WalkieService : Service() {
                     }
 
                     /*
-                     * PCM
+                     * 所有 WALKIE_ 开头的控制包
+                     * 不进入 Opus 解码。
+                     */
+                    if (
+                        text.startsWith(
+                            "WALKIE_"
+                        )
+                    ) {
+
+                        continue
+                    }
+
+                    /*
+                     * ==================================================
+                     * 音频包
+                     * ==================================================
                      */
 
-                    val audioData =
-                        ByteArray(
-                            length
+                    if (
+                        length <= 0 ||
+                        length >
+                        MAX_OPUS_PACKET_SIZE
+                    ) {
+
+                        println(
+                            "WALKIE AUDIO: drop invalid packet size=$length"
                         )
+
+                        continue
+                    }
+
+                    val decoder =
+                        opusDecoder
+                            ?: continue
+
+                    val audioData =
+                        ByteArray(length)
 
                     System.arraycopy(
                         packet.data,
@@ -895,21 +1712,92 @@ class WalkieService : Service() {
                         length
                     )
 
-                    enqueueAudio(
-                        audioData
-                    )
+                    val pcmData =
+                        try {
 
-                } catch (
+                            decoder.decode(
+                                audioData
+                            )
+
+                        } catch (e: Throwable) {
+
+                            println(
+                                "WALKIE AUDIO: decoder exception=${e.message}"
+                            )
+
+                            null
+                        }
+
+                    if (
+                        pcmData == null ||
+                        pcmData.isEmpty()
+                    ) {
+
+                        continue
+                    }
+
+                    if (
+                        pcmData.size >
+                        MAX_DECODED_PCM_SAMPLES
+                    ) {
+
+                        println(
+                            "WALKIE AUDIO: drop invalid PCM=${pcmData.size}"
+                        )
+
+                        continue
+                    }
+
+                    val pcmBytes =
+                        ByteArray(
+                            pcmData.size * 2
+                        )
+
+                    var i =
+                        0
+
+                    while (
+                        i <
+                        pcmData.size
+                    ) {
+
+                        val sample =
+                            pcmData[i].toInt()
+
+                        pcmBytes[i * 2] =
+                            (
+                                    sample and
+                                            0xff
+                                    ).toByte()
+
+                        pcmBytes[i * 2 + 1] =
+                            (
+                                    (sample shr 8) and
+                                            0xff
+                                    ).toByte()
+
+                        i++
+                    }
+
+                    enqueueAudio(
+                        pcmBytes
+                    )
+                }
+
+                catch (
                     _: SocketTimeoutException
                 ) {
 
-                    // 正常轮询
+                    continue
+                }
 
-                } catch (
+                catch (
                     e: SocketException
                 ) {
 
-                    if (!shuttingDown) {
+                    if (
+                        !shuttingDown
+                    ) {
 
                         println(
                             "WALKIE $WALKIE_VERSION: Socket=${e.message}"
@@ -918,21 +1806,79 @@ class WalkieService : Service() {
 
                     throw e
                 }
+
+                catch (
+                    e: Throwable
+                ) {
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: UDP处理异常=${e.message}"
+                    )
+                }
             }
 
         } finally {
 
-            cleanupSocket(
-                socket
-            )
+            cleanupSocket(socket)
         }
     }
 
     /*
      * ============================================================
-     * 频道列表
+     * 频道
      * ============================================================
      */
+
+    private fun requestChannelList() {
+
+        if (
+            !isConnected
+        ) {
+
+            return
+        }
+
+        sendMessageAsync(
+            MSG_CHANNEL_LIST
+        )
+    }
+
+    private fun startChannelRefreshWorker() {
+
+        if (
+            channelRefreshJob?.isActive == true
+        ) {
+
+            return
+        }
+
+        channelRefreshJob =
+            serviceScope.launch {
+
+                while (
+                    serviceScope.isActive &&
+                    !shuttingDown
+                ) {
+
+                    delay(10000L)
+
+                    if (
+                        isConnected
+                    ) {
+
+                        requestChannelList()
+                    }
+                }
+            }
+    }
+
+    private fun stopChannelRefreshWorker() {
+
+        channelRefreshJob?.cancel()
+
+        channelRefreshJob =
+            null
+    }
 
     private fun handleChannelList(
         text: String
@@ -947,26 +1893,33 @@ class WalkieService : Service() {
         val result =
             ArrayList<ChannelInfo>()
 
-        if (content.isNotBlank()) {
+        if (
+            content.isNotBlank()
+        ) {
 
-            val entries =
-                content.split(";")
+            for (
+            entry in content.split(";")
+            ) {
 
-            for (entry in entries) {
+                if (
+                    entry.isBlank()
+                ) {
 
-                val fields =
-                    entry.trim().split(",")
-
-                if (fields.isEmpty()) {
                     continue
                 }
+
+                val fields =
+                    entry.trim()
+                        .split(",")
 
                 val name =
                     fields.getOrNull(0)
                         ?.trim()
-                        ?: continue
 
-                if (name.isBlank()) {
+                if (
+                    name.isNullOrBlank()
+                ) {
+
                     continue
                 }
 
@@ -1027,10 +1980,26 @@ class WalkieService : Service() {
                     }
             )
 
+        cachedChannelInfoList
+            .firstOrNull {
+                it.name ==
+                        currentChannel
+            }?.let {
+
+                currentChannelOnlineCount =
+                    it.onlineCount
+
+                currentChannelPrivate =
+                    it.isPrivate
+
+                currentChannelRequirePassword =
+                    it.isPrivate
+            }
+
         broadcastChannelList()
 
-        println(
-            "WALKIE $WALKIE_VERSION: 频道列表=$cachedChannelInfoList"
+        broadcastChannelStatus(
+            "频道：$currentChannel，在线 ${currentChannelOnlineCount} 人"
         )
     }
 
@@ -1052,8 +2021,7 @@ class WalkieService : Service() {
             ArrayList<String>()
 
         for (
-        channel in
-        cachedChannelInfoList
+        channel in cachedChannelInfoList
         ) {
 
             names.add(
@@ -1085,16 +2053,8 @@ class WalkieService : Service() {
             infos
         )
 
-        sendBroadcast(
-            intent
-        )
+        sendBroadcast(intent)
     }
-
-    /*
-     * ============================================================
-     * 创建频道
-     * ============================================================
-     */
 
     private fun createChannel(
         channel: String,
@@ -1102,7 +2062,10 @@ class WalkieService : Service() {
         privateChannel: Boolean
     ) {
 
-        if (!isConnected) {
+        if (
+            !isConnected
+        ) {
+
             return
         }
 
@@ -1112,11 +2075,16 @@ class WalkieService : Service() {
         val cleanPassword =
             password.trim()
 
-        if (name.isBlank()) {
+        if (
+            name.isBlank()
+        ) {
+
             return
         }
 
-        if (name.length > 24) {
+        if (
+            name.length > 24
+        ) {
 
             broadcastChannelStatus(
                 "频道名称不能超过24个字符"
@@ -1153,7 +2121,9 @@ class WalkieService : Service() {
             return
         }
 
-        if (cleanPassword.length > 32) {
+        if (
+            cleanPassword.length > 32
+        ) {
 
             broadcastChannelStatus(
                 "频道密码不能超过32个字符"
@@ -1168,17 +2138,22 @@ class WalkieService : Service() {
         pendingCreateChannelPassword =
             cleanPassword
 
-        channelSwitching = true
+        channelSwitching =
+            true
 
         val type =
-            if (privateChannel) {
+            if (
+                privateChannel
+            ) {
                 "PRIVATE"
             } else {
                 "PUBLIC"
             }
 
         val message =
-            if (privateChannel) {
+            if (
+                privateChannel
+            ) {
 
                 "WALKIE_CREATE_CHANNEL:" +
                         name +
@@ -1200,18 +2175,15 @@ class WalkieService : Service() {
         )
     }
 
-    /*
-     * ============================================================
-     * 加入频道
-     * ============================================================
-     */
-
     private fun joinChannel(
         channel: String,
         password: String
     ) {
 
-        if (!isConnected) {
+        if (
+            !isConnected
+        ) {
+
             return
         }
 
@@ -1221,8 +2193,19 @@ class WalkieService : Service() {
         val cleanPassword =
             password.trim()
 
-        if (name.isBlank()) {
+        if (
+            name.isBlank()
+        ) {
+
             return
+        }
+
+        if (
+            cleanPassword.isNotBlank()
+        ) {
+
+            reconnectChannelPassword =
+                cleanPassword
         }
 
         if (
@@ -1240,9 +2223,14 @@ class WalkieService : Service() {
             return
         }
 
-        talkRequesting = false
-        talkAllowed = false
-        isSpeaking = false
+        talkRequesting =
+            false
+
+        talkAllowed =
+            false
+
+        isSpeaking =
+            false
 
         stopRecording()
 
@@ -1250,10 +2238,13 @@ class WalkieService : Service() {
             TALK_STATUS_RELEASED
         )
 
-        channelSwitching = true
+        channelSwitching =
+            true
 
         val message =
-            if (cleanPassword.isBlank()) {
+            if (
+                cleanPassword.isBlank()
+            ) {
 
                 "WALKIE_JOIN_CHANNEL:$name"
 
@@ -1269,12 +2260,6 @@ class WalkieService : Service() {
             message
         )
     }
-
-    /*
-     * ============================================================
-     * 加入成功
-     * ============================================================
-     */
 
     private fun handleChannelJoined(
         text: String
@@ -1294,7 +2279,10 @@ class WalkieService : Service() {
                 ?.trim()
                 ?: return
 
-        if (name.isBlank()) {
+        if (
+            name.isBlank()
+        ) {
+
             return
         }
 
@@ -1314,20 +2302,40 @@ class WalkieService : Service() {
         currentChannel =
             name
 
+        reconnectChannel =
+            name
+
         currentChannelOnlineCount =
             count
 
         currentChannelPrivate =
-            type == "PRIVATE"
+            type ==
+                    "PRIVATE"
 
         currentChannelRequirePassword =
             currentChannelPrivate
 
-        channelSwitching = false
+        if (
+            !currentChannelPrivate &&
+            name ==
+            "public"
+        ) {
 
-        talkRequesting = false
-        talkAllowed = false
-        isSpeaking = false
+            reconnectChannelPassword =
+                ""
+        }
+
+        channelSwitching =
+            false
+
+        talkRequesting =
+            false
+
+        talkAllowed =
+            false
+
+        isSpeaking =
+            false
 
         stopRecording()
 
@@ -1335,8 +2343,11 @@ class WalkieService : Service() {
             TALK_STATUS_RELEASED
         )
 
-        pendingCreateChannelName = ""
-        pendingCreateChannelPassword = ""
+        pendingCreateChannelName =
+            ""
+
+        pendingCreateChannelPassword =
+            ""
 
         updateCurrentChannelInfo()
 
@@ -1346,12 +2357,6 @@ class WalkieService : Service() {
 
         requestChannelList()
     }
-
-    /*
-     * ============================================================
-     * 创建成功
-     * ============================================================
-     */
 
     private fun handleChannelCreated(
         text: String
@@ -1371,7 +2376,10 @@ class WalkieService : Service() {
                 ?.trim()
                 ?: return
 
-        if (name.isBlank()) {
+        if (
+            name.isBlank()
+        ) {
+
             return
         }
 
@@ -1393,15 +2401,6 @@ class WalkieService : Service() {
         )
     }
 
-    /*
-     * ============================================================
-     * 删除成功
-     *
-     * VPS：
-     * WALKIE_CHANNEL_DELETED:频道名
-     * ============================================================
-     */
-
     private fun handleChannelDeleted(
         text: String
     ) {
@@ -1412,10 +2411,6 @@ class WalkieService : Service() {
                 ""
             ).trim()
 
-        println(
-            "WALKIE $WALKIE_VERSION: ★频道删除成功=$deletedChannel★"
-        )
-
         if (
             deletedChannel ==
             currentChannel
@@ -1423,6 +2418,12 @@ class WalkieService : Service() {
 
             currentChannel =
                 "public"
+
+            reconnectChannel =
+                "public"
+
+            reconnectChannelPassword =
+                ""
 
             currentChannelOnlineCount =
                 0
@@ -1470,18 +2471,10 @@ class WalkieService : Service() {
             deletedChannel
         )
 
-        sendBroadcast(
-            intent
-        )
+        sendBroadcast(intent)
 
         requestChannelList()
     }
-
-    /*
-     * ============================================================
-     * 错误
-     * ============================================================
-     */
 
     private fun handleChannelError(
         text: String
@@ -1497,7 +2490,9 @@ class WalkieService : Service() {
             false
 
         val message =
-            when (error) {
+            when (
+                error
+            ) {
 
                 "BAD_PASSWORD" ->
                     "频道密码错误"
@@ -1532,17 +2527,7 @@ class WalkieService : Service() {
         )
 
         requestChannelList()
-
-        println(
-            "WALKIE $WALKIE_VERSION: 频道错误=$error"
-        )
     }
-
-    /*
-     * ============================================================
-     * 离开频道
-     * ============================================================
-     */
 
     private fun handleChannelLeft(
         text: String
@@ -1581,6 +2566,18 @@ class WalkieService : Service() {
         channelSwitching =
             false
 
+        if (
+            currentChannel ==
+            "public"
+        ) {
+
+            reconnectChannel =
+                "public"
+
+            reconnectChannelPassword =
+                ""
+        }
+
         updateCurrentChannelInfo()
 
         broadcastChannelStatus(
@@ -1609,7 +2606,9 @@ class WalkieService : Service() {
                     currentChannelPrivate
             )
 
-        if (index >= 0) {
+        if (
+            index >= 0
+        ) {
 
             list[index] =
                 info
@@ -1667,16 +2666,49 @@ class WalkieService : Service() {
             currentChannelRequirePassword
         )
 
-        sendBroadcast(
-            intent
-        )
+        sendBroadcast(intent)
 
         updateNotification()
     }
 
+    private fun deleteChannel(
+        channel: String
+    ) {
+
+        if (
+            !isConnected
+        ) {
+
+            return
+        }
+
+        if (
+            channel.isBlank()
+        ) {
+
+            return
+        }
+
+        if (
+            channel ==
+            "public"
+        ) {
+
+            broadcastChannelStatus(
+                "public 频道不能删除"
+            )
+
+            return
+        }
+
+        sendMessageAsync(
+            "WALKIE_DELETE_CHANNEL:$channel"
+        )
+    }
+
     /*
      * ============================================================
-     * UDP 发送
+     * UDP发送
      * ============================================================
      */
 
@@ -1695,6 +2727,7 @@ class WalkieService : Service() {
             socket.isClosed ||
             address == null
         ) {
+
             return
         }
 
@@ -1713,13 +2746,7 @@ class WalkieService : Service() {
                     SERVER_PORT
                 )
 
-            socket.send(
-                packet
-            )
-
-            println(
-                "WALKIE $WALKIE_VERSION: UDP发送=$message"
-            )
+            socket.send(packet)
 
         } catch (e: Exception) {
 
@@ -1733,7 +2760,17 @@ class WalkieService : Service() {
         message: String
     ) {
 
+        if (
+            shuttingDown &&
+            message != MSG_GOODBYE &&
+            message != MSG_TALK_STOP
+        ) {
+
+            return
+        }
+
         serviceScope.launch {
+
             sendMessageNow(
                 message
             )
@@ -1742,7 +2779,7 @@ class WalkieService : Service() {
 
     /*
      * ============================================================
-     * 抢麦
+     * PTT
      * ============================================================
      */
 
@@ -1752,6 +2789,7 @@ class WalkieService : Service() {
             !isConnected ||
             channelSwitching
         ) {
+
             return
         }
 
@@ -1759,6 +2797,7 @@ class WalkieService : Service() {
             talkRequesting ||
             talkAllowed
         ) {
+
             return
         }
 
@@ -1775,21 +2814,24 @@ class WalkieService : Service() {
         sendMessageAsync(
             MSG_TALK_START
         )
-
-        println(
-            "WALKIE $WALKIE_VERSION: ★抢麦★ channel=$currentChannel"
-        )
     }
 
     private fun releaseTalk() {
 
-        isSpeaking = false
-        talkRequesting = false
-        talkAllowed = false
+        isSpeaking =
+            false
+
+        talkRequesting =
+            false
+
+        talkAllowed =
+            false
 
         stopRecording()
 
-        if (isConnected) {
+        if (
+            isConnected
+        ) {
 
             sendMessageAsync(
                 MSG_TALK_STOP
@@ -1812,10 +2854,14 @@ class WalkieService : Service() {
         if (
             recordJob?.isActive == true
         ) {
+
             return
         }
 
-        if (!talkAllowed) {
+        if (
+            !talkAllowed
+        ) {
+
             return
         }
 
@@ -1825,53 +2871,70 @@ class WalkieService : Service() {
             ) !=
             PackageManager.PERMISSION_GRANTED
         ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: 没有录音权限"
+            )
+
             return
         }
-
-        setupSpeakerOutput()
 
         recordJob =
             serviceScope.launch {
 
                 var recorder:
-                        AudioRecord? = null
+                        AudioRecord? =
+                    null
 
                 try {
-
-                    val channelConfig =
-                        AudioFormat.CHANNEL_IN_MONO
-
-                    val encoding =
-                        AudioFormat.ENCODING_PCM_16BIT
 
                     val minBuffer =
                         AudioRecord.getMinBufferSize(
                             SAMPLE_RATE,
-                            channelConfig,
-                            encoding
+                            AudioFormat.CHANNEL_IN_MONO,
+                            AudioFormat.ENCODING_PCM_16BIT
                         )
 
-                    if (minBuffer <= 0) {
+                    if (
+                        minBuffer <= 0
+                    ) {
+
                         return@launch
                     }
 
                     val recordBuffer =
-                        max(
+                        maxOf(
                             minBuffer * 2,
-                            max(
-                                AUDIO_PACKET_SIZE * 4,
-                                4096
-                            )
+                            AUDIO_PACKET_SIZE * 4,
+                            4096
                         )
 
                     recorder =
-                        AudioRecord(
-                            MediaRecorder.AudioSource.VOICE_COMMUNICATION,
-                            SAMPLE_RATE,
-                            channelConfig,
-                            encoding,
-                            recordBuffer
-                        )
+                        try {
+
+                            AudioRecord(
+                                MediaRecorder.AudioSource.MIC,
+                                SAMPLE_RATE,
+                                AudioFormat.CHANNEL_IN_MONO,
+                                AudioFormat.ENCODING_PCM_16BIT,
+                                recordBuffer
+                            )
+
+                        } catch (e: Exception) {
+
+                            println(
+                                "WALKIE $WALKIE_VERSION: AudioRecord创建失败=${e.message}"
+                            )
+
+                            null
+                        }
+
+                    if (
+                        recorder == null
+                    ) {
+
+                        return@launch
+                    }
 
                     if (
                         recorder.state !=
@@ -1884,26 +2947,35 @@ class WalkieService : Service() {
                         }
 
                         recorder =
-                            AudioRecord(
-                                MediaRecorder.AudioSource.MIC,
-                                SAMPLE_RATE,
-                                channelConfig,
-                                encoding,
-                                recordBuffer
-                            )
+                            try {
+
+                                AudioRecord(
+                                    MediaRecorder.AudioSource.MIC,
+                                    SAMPLE_RATE,
+                                    AudioFormat.CHANNEL_IN_MONO,
+                                    AudioFormat.ENCODING_PCM_16BIT,
+                                    recordBuffer
+                                )
+
+                            } catch (_: Exception) {
+
+                                null
+                            }
                     }
 
                     if (
+                        recorder == null ||
                         recorder.state !=
                         AudioRecord.STATE_INITIALIZED
                     ) {
 
                         try {
-                            recorder.release()
+                            recorder?.release()
                         } catch (_: Exception) {
                         }
 
-                        recorder = null
+                        recorder =
+                            null
 
                         return@launch
                     }
@@ -1928,35 +3000,32 @@ class WalkieService : Service() {
                     isSpeaking =
                         true
 
-                    recorder.startRecording()
+                    synchronized(
+                        audioRecordLock
+                    ) {
+
+                        recorder.startRecording()
+                    }
 
                     if (
                         recorder.recordingState !=
                         AudioRecord.RECORDSTATE_RECORDING
                     ) {
+
                         return@launch
                     }
 
+                    println(
+                        "WALKIE $WALKIE_VERSION: ★开始录音★"
+                    )
+
                     while (
-                        isActive &&
+                        serviceScope.isActive &&
                         isSpeaking &&
                         talkAllowed &&
-                        isConnected
+                        isConnected &&
+                        !shuttingDown
                     ) {
-
-                        val socket =
-                            udpSocket
-
-                        val address =
-                            serverAddress
-
-                        if (
-                            socket == null ||
-                            socket.isClosed ||
-                            address == null
-                        ) {
-                            break
-                        }
 
                         var filled =
                             0
@@ -1964,27 +3033,40 @@ class WalkieService : Service() {
                         while (
                             filled <
                             AUDIO_PACKET_SIZE &&
-                            isActive &&
+                            serviceScope.isActive &&
                             isSpeaking &&
                             talkAllowed &&
-                            isConnected
+                            isConnected &&
+                            !shuttingDown
                         ) {
 
                             val read =
                                 try {
 
-                                    recorder.read(
-                                        readBuffer,
-                                        0,
-                                        readBuffer.size
-                                    )
+                                    synchronized(
+                                        audioRecordLock
+                                    ) {
 
-                                } catch (_: Exception) {
+                                        recorder.read(
+                                            readBuffer,
+                                            0,
+                                            readBuffer.size,
+                                            AudioRecord.READ_BLOCKING
+                                        )
+                                    }
+
+                                } catch (e: Exception) {
+
+                                    println(
+                                        "WALKIE $WALKIE_VERSION: AudioRecord.read异常=${e.message}"
+                                    )
 
                                     -1
                                 }
 
-                            if (read > 0) {
+                            if (
+                                read > 0
+                            ) {
 
                                 val copySize =
                                     min(
@@ -2004,42 +3086,134 @@ class WalkieService : Service() {
                                 filled +=
                                     copySize
 
-                            } else if (read < 0) {
+                            } else if (
+                                read < 0
+                            ) {
 
                                 break
                             }
                         }
 
                         if (
-                            filled ==
+                            filled !=
                             AUDIO_PACKET_SIZE
                         ) {
 
+                            continue
+                        }
+
+                        val pcm =
+                            ShortArray(
+                                AUDIO_PACKET_SIZE / 2
+                            )
+
+                        var index =
+                            0
+
+                        while (
+                            index <
+                            pcm.size
+                        ) {
+
+                            val low =
+                                packetBuffer[
+                                    index * 2
+                                ].toInt() and
+                                        0xff
+
+                            val high =
+                                packetBuffer[
+                                    index * 2 + 1
+                                ].toInt()
+
+                            pcm[index] =
+                                (
+                                        (high shl 8) or
+                                                low
+                                        ).toShort()
+
+                            index++
+                        }
+
+                        val encoder =
+                            opusEncoder
+                                ?: continue
+
+                        val opus =
                             try {
 
-                                val packet =
-                                    DatagramPacket(
-                                        packetBuffer,
-                                        AUDIO_PACKET_SIZE,
-                                        address,
-                                        SERVER_PORT
-                                    )
-
-                                socket.send(
-                                    packet
+                                encoder.encode(
+                                    pcm
                                 )
 
-                            } catch (_: Exception) {
+                            } catch (e: Throwable) {
 
-                                break
+                                println(
+                                    "WALKIE $WALKIE_VERSION: Opus编码异常=${e.message}"
+                                )
+
+                                null
                             }
+
+                        if (
+                            opus == null ||
+                            opus.isEmpty()
+                        ) {
+
+                            continue
+                        }
+
+                        if (
+                            opus.size >
+                            MAX_OPUS_PACKET_SIZE
+                        ) {
+
+                            continue
+                        }
+
+                        val socket =
+                            udpSocket
+
+                        val address =
+                            serverAddress
+
+                        if (
+                            socket == null ||
+                            socket.isClosed ||
+                            address == null
+                        ) {
+
+                            break
+                        }
+
+                        try {
+
+                            val packet =
+                                DatagramPacket(
+                                    opus,
+                                    opus.size,
+                                    address,
+                                    SERVER_PORT
+                                )
+
+                            socket.send(packet)
+
+                        } catch (e: Exception) {
+
+                            println(
+                                "WALKIE $WALKIE_VERSION: OPUS发送失败=${e.message}"
+                            )
+
+                            break
                         }
                     }
 
-                } catch (e: Exception) {
+                } catch (
+                    e: Throwable
+                ) {
 
                     println(
-                        "WALKIE $WALKIE_VERSION: 录音异常=${e.message}"
+                        "WALKIE $WALKIE_VERSION: 录音线程异常=${e.message}"
                     )
 
                 } finally {
@@ -2049,31 +3223,53 @@ class WalkieService : Service() {
 
                     releaseAudioEffects()
 
-                    try {
-                        recorder?.stop()
-                    } catch (_: Exception) {
-                    }
+                    if (
+                        recorder != null
+                    ) {
 
-                    try {
-                        recorder?.release()
-                    } catch (_: Exception) {
+                        try {
+
+                            synchronized(
+                                audioRecordLock
+                            ) {
+
+                                if (
+                                    recorder.recordingState ==
+                                    AudioRecord.RECORDSTATE_RECORDING
+                                ) {
+
+                                    recorder.stop()
+                                }
+                            }
+
+                        } catch (_: Exception) {
+                        }
+
+                        try {
+                            recorder.release()
+                        } catch (_: Exception) {
+                        }
                     }
 
                     if (
                         audioRecord ===
                         recorder
                     ) {
-                        audioRecord = null
+
+                        audioRecord =
+                            null
                     }
 
-                    setupSpeakerOutput()
+                    println(
+                        "WALKIE $WALKIE_VERSION: 录音结束"
+                    )
                 }
             }
     }
 
     /*
      * ============================================================
-     * 音频效果
+     * Audio Effects
      * ============================================================
      */
 
@@ -2155,9 +3351,14 @@ class WalkieService : Service() {
         } catch (_: Exception) {
         }
 
-        noiseSuppressor = null
-        automaticGainControl = null
-        acousticEchoCanceler = null
+        noiseSuppressor =
+            null
+
+        automaticGainControl =
+            null
+
+        acousticEchoCanceler =
+            null
     }
 
     private fun stopRecording() {
@@ -2166,28 +3367,56 @@ class WalkieService : Service() {
             false
 
         recordJob?.cancel()
-        recordJob = null
 
-        try {
-            audioRecord?.stop()
-        } catch (_: Exception) {
+        recordJob =
+            null
+
+        val recorder =
+            audioRecord
+
+        if (
+            recorder != null
+        ) {
+
+            try {
+
+                synchronized(
+                    audioRecordLock
+                ) {
+
+                    if (
+                        recorder.recordingState ==
+                        AudioRecord.RECORDSTATE_RECORDING
+                    ) {
+
+                        recorder.stop()
+                    }
+                }
+
+            } catch (_: Exception) {
+            }
+
+            try {
+                recorder.release()
+            } catch (_: Exception) {
+            }
+
+            if (
+                audioRecord ===
+                recorder
+            ) {
+
+                audioRecord =
+                    null
+            }
         }
-
-        try {
-            audioRecord?.release()
-        } catch (_: Exception) {
-        }
-
-        audioRecord = null
 
         releaseAudioEffects()
-
-        setupSpeakerOutput()
     }
 
     /*
      * ============================================================
-     * 音频播放
+     * 播放队列
      * ============================================================
      */
 
@@ -2199,16 +3428,53 @@ class WalkieService : Service() {
             data.isEmpty() ||
             data.size % 2 != 0
         ) {
+
             return
         }
 
         if (
-            !playbackQueue.offer(data)
+            data.size > 8192
+        ) {
+
+            return
+        }
+
+        /*
+         * 队列太深时删最老的。
+         */
+        while (
+            playbackQueue.size >=
+            PLAYBACK_MAX_QUEUE_PACKETS
+        ) {
+
+            if (
+                playbackQueue.poll() ==
+                null
+            ) {
+
+                break
+            }
+        }
+
+        if (
+            !playbackQueue.offer(
+                data
+            )
         ) {
 
             playbackQueue.poll()
-            playbackQueue.offer(data)
+
+            playbackQueue.offer(
+                data
+            )
         }
+
+        /*
+         * 第一帧进入队列就确保播放线程存在。
+         *
+         * V19 不再等收到5包之后才启动播放线程。
+         */
+        startPlaybackWorker()
     }
 
     private fun applyPlaybackGain(
@@ -2216,10 +3482,18 @@ class WalkieService : Service() {
     ): ByteArray {
 
         if (
-            PLAYBACK_GAIN <= 1.0f ||
-            input.size < 2 ||
+            PLAYBACK_GAIN <=
+            1.0f
+        ) {
+
+            return input
+        }
+
+        if (
+            input.isEmpty() ||
             input.size % 2 != 0
         ) {
+
             return input
         }
 
@@ -2238,27 +3512,32 @@ class WalkieService : Service() {
 
             val low =
                 input[index]
-                    .toInt() and 0xFF
+                    .toInt() and
+                        0xff
 
             val high =
                 input[index + 1]
                     .toInt()
 
             var sample =
-                (high shl 8) or low
+                (high shl 8) or
+                        low
 
             if (
                 sample >
                 32767
             ) {
-                sample -= 65536
+
+                sample -=
+                    65536
             }
 
             val amplified =
                 (
                         sample.toFloat() *
                                 PLAYBACK_GAIN
-                        ).toInt()
+                        )
+                    .toInt()
                     .coerceIn(
                         -32768,
                         32767
@@ -2266,378 +3545,1062 @@ class WalkieService : Service() {
 
             output[index] =
                 (
-                        amplified and 0xFF
+                        amplified and
+                                0xff
                         ).toByte()
 
             output[index + 1] =
                 (
-                        (amplified shr 8) and 0xFF
+                        (amplified shr 8) and
+                                0xff
                         ).toByte()
 
-            index += 2
+            index +=
+                2
         }
 
         return output
     }
 
-    private fun startPlaybackWorker() {
+    /*
+     * ============================================================
+     * 将没有成功播放的帧重新放到队列最前面
+     * ============================================================
+     */
+
+    private fun requeueFront(
+        frames: List<ByteArray>
+    ) {
 
         if (
-            playbackJob?.isActive == true
+            frames.isEmpty()
         ) {
+
             return
         }
 
-        playbackJob =
-            serviceScope.launch {
+        val existing =
+            ArrayList<ByteArray>()
 
-                var started =
-                    false
+        while (true) {
 
-                while (
-                    isActive &&
-                    !shuttingDown
+            val item =
+                playbackQueue.poll()
+                    ?: break
+
+            existing.add(
+                item
+            )
+        }
+
+        val merged =
+            ArrayList<ByteArray>(
+                frames.size +
+                        existing.size
+            )
+
+        /*
+         * 当前尚未播放的帧必须最前。
+         */
+        merged.addAll(
+            frames
+        )
+
+        merged.addAll(
+            existing
+        )
+
+        /*
+         * 不超过整个队列容量。
+         */
+        val maxItems =
+            min(
+                merged.size,
+                PLAYBACK_QUEUE_CAPACITY
+            )
+
+        var index =
+            0
+
+        while (
+            index <
+            maxItems
+        ) {
+
+            playbackQueue.offer(
+                merged[index]
+            )
+
+            index++
+        }
+    }
+
+    /*
+     * ============================================================
+     * 唯一播放线程
+     * ============================================================
+     */
+
+    private fun startPlaybackWorker() {
+
+        synchronized(
+            playbackWorkerLock
+        ) {
+
+            if (
+                playbackJob?.isActive == true
+            ) {
+
+                return
+            }
+
+            if (
+                playbackWorkerStarting
+            ) {
+
+                return
+            }
+
+            playbackWorkerStarting =
+                true
+
+            playbackJob =
+                serviceScope.launch {
+
+                    try {
+
+                        playbackLoop()
+
+                    } finally {
+
+                        synchronized(
+                            playbackWorkerLock
+                        ) {
+
+                            playbackWorkerStarting =
+                                false
+                        }
+                    }
+                }
+        }
+    }
+
+    /*
+     * ============================================================
+     * 播放主循环
+     * ============================================================
+     */
+
+    private suspend fun playbackLoop() {
+
+        /*
+         * 第一次进入播放时需要最小缓冲。
+         */
+        var firstStart =
+            true
+
+        while (
+            serviceScope.isActive &&
+            !shuttingDown
+        ) {
+
+            /*
+             * ----------------------------------------------------
+             * V19 起播策略
+             * ----------------------------------------------------
+             *
+             * 第一次只等待2包。
+             *
+             * 2 * 20ms = 40ms。
+             *
+             * 尽量减少讲话开头的等待时间。
+             */
+            val recovering =
+                playbackRecoveryRequested
+
+            val requiredPackets =
+                if (
+                    firstStart
                 ) {
 
-                    if (!started) {
+                    PLAYBACK_START_BUFFER_PACKETS
 
-                        while (
-                            isActive &&
-                            !shuttingDown &&
-                            playbackQueue.size <
-                            PLAYBACK_START_BUFFER_PACKETS
-                        ) {
+                } else if (
+                    recovering
+                ) {
 
-                            delay(5)
-                        }
+                    PLAYBACK_RECOVERY_BUFFER_PACKETS
 
-                        if (
-                            !isActive ||
-                            shuttingDown
-                        ) {
-                            break
-                        }
+                } else {
 
-                        started =
-                            true
-                    }
+                    1
+                }
 
-                    val raw =
-                        playbackQueue.poll(
-                            300,
-                            TimeUnit.MILLISECONDS
+            while (
+                serviceScope.isActive &&
+                !shuttingDown &&
+                playbackQueue.size <
+                requiredPackets
+            ) {
+
+                delay(4L)
+            }
+
+            if (
+                !serviceScope.isActive ||
+                shuttingDown
+            ) {
+
+                break
+            }
+
+            ensureAudioPlayer()
+
+            val track =
+                synchronized(
+                    audioTrackLock
+                ) {
+
+                    audioTrack
+                }
+
+            if (
+                track == null ||
+                track.state !=
+                AudioTrack.STATE_INITIALIZED
+            ) {
+
+                delay(25L)
+
+                continue
+            }
+
+            /*
+             * ----------------------------------------------------
+             * 起播 / UNDERRUN恢复
+             * ----------------------------------------------------
+             */
+
+            if (
+                firstStart ||
+                recovering ||
+                track.playState !=
+                AudioTrack.PLAYSTATE_PLAYING
+            ) {
+
+                val frames =
+                    ArrayList<ByteArray>()
+
+                repeat(
+                    requiredPackets
+                ) {
+
+                    val frame =
+                        playbackQueue.poll()
+
+                    if (
+                        frame != null
+                    ) {
+
+                        frames.add(
+                            frame
                         )
-
-                    if (raw == null) {
-
-                        started =
-                            false
-
-                        continue
                     }
+                }
 
-                    val track =
+                if (
+                    frames.isEmpty()
+                ) {
+
+                    continue
+                }
+
+                val combined =
+                    combineFrames(
+                        frames
+                    )
+
+                var writeSuccess =
+                    false
+
+                synchronized(
+                    audioTrackLock
+                ) {
+
+                    val current =
                         audioTrack
 
                     if (
-                        track == null ||
-                        track.state !=
+                        current == null ||
+                        current !== track ||
+                        current.state !=
                         AudioTrack.STATE_INITIALIZED
                     ) {
 
-                        recreateAudioPlayer()
-
-                        started =
+                        writeSuccess =
                             false
 
-                        continue
+                    } else {
+
+                        try {
+
+                            /*
+                             * 保留已经验证正常的扬声器输出。
+                             */
+                            setTrackSpeaker(
+                                current
+                            )
+
+                            val result =
+                                current.write(
+                                    applyPlaybackGain(
+                                        combined
+                                    ),
+                                    0,
+                                    combined.size,
+                                    AudioTrack.WRITE_BLOCKING
+                                )
+
+                            if (
+                                result > 0
+                            ) {
+
+                                current.play()
+
+                                writeSuccess =
+                                    true
+
+                                println(
+                                    "WALKIE AUDIO: ★V19起播★ packets=${frames.size} queue=${playbackQueue.size}"
+                                )
+                            }
+
+                        } catch (
+                            e: Throwable
+                        ) {
+
+                            println(
+                                "WALKIE AUDIO: 起播/恢复异常=${e.message}"
+                            )
+
+                            writeSuccess =
+                                false
+                        }
                     }
+                }
+
+                if (
+                    !writeSuccess
+                ) {
+
+                    /*
+                     * 不能直接丢掉讲话最前面的数据。
+                     */
+                    requeueFront(
+                        frames
+                    )
+
+                    handlePlaybackFailure(
+                        track
+                    )
+
+                    playbackRecoveryRequested =
+                        true
+
+                    delay(30L)
+
+                    continue
+                }
+
+                playbackRecoveryRequested =
+                    false
+
+                firstStart =
+                    false
+
+                lastUnderrunCount =
+                    getUnderrunCount(
+                        track
+                    )
+
+                continue
+            }
+
+            /*
+             * ----------------------------------------------------
+             * 正常播放
+             * ----------------------------------------------------
+             *
+             * 一次取1~2帧。
+             *
+             * 这样既不会让延迟越来越大，
+             * 也不会每20ms都频繁进入AudioTrack。
+             */
+            val first =
+                try {
+
+                    playbackQueue.poll(
+                        40L,
+                        TimeUnit.MILLISECONDS
+                    )
+
+                } catch (
+                    _: InterruptedException
+                ) {
+
+                    null
+                }
+
+            if (
+                first == null
+            ) {
+
+                continue
+            }
+
+            val second =
+                playbackQueue.poll()
+
+            val frames =
+                if (
+                    second != null
+                ) {
+
+                    listOf(
+                        first,
+                        second
+                    )
+
+                } else {
+
+                    listOf(
+                        first
+                    )
+                }
+
+            val combined =
+                combineFrames(
+                    frames
+                )
+
+            var failed =
+                false
+
+            synchronized(
+                audioTrackLock
+            ) {
+
+                val current =
+                    audioTrack
+
+                if (
+                    current == null ||
+                    current !== track ||
+                    current.state !=
+                    AudioTrack.STATE_INITIALIZED
+                ) {
+
+                    failed =
+                        true
+
+                } else {
+
+                    try {
+
+                        if (
+                            current.playState !=
+                            AudioTrack.PLAYSTATE_PLAYING
+                        ) {
+
+                            /*
+                             * 系统暂停后：
+                             * 当前帧先写进去，
+                             * 成功以后再play。
+                             */
+                            val result =
+                                current.write(
+                                    applyPlaybackGain(
+                                        combined
+                                    ),
+                                    0,
+                                    combined.size,
+                                    AudioTrack.WRITE_BLOCKING
+                                )
+
+                            if (
+                                result > 0
+                            ) {
+
+                                setTrackSpeaker(
+                                    current
+                                )
+
+                                current.play()
+
+                                println(
+                                    "WALKIE AUDIO: ★AudioTrack恢复播放★ queue=${playbackQueue.size}"
+                                )
+
+                            } else {
+
+                                failed =
+                                    true
+                            }
+
+                        } else {
+
+                            val result =
+                                current.write(
+                                    applyPlaybackGain(
+                                        combined
+                                    ),
+                                    0,
+                                    combined.size,
+                                    AudioTrack.WRITE_BLOCKING
+                                )
+
+                            if (
+                                result <= 0
+                            ) {
+
+                                println(
+                                    "WALKIE AUDIO: AudioTrack.write失败=$result"
+                                )
+
+                                failed =
+                                    true
+                            }
+                        }
+
+                    } catch (
+                        e: Throwable
+                    ) {
+
+                        println(
+                            "WALKIE AUDIO: 正常播放异常=${e.message}"
+                        )
+
+                        failed =
+                            true
+                    }
+                }
+            }
+
+            if (
+                failed
+            ) {
+
+                /*
+                 * 当前没有播放成功的数据不能丢。
+                 */
+                requeueFront(
+                    frames
+                )
+
+                handlePlaybackFailure(
+                    track
+                )
+
+                playbackRecoveryRequested =
+                    true
+
+                delay(25L)
+
+                continue
+            }
+
+            /*
+             * ----------------------------------------------------
+             * underrun监控
+             * ----------------------------------------------------
+             */
+
+            val currentUnderrun =
+                getUnderrunCount(
+                    track
+                )
+
+            if (
+                currentUnderrun >
+                lastUnderrunCount
+            ) {
+
+                val delta =
+                    currentUnderrun -
+                            lastUnderrunCount
+
+                println(
+                    "WALKIE AUDIO: ★underrun +$delta total=$currentUnderrun queue=${playbackQueue.size}★"
+                )
+
+                lastUnderrunCount =
+                    currentUnderrun
+
+                /*
+                 * UNDERRUN不马上销毁AudioTrack。
+                 *
+                 * 下一轮等待3包，
+                 * 恢复后继续。
+                 */
+                playbackRecoveryRequested =
+                    true
+            }
+        }
+    }
+
+    /*
+     * ============================================================
+     * 合并PCM
+     * ============================================================
+     */
+
+    private fun combineFrames(
+        frames: List<ByteArray>
+    ): ByteArray {
+
+        if (
+            frames.isEmpty()
+        ) {
+
+            return ByteArray(0)
+        }
+
+        if (
+            frames.size == 1
+        ) {
+
+            return frames[0]
+        }
+
+        var total =
+            0
+
+        for (
+        frame in frames
+        ) {
+
+            total +=
+                frame.size
+        }
+
+        val combined =
+            ByteArray(total)
+
+        var offset =
+            0
+
+        for (
+        frame in frames
+        ) {
+
+            System.arraycopy(
+                frame,
+                0,
+                combined,
+                offset,
+                frame.size
+            )
+
+            offset +=
+                frame.size
+        }
+
+        return combined
+    }
+
+    private fun getUnderrunCount(
+        track: AudioTrack?
+    ): Int {
+
+        if (
+            track == null
+        ) {
+
+            return 0
+        }
+
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.N
+        ) {
+
+            return 0
+        }
+
+        return try {
+
+            track.underrunCount
+
+        } catch (_: Exception) {
+
+            0
+        }
+    }
+
+    /*
+     * ============================================================
+     * AudioTrack异常处理
+     * ============================================================
+     */
+
+    private fun handlePlaybackFailure(
+        track: AudioTrack
+    ) {
+
+        synchronized(
+            audioTrackLock
+        ) {
+
+            if (
+                audioTrack !==
+                track
+            ) {
+
+                return
+            }
+
+            val state =
+                try {
+
+                    track.state
+
+                } catch (_: Exception) {
+
+                    AudioTrack.STATE_UNINITIALIZED
+                }
+
+            if (
+                state !=
+                AudioTrack.STATE_INITIALIZED
+            ) {
+
+                audioTrack =
+                    null
+
+                try {
+                    track.release()
+                } catch (_: Exception) {
+                }
+
+                println(
+                    "WALKIE AUDIO: AudioTrack已失效，准备重建"
+                )
+
+            } else {
+
+                /*
+                 * Track本身还有效，
+                 * 尝试重新播放，不马上销毁。
+                 */
+                try {
 
                     if (
                         track.playState !=
                         AudioTrack.PLAYSTATE_PLAYING
                     ) {
 
-                        try {
-
-                            track.play()
-
-                        } catch (_: Exception) {
-
-                            recreateAudioPlayer()
-
-                            started =
-                                false
-
-                            continue
-                        }
+                        track.play()
                     }
 
-                    try {
-
-                        track.write(
-                            applyPlaybackGain(raw),
-                            0,
-                            raw.size,
-                            AudioTrack.WRITE_BLOCKING
-                        )
-
-                    } catch (e: Exception) {
-
-                        println(
-                            "WALKIE $WALKIE_VERSION: 播放异常=${e.message}"
-                        )
-
-                        recreateAudioPlayer()
-
-                        started =
-                            false
-                    }
+                } catch (_: Exception) {
                 }
             }
+        }
+    }
+
+    /*
+     * ============================================================
+     * AudioTrack
+     * ============================================================
+     */
+
+    private fun ensureAudioPlayer() {
+
+        val current =
+            synchronized(
+                audioTrackLock
+            ) {
+
+                audioTrack
+            }
+
+        if (
+            current != null &&
+            current.state ==
+            AudioTrack.STATE_INITIALIZED
+        ) {
+
+            return
+        }
+
+        createAudioPlayer()
     }
 
     private fun createAudioPlayer() {
 
-        releaseAudioPlayer()
+        synchronized(
+            audioTrackLock
+        ) {
 
-        val channelConfig =
-            AudioFormat.CHANNEL_OUT_MONO
+            val oldTrack =
+                audioTrack
 
-        val encoding =
-            AudioFormat.ENCODING_PCM_16BIT
+            if (
+                oldTrack != null &&
+                oldTrack.state ==
+                AudioTrack.STATE_INITIALIZED
+            ) {
 
-        val minBuffer =
-            AudioTrack.getMinBufferSize(
-                SAMPLE_RATE,
-                channelConfig,
-                encoding
-            )
+                return
+            }
 
-        if (minBuffer <= 0) {
-            return
-        }
+            audioTrack =
+                null
 
-        val bufferSize =
-            max(
-                minBuffer * 2,
-                AUDIO_PACKET_SIZE * 8
-            )
+            try {
+                oldTrack?.release()
+            } catch (_: Exception) {
+            }
 
-        val attributes =
-            AudioAttributes.Builder()
-                .setUsage(
-                    AudioAttributes.USAGE_VOICE_COMMUNICATION
-                )
-                .setContentType(
-                    AudioAttributes.CONTENT_TYPE_SPEECH
-                )
-                .build()
+            val channelConfig =
+                AudioFormat.CHANNEL_OUT_MONO
 
-        val format =
-            AudioFormat.Builder()
-                .setSampleRate(
-                    SAMPLE_RATE
-                )
-                .setEncoding(
+            val encoding =
+                AudioFormat.ENCODING_PCM_16BIT
+
+            val minBuffer =
+                AudioTrack.getMinBufferSize(
+                    SAMPLE_RATE,
+                    channelConfig,
                     encoding
                 )
-                .setChannelMask(
-                    channelConfig
+
+            if (
+                minBuffer <= 0
+            ) {
+
+                println(
+                    "WALKIE AUDIO: getMinBufferSize失败=$minBuffer"
                 )
-                .build()
 
-        try {
+                return
+            }
 
-            val track =
-                AudioTrack.Builder()
-                    .setAudioAttributes(
-                        attributes
+            /*
+             * 继续使用当前已验证过能正常出声的buffer策略。
+             */
+            val bufferSize =
+                maxOf(
+                    minBuffer * 4,
+                    AUDIO_PACKET_SIZE * 16
+                )
+
+            val attributes =
+                AudioAttributes.Builder()
+                    .setUsage(
+                        AudioAttributes.USAGE_VOICE_COMMUNICATION
                     )
-                    .setAudioFormat(
-                        format
-                    )
-                    .setBufferSizeInBytes(
-                        bufferSize
-                    )
-                    .setTransferMode(
-                        AudioTrack.MODE_STREAM
+                    .setContentType(
+                        AudioAttributes.CONTENT_TYPE_SPEECH
                     )
                     .build()
+
+            val format =
+                AudioFormat.Builder()
+                    .setSampleRate(
+                        SAMPLE_RATE
+                    )
+                    .setEncoding(
+                        encoding
+                    )
+                    .setChannelMask(
+                        channelConfig
+                    )
+                    .build()
+
+            val track =
+                try {
+
+                    AudioTrack.Builder()
+                        .setAudioAttributes(
+                            attributes
+                        )
+                        .setAudioFormat(
+                            format
+                        )
+                        .setBufferSizeInBytes(
+                            bufferSize
+                        )
+                        .setTransferMode(
+                            AudioTrack.MODE_STREAM
+                        )
+                        .build()
+
+                } catch (e: Exception) {
+
+                    println(
+                        "WALKIE AUDIO: AudioTrack创建失败=${e.message}"
+                    )
+
+                    return
+                }
 
             if (
                 track.state !=
                 AudioTrack.STATE_INITIALIZED
             ) {
 
-                track.release()
+                println(
+                    "WALKIE AUDIO: AudioTrack状态异常=${track.state}"
+                )
+
+                try {
+                    track.release()
+                } catch (_: Exception) {
+                }
+
                 return
             }
 
-            val speaker =
-                findBuiltInSpeaker()
+            /*
+             * 关键：
+             *
+             * 继续保留已经验证有声音的
+             * setPreferredDevice(内置扬声器)。
+             */
+            setTrackSpeaker(
+                track
+            )
 
-            if (speaker != null) {
+            try {
 
-                try {
+                track.setVolume(
+                    1.0f
+                )
 
-                    track.setPreferredDevice(
-                        speaker
-                    )
-
-                } catch (_: Exception) {
-                }
+            } catch (_: Exception) {
             }
 
             audioTrack =
                 track
 
-            try {
-                track.setVolume(
-                    1.0f
+            lastUnderrunCount =
+                getUnderrunCount(
+                    track
                 )
-            } catch (_: Exception) {
-            }
-
-            track.play()
-
-            startPlaybackWorker()
-
-        } catch (e: Exception) {
 
             println(
-                "WALKIE $WALKIE_VERSION: 创建播放设备失败=${e.message}"
+                "WALKIE AUDIO: AudioTrack创建成功 buffer=$bufferSize speaker=${findBuiltInSpeaker() != null}"
             )
         }
     }
 
-    private fun recreateAudioPlayer() {
+    private fun setTrackSpeaker(
+        track: AudioTrack
+    ) {
 
-        releaseAudioPlayer()
+        if (
+            track.state !=
+            AudioTrack.STATE_INITIALIZED
+        ) {
 
-        if (!shuttingDown) {
-            createAudioPlayer()
-        }
-    }
-
-    private fun releaseAudioPlayer() {
-
-        playbackQueue.clear()
-
-        playbackJob?.cancel()
-        playbackJob = null
-
-        try {
-            audioTrack?.pause()
-        } catch (_: Exception) {
+            return
         }
 
-        try {
-            audioTrack?.flush()
-        } catch (_: Exception) {
+        val speaker =
+            findBuiltInSpeaker()
+
+        if (
+            speaker == null
+        ) {
+
+            return
         }
 
         try {
-            audioTrack?.stop()
-        } catch (_: Exception) {
-        }
 
-        try {
-            audioTrack?.release()
-        } catch (_: Exception) {
-        }
+            val result =
+                track.setPreferredDevice(
+                    speaker
+                )
 
-        audioTrack = null
+            if (
+                result
+            ) {
+
+                println(
+                    "WALKIE AUDIO: 首选输出=内置扬声器"
+                )
+            }
+
+        } catch (e: Exception) {
+
+            println(
+                "WALKIE AUDIO: 设置AudioTrack扬声器失败=${e.message}"
+            )
+        }
     }
 
     /*
      * ============================================================
-     * 扬声器
+     * 释放播放
      * ============================================================
      */
 
-    private fun setupSpeakerOutput() {
+    private fun releaseAudioPlayer() {
 
-        try {
+        synchronized(
+            playbackWorkerLock
+        ) {
 
-            val audioManager =
-                getSystemService(
-                    Context.AUDIO_SERVICE
-                ) as AudioManager
+            playbackJob?.cancel()
 
-            @Suppress("DEPRECATION")
-            audioManager.mode =
-                AudioManager.MODE_IN_COMMUNICATION
+            playbackJob =
+                null
+
+            playbackWorkerStarting =
+                false
+        }
+
+        playbackQueue.clear()
+
+        playbackRecoveryRequested =
+            false
+
+        synchronized(
+            audioTrackLock
+        ) {
+
+            val track =
+                audioTrack
+
+            audioTrack =
+                null
 
             if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.S
+                track != null
             ) {
 
-                val speaker =
-                    audioManager
-                        .availableCommunicationDevices
-                        .firstOrNull {
-                            it.type ==
-                                    AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
-                        }
-
-                if (speaker != null) {
-
-                    try {
-
-                        audioManager
-                            .setCommunicationDevice(
-                                speaker
-                            )
-
-                    } catch (_: Exception) {
-                    }
+                try {
+                    track.pause()
+                } catch (_: Exception) {
                 }
 
-            } else {
+                try {
+                    track.flush()
+                } catch (_: Exception) {
+                }
 
-                @Suppress("DEPRECATION")
-                audioManager.isSpeakerphoneOn =
-                    true
+                try {
+                    track.stop()
+                } catch (_: Exception) {
+                }
+
+                try {
+                    track.release()
+                } catch (_: Exception) {
+                }
             }
-
-        } catch (_: Exception) {
-        }
-    }
-
-    private fun findBuiltInSpeaker():
-            AudioDeviceInfo? {
-
-        return try {
-
-            val audioManager =
-                getSystemService(
-                    Context.AUDIO_SERVICE
-                ) as AudioManager
-
-            if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.M
-            ) {
-
-                audioManager
-                    .getDevices(
-                        AudioManager.GET_DEVICES_OUTPUTS
-                    )
-                    .firstOrNull {
-                        it.type ==
-                                AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
-                    }
-
-            } else {
-
-                null
-            }
-
-        } catch (_: Exception) {
-
-            null
         }
     }
 
@@ -2651,8 +4614,25 @@ class WalkieService : Service() {
         connected: Boolean
     ) {
 
+        if (
+            isConnected ==
+            connected
+        ) {
+
+            updateNotification()
+
+            return
+        }
+
         isConnected =
             connected
+
+        if (
+            !connected
+        ) {
+
+            stopChannelRefreshWorker()
+        }
 
         val intent =
             Intent(
@@ -2668,9 +4648,7 @@ class WalkieService : Service() {
             connected
         )
 
-        sendBroadcast(
-            intent
-        )
+        sendBroadcast(intent)
 
         updateNotification()
     }
@@ -2693,9 +4671,7 @@ class WalkieService : Service() {
             status
         )
 
-        sendBroadcast(
-            intent
-        )
+        sendBroadcast(intent)
     }
 
     /*
@@ -2717,37 +4693,62 @@ class WalkieService : Service() {
             udpSocket ===
             socket
         ) {
-            udpSocket = null
+
+            udpSocket =
+                null
         }
-
-        talkRequesting = false
-        talkAllowed = false
-        isSpeaking = false
-
-        stopRecording()
-        releaseAudioPlayer()
-
-        setConnected(false)
     }
 
     private fun cleanupConnection() {
 
-        talkRequesting = false
-        talkAllowed = false
-        isSpeaking = false
+        if (
+            currentChannel.isNotBlank() &&
+            currentChannel !=
+            "public"
+        ) {
+
+            reconnectChannel =
+                currentChannel
+        }
+
+        talkRequesting =
+            false
+
+        talkAllowed =
+            false
+
+        isSpeaking =
+            false
 
         stopRecording()
+
         closeSocket()
-        releaseAudioPlayer()
 
-        serverAddress = null
+        serverAddress =
+            null
 
-        currentChannel = "public"
-        currentChannelOnlineCount = 0
-        currentChannelPrivate = false
-        currentChannelRequirePassword = false
+        /*
+         * 重连时不播放旧语音。
+         */
+        playbackQueue.clear()
 
-        channelSwitching = false
+        playbackRecoveryRequested =
+            true
+
+        currentChannel =
+            "public"
+
+        currentChannelOnlineCount =
+            0
+
+        currentChannelPrivate =
+            false
+
+        currentChannelRequirePassword =
+            false
+
+        channelSwitching =
+            false
 
         cachedChannelInfoList =
             ArrayList()
@@ -2756,7 +4757,9 @@ class WalkieService : Service() {
             TALK_STATUS_RELEASED
         )
 
-        setConnected(false)
+        setConnected(
+            false
+        )
     }
 
     private fun closeSocket() {
@@ -2766,16 +4769,20 @@ class WalkieService : Service() {
         } catch (_: Exception) {
         }
 
-        udpSocket = null
+        udpSocket =
+            null
     }
 
     private fun stopAll() {
 
-        shuttingDown = true
+        shuttingDown =
+            true
 
         try {
 
-            if (isConnected) {
+            if (
+                isConnected
+            ) {
 
                 if (
                     talkAllowed ||
@@ -2796,38 +4803,133 @@ class WalkieService : Service() {
         }
 
         networkJob?.cancel()
-        networkJob = null
+
+        networkJob =
+            null
+
+        stopChannelRefreshWorker()
+
+        stopBackgroundDiagnostic()
 
         stopRecording()
+
         closeSocket()
+
         releaseAudioPlayer()
 
-        talkRequesting = false
-        talkAllowed = false
-        isSpeaking = false
-        isConnected = false
+        talkRequesting =
+            false
 
-        serverIp = null
-        serverAddress = null
+        talkAllowed =
+            false
 
-        currentChannel = "public"
-        currentChannelOnlineCount = 0
-        currentChannelPrivate = false
-        currentChannelRequirePassword = false
+        isSpeaking =
+            false
 
-        channelSwitching = false
+        isConnected =
+            false
+
+        serverIp =
+            null
+
+        serverAddress =
+            null
+
+        currentChannel =
+            "public"
+
+        currentChannelOnlineCount =
+            0
+
+        currentChannelPrivate =
+            false
+
+        currentChannelRequirePassword =
+            false
+
+        reconnectChannel =
+            ""
+
+        reconnectChannelPassword =
+            ""
+
+        channelSwitching =
+            false
 
         cachedChannelInfoList =
             ArrayList()
 
-        pendingCreateChannelName = ""
-        pendingCreateChannelPassword = ""
+        pendingCreateChannelName =
+            ""
+
+        pendingCreateChannelPassword =
+            ""
 
         setTalkStatus(
             TALK_STATUS_RELEASED
         )
 
-        setConnected(false)
+        val intent =
+            Intent(
+                ACTION_CONNECTION_STATUS
+            )
+
+        intent.setPackage(
+            packageName
+        )
+
+        intent.putExtra(
+            EXTRA_CONNECTED,
+            false
+        )
+
+        sendBroadcast(intent)
+
+        updateNotification()
+    }
+
+    /*
+     * ============================================================
+     * WakeLock
+     * ============================================================
+     */
+
+    private fun acquireWakeLock() {
+
+        try {
+
+            val powerManager =
+                getSystemService(
+                    Context.POWER_SERVICE
+                ) as PowerManager
+
+            wakeLock =
+                powerManager.newWakeLock(
+                    PowerManager.PARTIAL_WAKE_LOCK,
+                    "Walkie::KeepAlive"
+                )
+
+            wakeLock?.setReferenceCounted(
+                false
+            )
+
+            if (
+                wakeLock?.isHeld == false
+            ) {
+
+                wakeLock?.acquire()
+            }
+
+            println(
+                "WALKIE $WALKIE_VERSION: WakeLock已开启"
+            )
+
+        } catch (e: Exception) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: WakeLock失败=${e.message}"
+            )
+        }
     }
 
     /*
@@ -2840,7 +4942,9 @@ class WalkieService : Service() {
             Notification {
 
         val text =
-            if (isConnected) {
+            if (
+                isConnected
+            ) {
 
                 "频道：$currentChannel  👥 ${currentChannelOnlineCount}人"
 
@@ -2854,7 +4958,7 @@ class WalkieService : Service() {
             CHANNEL_ID
         )
             .setContentTitle(
-                "WALKIE V11"
+                "WALKIE V20"
             )
             .setContentText(
                 text
@@ -2862,7 +4966,9 @@ class WalkieService : Service() {
             .setSmallIcon(
                 android.R.drawable.ic_btn_speak_now
             )
-            .setOngoing(true)
+            .setOngoing(
+                true
+            )
             .setCategory(
                 NotificationCompat.CATEGORY_SERVICE
             )
@@ -2886,11 +4992,16 @@ class WalkieService : Service() {
             channel.description =
                 "保持 WALKIE 后台运行"
 
-            getSystemService(
-                NotificationManager::class.java
-            ).createNotificationChannel(
-                channel
-            )
+            try {
+
+                getSystemService(
+                    NotificationManager::class.java
+                ).createNotificationChannel(
+                    channel
+                )
+
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -2909,6 +5020,12 @@ class WalkieService : Service() {
         }
     }
 
+    /*
+     * ============================================================
+     * Bind / Destroy
+     * ============================================================
+     */
+
     override fun onBind(
         intent: Intent?
     ): IBinder? {
@@ -2924,7 +5041,38 @@ class WalkieService : Service() {
 
         stopAll()
 
-        serviceScope.cancel()
+        unregisterNetworkCallback()
+
+        try {
+            opusEncoder?.release()
+        } catch (_: Exception) {
+        }
+
+        try {
+            opusDecoder?.release()
+        } catch (_: Exception) {
+        }
+
+        opusEncoder =
+            null
+
+        opusDecoder =
+            null
+
+        try {
+
+            if (
+                wakeLock?.isHeld == true
+            ) {
+
+                wakeLock?.release()
+            }
+
+        } catch (_: Exception) {
+        }
+
+        wakeLock =
+            null
 
         try {
 
@@ -2943,6 +5091,8 @@ class WalkieService : Service() {
 
         } catch (_: Exception) {
         }
+
+        serviceScope.cancel()
 
         super.onDestroy()
     }
