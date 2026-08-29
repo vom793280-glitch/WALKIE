@@ -1,0 +1,262 @@
+package main
+
+import (
+	"log"
+	"net"
+	"sync"
+	"time"
+)
+
+const (
+	listenAddr    = ":50000"
+	maxClients    = 32
+	clientTimeout = 60 * time.Second
+	maxPacketSize = 1500
+
+	msgHello      = "WALKIE_HELLO"
+	msgConnected  = "WALKIE_CONNECTED"
+	msgKeepAlive  = "WALKIE_KEEPALIVE"
+	msgDisconnect = "WALKIE_GOODBYE"
+)
+
+type Client struct {
+	Addr     *net.UDPAddr
+	LastSeen time.Time
+}
+
+type Server struct {
+	conn    *net.UDPConn
+	mu      sync.RWMutex
+	clients map[string]*Client
+}
+
+func main() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+
+	addr, err := net.ResolveUDPAddr("udp", listenAddr)
+	if err != nil {
+		log.Fatal("解析 UDP 地址失败:", err)
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		log.Fatal("监听 UDP 50000 失败:", err)
+	}
+
+	defer conn.Close()
+
+	server := &Server{
+		conn:    conn,
+		clients: make(map[string]*Client),
+	}
+
+	log.Println("==============================")
+	log.Println("私人公网对讲服务器")
+	log.Println("==============================")
+	log.Println("UDP监听:", listenAddr)
+	log.Println("最大在线人数:", maxClients)
+	log.Println("客户端超时:", clientTimeout)
+	log.Println("连接确认:", msgConnected)
+	log.Println("服务器已启动，等待手机连接...")
+	log.Println("==============================")
+
+	server.run()
+}
+
+func (s *Server) run() {
+	buffer := make([]byte, maxPacketSize)
+
+	for {
+		n, remoteAddr, err := s.conn.ReadFromUDP(buffer)
+		if err != nil {
+			log.Println("读取 UDP 数据失败:", err)
+			continue
+		}
+
+		if n <= 0 {
+			continue
+		}
+
+		data := buffer[:n]
+
+		// 手机发来的连接请求
+		if string(data) == msgHello {
+			s.updateClient(remoteAddr)
+
+			log.Printf(
+				"收到连接请求: %s",
+				remoteAddr.String(),
+			)
+
+			s.sendConnected(remoteAddr)
+
+			continue
+		}
+
+		// 手机心跳
+		if string(data) == msgKeepAlive {
+			s.updateClient(remoteAddr)
+
+			log.Printf(
+				"收到心跳: %s",
+				remoteAddr.String(),
+			)
+
+			continue
+		}
+
+		// 手机主动断开
+		if string(data) == msgDisconnect {
+			s.removeClient(remoteAddr)
+
+			log.Printf(
+				"客户端断开: %s",
+				remoteAddr.String(),
+			)
+
+			continue
+		}
+
+		// 其他数据按照音频处理
+		s.updateClient(remoteAddr)
+
+		log.Printf(
+			"收到 UDP 音频: %d 字节，来自 %s",
+			n,
+			remoteAddr.String(),
+		)
+
+		s.relayAudio(data, remoteAddr)
+	}
+}
+
+func (s *Server) sendConnected(addr *net.UDPAddr) {
+	data := []byte(msgConnected)
+
+	_, err := s.conn.WriteToUDP(data, addr)
+	if err != nil {
+		log.Printf(
+			"发送连接确认失败: %s: %v",
+			addr.String(),
+			err,
+		)
+
+		return
+	}
+
+	log.Printf(
+		"发送连接确认: %s -> %s",
+		msgConnected,
+		addr.String(),
+	)
+}
+
+func (s *Server) updateClient(addr *net.UDPAddr) {
+	key := addr.String()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := time.Now()
+
+	// 清理超时客户端
+	for clientKey, client := range s.clients {
+		if now.Sub(client.LastSeen) > clientTimeout {
+			log.Println(
+				"清理超时客户端:",
+				clientKey,
+			)
+
+			delete(s.clients, clientKey)
+		}
+	}
+
+	// 已经存在
+	if client, exists := s.clients[key]; exists {
+		client.LastSeen = now
+		return
+	}
+
+	// 达到人数上限
+	if len(s.clients) >= maxClients {
+		log.Println(
+			"客户端数量已达到上限:",
+			key,
+		)
+
+		return
+	}
+
+	// 新客户端
+	s.clients[key] = &Client{
+		Addr:     addr,
+		LastSeen: now,
+	}
+
+	log.Println(
+		"新客户端:",
+		key,
+	)
+}
+
+func (s *Server) removeClient(addr *net.UDPAddr) {
+	key := addr.String()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.clients, key)
+}
+
+func (s *Server) relayAudio(
+	data []byte,
+	sender *net.UDPAddr,
+) {
+	s.mu.RLock()
+
+	clients := make(
+		[]*Client,
+		0,
+		len(s.clients),
+	)
+
+	for _, client := range s.clients {
+		if time.Since(client.LastSeen) <= clientTimeout {
+			clients = append(
+				clients,
+				client,
+			)
+		}
+	}
+
+	s.mu.RUnlock()
+
+	for _, client := range clients {
+		// 不把自己的声音发回自己
+		if client.Addr.String() == sender.String() {
+			continue
+		}
+
+		_, err := s.conn.WriteToUDP(
+			data,
+			client.Addr,
+		)
+
+		if err != nil {
+			log.Printf(
+				"转发失败: %s: %v",
+				client.Addr.String(),
+				err,
+			)
+
+			continue
+		}
+
+		log.Printf(
+			"转发音频: %d 字节 %s -> %s",
+			len(data),
+			sender.String(),
+			client.Addr.String(),
+		)
+	}
+}

@@ -1,0 +1,170 @@
+package main
+
+import (
+	"log"
+	"net"
+	"sync"
+	"time"
+)
+
+const (
+	listenAddr     = ":50000"
+	maxClients     = 32
+	clientTimeout  = 60 * time.Second
+	maxPacketSize  = 1500
+	packetHello    byte = 1
+	packetHeartbeat byte = 2
+	packetAudio    byte = 3
+	packetGoodbye  byte = 4
+)
+
+type Client struct {
+	Addr     *net.UDPAddr
+	LastSeen time.Time
+}
+
+type Server struct {
+	conn    *net.UDPConn
+	mu      sync.RWMutex
+	clients map[string]*Client
+}
+
+func main() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+
+	addr, err := net.ResolveUDPAddr("udp", listenAddr)
+	if err != nil {
+		log.Fatal("解析 UDP 地址失败:", err)
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		log.Fatal("监听 UDP 50000 失败:", err)
+	}
+
+	defer conn.Close()
+
+	server := &Server{
+		conn:    conn,
+		clients: make(map[string]*Client),
+	}
+
+	log.Println("==============================")
+	log.Println("私人公网对讲服务器")
+	log.Println("==============================")
+	log.Println("UDP监听:", listenAddr)
+	log.Println("最大在线人数:", maxClients)
+	log.Println("客户端超时:", clientTimeout)
+	log.Println("服务器已启动，等待手机连接...")
+	log.Println("==============================")
+
+	server.run()
+}
+
+func (s *Server) run() {
+	buffer := make([]byte, maxPacketSize)
+
+	for {
+		n, remoteAddr, err := s.conn.ReadFromUDP(buffer)
+		if err != nil {
+			log.Println("读取 UDP 数据失败:", err)
+			continue
+		}
+
+		if n <= 0 {
+			continue
+		}
+
+		s.updateClient(remoteAddr)
+
+		if n == 12 {
+			log.Printf(
+				"收到连接测试: %s",
+				remoteAddr.String(),
+			)
+			continue
+		}
+
+		log.Printf(
+			"收到 UDP 数据: %d 字节，来自 %s",
+			n,
+			remoteAddr.String(),
+		)
+
+		s.relayAudio(buffer[:n], remoteAddr)
+	}
+}
+
+func (s *Server) updateClient(addr *net.UDPAddr) {
+    key := addr.String()
+
+    s.mu.Lock()
+    defer s.mu.Unlock()
+
+    // 先清理已经超时的客户端
+    now := time.Now()
+
+    for clientKey, client := range s.clients {
+        if now.Sub(client.LastSeen) > clientTimeout {
+            log.Println("清理超时客户端:", clientKey)
+            delete(s.clients, clientKey)
+        }
+    }
+
+    // 已存在的客户端，更新最后活动时间
+    if client, exists := s.clients[key]; exists {
+        client.LastSeen = now
+        return
+    }
+
+    // 清理后仍然达到上限，才拒绝新客户端
+    if len(s.clients) >= maxClients {
+        log.Println("客户端数量已达到上限:", key)
+        return
+    }
+
+    // 添加新客户端
+    s.clients[key] = &Client{
+        Addr:     addr,
+        LastSeen: now,
+    }
+
+    log.Println("新客户端:", key)
+}
+
+func (s *Server) relayAudio(data []byte, sender *net.UDPAddr) {
+	s.mu.RLock()
+
+	clients := make([]*Client, 0, len(s.clients))
+
+	for _, client := range s.clients {
+		if time.Since(client.LastSeen) <= clientTimeout {
+			clients = append(clients, client)
+		}
+	}
+
+	s.mu.RUnlock()
+
+	for _, client := range clients {
+		if client.Addr.String() == sender.String() {
+			continue
+		}
+
+		_, err := s.conn.WriteToUDP(data, client.Addr)
+		if err != nil {
+	log.Printf(
+         "转发失败: %s: %v",
+         client.Addr.String(),
+         err,
+    )
+			continue
+		}
+
+		log.Printf(
+			"转发音频: %d 字节 %s -> %s",
+			len(data),
+			sender.String(),
+			client.Addr.String(),
+		)
+	}
+}
