@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -62,13 +63,13 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.walkie.ui.theme.WalkieTheme
 
-private const val WALKIE_VERSION = "V22"
+private const val WALKIE_VERSION = "V23.3"
 
 private const val DEFAULT_SERVER_IP =
     "38.146.29.169"
 
 private const val UI_PREFS =
-    "walkie_session_v22"
+    "walkie_session_v23_3"
 
 private const val UI_PREF_NICKNAME =
     "nickname"
@@ -166,10 +167,23 @@ class MainActivity : ComponentActivity() {
     )
 
     /*
-  * ============================================================
-  * V21 网络质量状态
-  * ============================================================
-  */
+     * ============================================================
+     * 网络质量
+     *
+     * networkBaseType：
+     * 只保存 Wi-Fi / 移动数据 / 无网络。
+     *
+     * networkType：
+     * 对 UI 显示完整网络摘要。
+     *
+     * 这样刷新频道或者重新检测网络类型时，
+     * 不会把已经得到的延迟、丢包、抖动清掉。
+     * ============================================================
+     */
+
+    private var networkBaseType by mutableStateOf(
+        "检测中"
+    )
 
     private var networkType by mutableStateOf(
         "检测中"
@@ -202,8 +216,9 @@ class MainActivity : ComponentActivity() {
     private var networkJitter by mutableStateOf(
         -1L
     )
+
     /*
-     * 当前页面。
+     * 当前页面
      */
     private var currentPage by mutableStateOf(
         "home"
@@ -231,9 +246,6 @@ class MainActivity : ComponentActivity() {
                     return
                 }
 
-                /*
-                 * 首页才真正退出 Activity。
-                 */
                 isEnabled =
                     false
 
@@ -314,13 +326,7 @@ class MainActivity : ComponentActivity() {
                         ) {
 
                             /*
-                             * V21：
-                             * 断线后立即清除旧的在线成员状态。
-                             *
-                             * 但是不要清除 currentChannel。
-                             *
-                             * WalkieService 会负责自动重连，
-                             * 并在重连成功后恢复之前的频道。
+                             * 真正断线才清空实时网络统计。
                              */
                             onlineUsers =
                                 emptyList()
@@ -334,11 +340,6 @@ class MainActivity : ComponentActivity() {
                             myUserId =
                                 ""
 
-                            /*
-                             * 网络状态立即恢复为离线。
-                             * 等 Service 重新建立连接后，
-                             * ACTION_NETWORK_STATUS 会重新更新。
-                             */
                             networkLatency =
                                 -1L
 
@@ -359,6 +360,26 @@ class MainActivity : ComponentActivity() {
 
                             networkJitter =
                                 -1L
+
+                            networkType =
+                                if (
+                                    networkBaseType ==
+                                    "无网络"
+                                ) {
+
+                                    "无网络 · 离线"
+
+                                } else {
+
+                                    "$networkBaseType · 离线"
+                                }
+                        } else {
+
+                            /*
+                             * 重新连接时不要把旧网络数据清掉。
+                             * 等新的 NET PONG 到来后自动更新。
+                             */
+                            refreshNetworkDisplay()
                         }
 
                         updateNetworkType()
@@ -451,15 +472,16 @@ class MainActivity : ComponentActivity() {
                         onlineUsers =
                             result
 
-                        /*
-                         * 用户列表是服务器当前频道成员的最终人数。
-                         */
                         currentOnlineCount =
                             result.size
 
                         connectionState =
                             true
 
+                        /*
+                         * 这里只重新检测“网络类型”，
+                         * 不清除服务器返回的网络质量数据。
+                         */
                         updateNetworkType()
 
                         println(
@@ -514,10 +536,10 @@ class MainActivity : ComponentActivity() {
                     }
 
                     /*
- * ============================================================
- * V21 网络质量
- * ============================================================
- */
+                     * ==================================================
+                     * 网络质量
+                     * ==================================================
+                     */
 
                     WalkieService.ACTION_NETWORK_STATUS -> {
 
@@ -580,46 +602,15 @@ class MainActivity : ComponentActivity() {
                                 )
 
                         /*
- * V21：
- * 收到服务器网络质量数据时，
- * 同时重新检测手机当前使用的网络类型。
- */
+                         * 获取手机当前网络类型。
+                         * 不再覆盖已有统计数据。
+                         */
                         updateNetworkType()
 
                         /*
- * V21：
- * 重新获取基础网络类型，
- * 再组合 V21 网络质量信息。
- *
- * 避免每次广播都重复追加文字。
- */
-                        updateNetworkType()
-
-                        val baseNetworkType =
-                            networkType
-
-                        val latencyText =
-                            if (
-                                networkLatency >= 0L
-                            ) {
-
-                                "${networkLatency}ms"
-
-                            } else {
-
-                                "--"
-                            }
-
-                        networkType =
-                            "$baseNetworkType · " +
-                                    "$networkQuality · " +
-                                    "$latencyText · " +
-                                    "丢包 ${
-                                        String.format(
-                                            "%.1f%%",
-                                            networkLoss
-                                        )
-                                    }"
+                         * 网络检测成功后组合完整 UI 文本。
+                         */
+                        refreshNetworkDisplay()
 
                         println(
                             "WALKIE $WALKIE_VERSION: " +
@@ -646,15 +637,6 @@ class MainActivity : ComponentActivity() {
                             )
                                 ?: currentChannel
 
-                        /*
-  * V21：
-  * 如果已经收到服务器真实成员列表，
-  * 以 onlineUsers.size 作为当前频道真实人数。
-  *
-  * CHANNEL_STATUS 里的在线人数只作为备用值，
-  * 防止旧缓存人数把真实成员人数覆盖掉。
-  */
-
                         currentPrivate =
                             intent.getBooleanExtra(
                                 WalkieService.EXTRA_CHANNEL_PRIVATE,
@@ -667,7 +649,9 @@ class MainActivity : ComponentActivity() {
                             )
                                 ?: ""
 
-
+                        /*
+                         * 不清除网络数据。
+                         */
                         updateNetworkType()
 
                         println(
@@ -750,6 +734,15 @@ class MainActivity : ComponentActivity() {
                 ?.take(20)
                 ?: ""
 
+        nicknameInput =
+            nickname
+
+        /*
+         * 第一次没有昵称，必须设置。
+         */
+        nicknameDialog =
+            nickname.isBlank()
+
         updateNetworkType()
 
         requestPermissionsIfNeeded()
@@ -811,6 +804,7 @@ class MainActivity : ComponentActivity() {
             WalkieTheme {
 
                 Surface(
+
                     modifier =
                         Modifier.fillMaxSize(),
 
@@ -903,8 +897,16 @@ class MainActivity : ComponentActivity() {
 
                         onDismissNickname = {
 
-                            nicknameDialog =
-                                false
+                            /*
+                             * 首次设置时不能关闭。
+                             */
+                            if (
+                                nickname.isNotBlank()
+                            ) {
+
+                                nicknameDialog =
+                                    false
+                            }
                         },
 
                         onNicknameChanged = {
@@ -1030,7 +1032,9 @@ class MainActivity : ComponentActivity() {
 
                         onStartSpeaking = {
 
-                            println("WALKIE UI: ★触发一次 START★")
+                            println(
+                                "WALKIE UI: ★触发一次 START★"
+                            )
 
                             startSpeaking()
                         },
@@ -1051,49 +1055,20 @@ class MainActivity : ComponentActivity() {
      * ============================================================
      */
 
-    /*
- * ============================================================
- * V21 前台恢复
- * ============================================================
- *
- * Activity 回到前台时：
- *
- * 1. 重新检测手机网络类型
- * 2. 无论 Activity 自己保存的 connectionState 是什么，
- *    都向 WalkieService 请求重新同步
- *
- * 注意：
- * 真正的 UDP 连接生命周期由 WalkieService 管理。
- * MainActivity 不负责重新创建 Socket。
- */
     override fun onResume() {
 
         super.onResume()
 
+        /*
+         * 这里只检测网络类型，不重置网络质量。
+         */
         updateNetworkType()
 
         /*
-         * 不使用 connectionState 判断。
-         *
-         * 因为 Activity 可能刚刚重新创建，
-         * 此时 connectionState 还是 false，
-         * 但后台 WalkieService 可能仍然在线。
-         *
-         * 这里直接请求 Service 同步频道信息。
+         * 不因为刷新频道而清除网络统计。
          */
         requestChannelList()
 
-        /*
-         * 如果 Service 当前在线，
-         * 它会返回：
-         *
-         * CHANNEL_LIST
-         * CHANNEL_STATUS
-         * USER_LIST
-         * NETWORK_STATUS
-         *
-         * Activity 再根据这些广播恢复界面。
-         */
         println(
             "WALKIE $WALKIE_VERSION: " +
                     "Activity 回到前台，主动请求 Service 同步状态"
@@ -1149,6 +1124,11 @@ class MainActivity : ComponentActivity() {
     /*
      * ============================================================
      * 网络类型
+     *
+     * 只更新 networkBaseType。
+     *
+     * 不再把 networkType 直接覆盖成 Wi-Fi / 移动数据，
+     * 防止已有延迟、丢包等数据消失。
      * ============================================================
      */
 
@@ -1173,7 +1153,7 @@ class MainActivity : ComponentActivity() {
                         )
                 }
 
-            networkType =
+            networkBaseType =
                 when {
 
                     capabilities == null ->
@@ -1198,11 +1178,71 @@ class MainActivity : ComponentActivity() {
                         "网络已连接"
                 }
 
+            /*
+             * 只有已经有网络质量数据时才重新组合。
+             */
+            if (
+                connectionState ||
+                networkQuality != "检测中"
+            ) {
+
+                refreshNetworkDisplay()
+            } else {
+
+                networkType =
+                    networkBaseType
+            }
+
         } catch (_: Exception) {
 
-            networkType =
+            networkBaseType =
                 "未知"
+
+            if (
+                networkQuality != "检测中"
+            ) {
+
+                refreshNetworkDisplay()
+
+            } else {
+
+                networkType =
+                    networkBaseType
+            }
         }
+    }
+
+    /*
+     * ============================================================
+     * 网络 UI 文本
+     * ============================================================
+     */
+
+    private fun refreshNetworkDisplay() {
+
+        val latencyText =
+            if (
+                networkLatency >= 0L
+            ) {
+
+                "${networkLatency}ms"
+
+            } else {
+
+                "--"
+            }
+
+        val lossText =
+            String.format(
+                "%.1f%%",
+                networkLoss
+            )
+
+        networkType =
+            "$networkBaseType · " +
+                    "$networkQuality · " +
+                    "$latencyText · " +
+                    "丢包 $lossText"
     }
 
     /*
@@ -1222,9 +1262,6 @@ class MainActivity : ComponentActivity() {
                 action =
                     WalkieService.ACTION_START
 
-                /*
-                 * IP只在程序内部使用。
-                 */
                 putExtra(
                     WalkieService.EXTRA_SERVER_IP,
                     DEFAULT_SERVER_IP
@@ -1308,6 +1345,9 @@ class MainActivity : ComponentActivity() {
         nickname =
             value
 
+        nicknameInput =
+            value
+
         getSharedPreferences(
             UI_PREFS,
             MODE_PRIVATE
@@ -1322,11 +1362,6 @@ class MainActivity : ComponentActivity() {
         nicknameDialog =
             false
 
-        /*
-         * V20.1：
-         * 真正发送给 Service，
-         * Service 再发送 WALKIE_LOGIN 给 VPS。
-         */
         val intent =
             Intent(
                 this,
@@ -1421,13 +1456,6 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        /*
- * V21：
- * 开始切换频道时，立即清除旧频道成员。
- *
- * 这样在服务器返回新频道成员列表之前，
- * UI 不会继续显示旧频道的人。
- */
         onlineUsers =
             emptyList()
 
@@ -1807,7 +1835,7 @@ class MainActivity : ComponentActivity() {
 
 /*
  * ================================================================
- * V20.1 SCREEN
+ * V23.3 SCREEN
  * ================================================================
  */
 
@@ -1895,7 +1923,7 @@ private fun WalkieV20Screen(
 
     /*
      * ============================================================
-     * 昵称弹窗
+     * 昵称
      * ============================================================
      */
 
@@ -1911,40 +1939,77 @@ private fun WalkieV20Screen(
             title = {
 
                 Text(
-                    "设置昵称"
+
+                    if (
+                        nickname.isBlank()
+                    ) {
+
+                        "首次设置昵称"
+
+                    } else {
+
+                        "修改昵称"
+                    }
                 )
             },
 
             text = {
 
-                OutlinedTextField(
+                Column {
 
-                    value =
-                        nicknameInput,
-
-                    onValueChange =
-                        onNicknameChanged,
-
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
-                    singleLine =
-                        true,
-
-                    label = {
+                    if (
+                        nickname.isBlank()
+                    ) {
 
                         Text(
-                            "我的昵称"
+
+                            "请先设置昵称，设置完成后才能使用对讲功能。",
+
+                            fontSize =
+                                13.sp,
+
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant
                         )
-                    },
 
-                    supportingText = {
-
-                        Text(
-                            "最多 20 个字符"
+                        Spacer(
+                            Modifier.height(
+                                10.dp
+                            )
                         )
                     }
-                )
+
+                    OutlinedTextField(
+
+                        value =
+                            nicknameInput,
+
+                        onValueChange =
+                            onNicknameChanged,
+
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
+                        singleLine =
+                            true,
+
+                        label = {
+
+                            Text(
+                                "我的昵称"
+                            )
+                        },
+
+                        supportingText = {
+
+                            Text(
+                                "最多 20 个字符"
+                            )
+                        }
+                    )
+                }
             },
 
             confirmButton = {
@@ -1969,14 +2034,21 @@ private fun WalkieV20Screen(
 
             dismissButton = {
 
-                TextButton(
-                    onClick =
-                        onDismissNickname
+                if (
+                    nickname.isNotBlank()
                 ) {
 
-                    Text(
-                        "取消"
-                    )
+                    TextButton(
+
+                        onClick =
+                            onDismissNickname
+
+                    ) {
+
+                        Text(
+                            "取消"
+                        )
+                    }
                 }
             }
         )
@@ -2385,9 +2457,6 @@ private fun WalkieV20Screen(
                     connected =
                         connected,
 
-                    nickname =
-                        nickname,
-
                     currentChannel =
                         currentChannel,
 
@@ -2397,6 +2466,9 @@ private fun WalkieV20Screen(
                     currentPrivate =
                         currentPrivate,
 
+                    onlineUsers =
+                        onlineUsers,
+
                     networkType =
                         networkType,
 
@@ -2405,9 +2477,6 @@ private fun WalkieV20Screen(
 
                     onDisconnect =
                         onDisconnect,
-
-                    onOpenNickname =
-                        onOpenNickname,
 
                     onOpenUsers = {
 
@@ -2522,6 +2591,9 @@ private fun WalkieV20Screen(
                     myUserId =
                         myUserId,
 
+                    networkType =
+                        networkType,
+
                     onBack = {
 
                         onPageChanged(
@@ -2547,14 +2619,13 @@ private fun WalkieV20Screen(
 private fun HomePage(
     modifier: Modifier,
     connected: Boolean,
-    nickname: String,
     currentChannel: String,
     currentOnlineCount: Int,
     currentPrivate: Boolean,
+    onlineUsers: List<OnlineUserUiInfo>,
     networkType: String,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
-    onOpenNickname: () -> Unit,
     onOpenUsers: () -> Unit,
     onOpenChannels: () -> Unit,
     onOpenSettings: () -> Unit
@@ -2565,22 +2636,21 @@ private fun HomePage(
         modifier =
             modifier
                 .fillMaxSize()
-                .verticalScroll(
-                    rememberScrollState()
-                )
                 .padding(
-                    horizontal = 16.dp,
-                    vertical = 14.dp
+                    horizontal = 15.dp,
+                    vertical = 9.dp
                 ),
 
         verticalArrangement =
             Arrangement.spacedBy(
-                11.dp
+                9.dp
             )
     ) {
 
         /*
+         * ========================================================
          * 顶部
+         * ========================================================
          */
 
         Row(
@@ -2595,7 +2665,9 @@ private fun HomePage(
             Column(
 
                 modifier =
-                    Modifier.weight(1f)
+                    Modifier.weight(
+                        1f
+                    )
             ) {
 
                 Text(
@@ -2603,7 +2675,7 @@ private fun HomePage(
                     "兄弟对讲机",
 
                     fontSize =
-                        28.sp,
+                        27.sp,
 
                     fontWeight =
                         FontWeight.Bold
@@ -2611,13 +2683,15 @@ private fun HomePage(
 
                 Text(
 
-                    "V20.1 · 实时语音通信",
+                    "实时语音通信",
 
                     fontSize =
-                        13.sp,
+                        12.sp,
 
                     color =
-                        Color.Gray
+                        MaterialTheme
+                            .colorScheme
+                            .onSurfaceVariant
                 )
             }
 
@@ -2628,109 +2702,11 @@ private fun HomePage(
         }
 
         /*
-         * 我的昵称
-         */
-
-        Card(
-
-            modifier =
-                Modifier.fillMaxWidth(),
-
-            shape =
-                RoundedCornerShape(
-                    20.dp
-                )
-        ) {
-
-            Row(
-
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
-
-                Box(
-
-                    modifier =
-                        Modifier
-                            .size(52.dp)
-                            .clip(
-                                CircleShape
-                            )
-                            .background(
-                                MaterialTheme
-                                    .colorScheme
-                                    .primaryContainer
-                            ),
-
-                    contentAlignment =
-                        Alignment.Center
-                ) {
-
-                    Text(
-                        "👤",
-                        fontSize =
-                            24.sp
-                    )
-                }
-
-                Spacer(
-                    Modifier.width(
-                        12.dp
-                    )
-                )
-
-                Column(
-
-                    modifier =
-                        Modifier.weight(1f)
-                ) {
-
-                    Text(
-
-                        "我的昵称",
-
-                        fontSize =
-                            12.sp,
-
-                        color =
-                            Color.Gray
-                    )
-
-                    Text(
-
-                        nickname.ifBlank {
-                            "未设置昵称"
-                        },
-
-                        fontSize =
-                            19.sp,
-
-                        fontWeight =
-                            FontWeight.Bold
-                    )
-                }
-
-                OutlinedButton(
-
-                    onClick =
-                        onOpenNickname
-
-                ) {
-
-                    Text(
-                        "修改"
-                    )
-                }
-            }
-        }
-
-        /*
+         * ========================================================
          * 服务器
+         *
+         * 连接 / 断开固定保留在一级首页。
+         * ========================================================
          */
 
         Card(
@@ -2740,7 +2716,7 @@ private fun HomePage(
 
             shape =
                 RoundedCornerShape(
-                    20.dp
+                    19.dp
                 ),
 
             colors =
@@ -2769,7 +2745,10 @@ private fun HomePage(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(
+                            horizontal = 15.dp,
+                            vertical = 11.dp
+                        ),
 
                 verticalAlignment =
                     Alignment.CenterVertically
@@ -2778,7 +2757,9 @@ private fun HomePage(
                 Column(
 
                     modifier =
-                        Modifier.weight(1f)
+                        Modifier.weight(
+                            1f
+                        )
                 ) {
 
                     Text(
@@ -2786,10 +2767,12 @@ private fun HomePage(
                         "兄弟服务器",
 
                         fontSize =
-                            12.sp,
+                            11.sp,
 
                         color =
-                            Color.Gray
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant
                     )
 
                     Text(
@@ -2806,7 +2789,7 @@ private fun HomePage(
                         },
 
                         fontSize =
-                            20.sp,
+                            19.sp,
 
                         fontWeight =
                             FontWeight.Bold
@@ -2814,13 +2797,24 @@ private fun HomePage(
 
                     Text(
 
-                        networkType,
+                        if (
+                            networkType.isBlank()
+                        ) {
+
+                            "网络状态检测中"
+
+                        } else {
+
+                            networkType
+                        },
 
                         fontSize =
-                            12.sp,
+                            11.sp,
 
                         color =
-                            Color.Gray
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant
                     )
                 }
 
@@ -2858,7 +2852,9 @@ private fun HomePage(
         }
 
         /*
+         * ========================================================
          * 当前频道
+         * ========================================================
          */
 
         Card(
@@ -2868,18 +2864,249 @@ private fun HomePage(
 
             shape =
                 RoundedCornerShape(
-                    20.dp
+                    19.dp
+                ),
+
+            colors =
+                CardDefaults.cardColors(
+
+                    containerColor =
+                        MaterialTheme
+                            .colorScheme
+                            .surface
+                )
+        ) {
+
+            Row(
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = 15.dp,
+                            vertical = 10.dp
+                        ),
+
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                Column(
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        )
+                ) {
+
+                    Text(
+
+                        "当前频道",
+
+                        fontSize =
+                            11.sp,
+
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant
+                    )
+
+                    Text(
+
+                        if (
+                            currentPrivate
+                        ) {
+
+                            "🔒 $currentChannel"
+
+                        } else {
+
+                            "🌐 $currentChannel"
+                        },
+
+                        fontSize =
+                            20.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+
+                Column(
+
+                    horizontalAlignment =
+                        Alignment.End
+                ) {
+
+                    Text(
+
+                        "在线",
+
+                        fontSize =
+                            11.sp,
+
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant
+                    )
+
+                    Text(
+
+                        "$currentOnlineCount 人",
+
+                        fontSize =
+                            18.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        /*
+         * ========================================================
+         * 网络状态
+         * ========================================================
+         *
+         * 不再使用“打开”按钮。
+         */
+
+        Card(
+
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            shape =
+                RoundedCornerShape(
+                    19.dp
+                )
+        ) {
+
+            Row(
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = 14.dp,
+                            vertical = 10.dp
+                        ),
+
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                Box(
+
+                    modifier =
+                        Modifier
+                            .size(39.dp)
+                            .clip(
+                                CircleShape
+                            )
+                            .background(
+                                MaterialTheme
+                                    .colorScheme
+                                    .secondaryContainer
+                            ),
+
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+                        "📶",
+                        fontSize =
+                            19.sp
+                    )
+                }
+
+                Spacer(
+                    Modifier.width(
+                        10.dp
+                    )
+                )
+
+                Column(
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        )
+                ) {
+
+                    Text(
+
+                        "网络状态",
+
+                        fontSize =
+                            15.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+
+                    Text(
+
+                        networkType,
+
+                        fontSize =
+                            11.sp,
+
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        /*
+         * ========================================================
+         * 在线人员
+         *
+         * 一级首页直接显示。
+         *
+         * 固定高度：
+         * 人少 → 直接看到。
+         * 人多 → 这个区域内部上下滑动。
+         * ========================================================
+         */
+
+        Card(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .weight(
+                        1f
+                    ),
+
+            shape =
+                RoundedCornerShape(
+                    19.dp
                 )
         ) {
 
             Column(
 
-                Modifier.padding(
-                    16.dp
-                )
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = 13.dp,
+                            vertical = 10.dp
+                        )
             ) {
 
                 Row(
+
+                    modifier =
+                        Modifier.fillMaxWidth(),
 
                     verticalAlignment =
                         Alignment.CenterVertically
@@ -2888,283 +3115,269 @@ private fun HomePage(
                     Column(
 
                         modifier =
-                            Modifier.weight(1f)
+                            Modifier.weight(
+                                1f
+                            )
                     ) {
 
                         Text(
 
-                            "当前频道",
+                            "在线人员",
 
                             fontSize =
-                                12.sp,
+                                16.sp,
 
-                            color =
-                                Color.Gray
+                            fontWeight =
+                                FontWeight.Bold
                         )
 
                         Text(
 
                             if (
-                                currentPrivate
+                                connected
                             ) {
 
-                                "🔒 $currentChannel"
+                                "当前频道成员"
 
                             } else {
 
-                                "🌐 $currentChannel"
+                                "连接服务器后显示"
                             },
 
                             fontSize =
-                                22.sp,
+                                11.sp,
 
-                            fontWeight =
-                                FontWeight.Bold
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant
                         )
                     }
 
-                    Column(
+                    TextButton(
 
-                        horizontalAlignment =
-                            Alignment.End
+                        onClick =
+                            onOpenUsers,
+
+                        enabled =
+                            connected
+
                     ) {
 
                         Text(
-
-                            "在线",
-
-                            fontSize =
-                                12.sp,
-
-                            color =
-                                Color.Gray
-                        )
-
-                        Text(
-
-                            "$currentOnlineCount",
-
-                            fontSize =
-                                29.sp,
-
-                            fontWeight =
-                                FontWeight.Bold
+                            "全部"
                         )
                     }
                 }
 
                 Spacer(
                     Modifier.height(
-                        10.dp
+                        5.dp
                     )
                 )
 
-                Button(
-
-                    onClick =
-                        onOpenChannels,
-
-                    enabled =
-                        connected,
-
-                    modifier =
-                        Modifier.fillMaxWidth()
-
+                if (
+                    !connected
                 ) {
 
-                    Text(
-                        "频道管理"
+                    EmptyCard(
+                        "当前未连接服务器"
                     )
-                }
-            }
-        }
 
-        /*
-         * 功能入口
-         */
+                } else if (
+                    onlineUsers.isEmpty()
+                ) {
 
-        Row(
+                    EmptyCard(
+                        "正在同步在线人员…"
+                    )
 
-            modifier =
-                Modifier.fillMaxWidth(),
+                } else {
 
-            horizontalArrangement =
-                Arrangement.spacedBy(
-                    10.dp
-                )
-        ) {
+                    Column(
 
-            FeatureCard(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(
+                                    min = 45.dp,
+                                    max = 132.dp
+                                )
+                                .verticalScroll(
+                                    rememberScrollState()
+                                ),
 
-                icon =
-                    "👥",
-
-                title =
-                    "在线人员",
-
-                value =
-                    "$currentOnlineCount 人",
-
-                onClick =
-                    onOpenUsers,
-
-                modifier =
-                    Modifier.weight(1f)
-            )
-
-            FeatureCard(
-
-                icon =
-                    "📶",
-
-                title =
-                    "网络状态",
-
-                value =
-                    networkType,
-
-                onClick = {},
-
-                modifier =
-                    Modifier.weight(1f),
-
-                enabled =
-                    false
-            )
-        }
-
-        Row(
-
-            modifier =
-                Modifier.fillMaxWidth(),
-
-            horizontalArrangement =
-                Arrangement.spacedBy(
-                    10.dp
-                )
-        ) {
-
-            FeatureCard(
-
-                icon =
-                    "⚙️",
-
-                title =
-                    "设置",
-
-                value =
-                    "昵称与应用信息",
-
-                onClick =
-                    onOpenSettings,
-
-                modifier =
-                    Modifier.weight(1f)
-            )
-
-            FeatureCard(
-
-                icon =
-                    "🎙",
-
-                title =
-                    "实时通话",
-
-                value =
-
-                    if (
-                        connected
+                        verticalArrangement =
+                            Arrangement.spacedBy(
+                                5.dp
+                            )
                     ) {
 
-                        "按住底部说话"
+                        onlineUsers.forEach { user ->
 
-                    } else {
-
-                        "连接后使用"
-                    },
-
-                onClick = {},
-
-                modifier =
-                    Modifier.weight(1f),
-
-                enabled =
-                    false
-            )
-        }
-
-        /*
-         * 在线提示
-         */
-
-        if (
-            connected
-        ) {
-
-            Card(
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                shape =
-                    RoundedCornerShape(
-                        18.dp
-                    )
-            ) {
-
-                Row(
-
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(15.dp),
-
-                    verticalAlignment =
-                        Alignment.CenterVertically
-                ) {
-
-                    Text(
-                        "🟢",
-                        fontSize =
-                            15.sp
-                    )
-
-                    Spacer(
-                        Modifier.width(
-                            8.dp
-                        )
-                    )
-
-                    Column {
-
-                        Text(
-
-                            "服务器连接正常",
-
-                            fontWeight =
-                                FontWeight.Bold
-                        )
-
-                        Text(
-
-                            "当前频道 $currentChannel · 在线 $currentOnlineCount 人",
-
-                            fontSize =
-                                12.sp,
-
-                            color =
-                                Color.Gray
-                        )
+                            CompactOnlineUserRow(
+                                user =
+                                    user
+                            )
+                        }
                     }
                 }
             }
         }
 
-        Spacer(
-            Modifier.height(
-                6.dp
+        /*
+         * ========================================================
+         * 底部入口
+         * ========================================================
+         */
+
+        Row(
+
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    9.dp
+                )
+        ) {
+
+            OutlinedButton(
+
+                onClick =
+                    onOpenChannels,
+
+                enabled =
+                    connected,
+
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+
+            ) {
+
+                Text(
+                    "频道"
+                )
+            }
+
+            Button(
+
+                onClick =
+                    onOpenSettings,
+
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+
+            ) {
+
+                Text(
+                    "⚙ 设置"
+                )
+            }
+        }
+    }
+}
+
+/*
+ * ================================================================
+ * 紧凑在线人员行
+ * ================================================================
+ */
+
+@Composable
+private fun CompactOnlineUserRow(
+    user: OnlineUserUiInfo
+) {
+
+    Surface(
+
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        shape =
+            RoundedCornerShape(
+                12.dp
+            ),
+
+        color =
+            MaterialTheme
+                .colorScheme
+                .surfaceVariant
+    ) {
+
+        Row(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = 10.dp,
+                        vertical = 7.dp
+                    ),
+
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+            Box(
+
+                modifier =
+                    Modifier
+                        .size(30.dp)
+                        .clip(
+                            CircleShape
+                        )
+                        .background(
+                            MaterialTheme
+                                .colorScheme
+                                .primaryContainer
+                        ),
+
+                contentAlignment =
+                    Alignment.Center
+            ) {
+
+                Text(
+                    "👤",
+                    fontSize =
+                        15.sp
+                )
+            }
+
+            Spacer(
+                Modifier.width(
+                    9.dp
+                )
             )
-        )
+
+            Text(
+
+                user.nickname.ifBlank {
+                    "未命名用户"
+                },
+
+                fontSize =
+                    14.sp,
+
+                fontWeight =
+                    FontWeight.Medium,
+
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+            )
+
+            Text(
+                "🟢",
+                fontSize =
+                    11.sp
+            )
+        }
     }
 }
 
@@ -3194,12 +3407,13 @@ private fun UsersPage(
                     rememberScrollState()
                 )
                 .padding(
-                    16.dp
+                    horizontal = 15.dp,
+                    vertical = 10.dp
                 ),
 
         verticalArrangement =
             Arrangement.spacedBy(
-                12.dp
+                9.dp
             )
     ) {
 
@@ -3215,27 +3429,90 @@ private fun UsersPage(
                 onBack
         )
 
-        InfoCard(
+        /*
+         * 人数
+         */
 
-            title =
-                "当前在线人数",
+        Card(
 
-            value =
+            modifier =
+                Modifier.fillMaxWidth(),
 
-                if (
-                    connected
+            shape =
+                RoundedCornerShape(
+                    17.dp
+                )
+        ) {
+
+            Row(
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = 14.dp,
+                            vertical = 10.dp
+                        ),
+
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                Column(
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        )
                 ) {
 
-                    "$currentOnlineCount 人"
+                    Text(
 
-                } else {
+                        "当前在线",
 
-                    "未连接"
-                },
+                        fontSize =
+                            11.sp,
 
-            extra =
-                "人数来自服务器当前频道成员列表"
-        )
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant
+                    )
+
+                    Text(
+
+                        if (
+                            connected
+                        ) {
+
+                            "$currentOnlineCount 人"
+
+                        } else {
+
+                            "未连接"
+                        },
+
+                        fontSize =
+                            20.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+
+                Text(
+                    "👥",
+                    fontSize =
+                        25.sp
+                )
+            }
+        }
+
+        /*
+         * 小列表
+         *
+         * 人多时内部滚动。
+         */
 
         if (
             !connected
@@ -3255,118 +3532,179 @@ private fun UsersPage(
 
         } else {
 
-            onlineUsers.forEach { user ->
+            Card(
 
-                Card(
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                shape =
+                    RoundedCornerShape(
+                        17.dp
+                    )
+            ) {
+
+                Column(
 
                     modifier =
-                        Modifier.fillMaxWidth(),
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(
+                                min = 60.dp,
+                                max = 330.dp
+                            )
+                            .verticalScroll(
+                                rememberScrollState()
+                            )
+                            .padding(
+                                9.dp
+                            ),
 
-                    shape =
-                        RoundedCornerShape(
-                            18.dp
+                    verticalArrangement =
+                        Arrangement.spacedBy(
+                            5.dp
                         )
                 ) {
 
-                    Row(
+                    onlineUsers.forEach { user ->
 
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    15.dp
-                                ),
+                        CompactOnlineUserRowLarge(
+                            user =
+                                user,
 
-                        verticalAlignment =
-                            Alignment.CenterVertically
-                    ) {
-
-                        Box(
-
-                            modifier =
-                                Modifier
-                                    .size(
-                                        44.dp
-                                    )
-                                    .clip(
-                                        CircleShape
-                                    )
-                                    .background(
-                                        MaterialTheme
-                                            .colorScheme
-                                            .primaryContainer
-                                    ),
-
-                            contentAlignment =
-                                Alignment.Center
-                        ) {
-
-                            Text(
-                                "👤",
-                                fontSize =
-                                    21.sp
-                            )
-                        }
-
-                        Spacer(
-                            Modifier.width(
-                                12.dp
-                            )
-                        )
-
-                        Column(
-
-                            modifier =
-                                Modifier.weight(
-                                    1f
-                                )
-                        ) {
-
-                            Text(
-
-                                user.nickname
-                                    .ifBlank {
-                                        "未命名用户"
-                                    },
-
-                                fontSize =
-                                    17.sp,
-
-                                fontWeight =
-                                    FontWeight.Bold
-                            )
-
-                            Text(
-
-                                if (
-                                    user.userId ==
-                                    myUserId &&
-                                    myUserId.isNotBlank()
-                                ) {
-
-                                    "我的设备"
-
-                                } else {
-
-                                    "在线"
-                                },
-
-                                fontSize =
-                                    12.sp,
-
-                                color =
-                                    Color.Gray
-                            )
-                        }
-
-                        Text(
-                            "🟢",
-                            fontSize =
-                                14.sp
+                            myUserId =
+                                myUserId
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+/*
+ * ================================================================
+ * 二级页面在线人员行
+ * ================================================================
+ */
+
+@Composable
+private fun CompactOnlineUserRowLarge(
+    user: OnlineUserUiInfo,
+    myUserId: String
+) {
+
+    Surface(
+
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        shape =
+            RoundedCornerShape(
+                13.dp
+            ),
+
+        color =
+            MaterialTheme
+                .colorScheme
+                .surfaceVariant
+    ) {
+
+        Row(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = 11.dp,
+                        vertical = 8.dp
+                    ),
+
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+            Box(
+
+                modifier =
+                    Modifier
+                        .size(34.dp)
+                        .clip(
+                            CircleShape
+                        )
+                        .background(
+                            MaterialTheme
+                                .colorScheme
+                                .primaryContainer
+                        ),
+
+                contentAlignment =
+                    Alignment.Center
+            ) {
+
+                Text(
+                    "👤",
+                    fontSize =
+                        17.sp
+                )
+            }
+
+            Spacer(
+                Modifier.width(
+                    10.dp
+                )
+            )
+
+            Column(
+
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+            ) {
+
+                Text(
+
+                    user.nickname.ifBlank {
+                        "未命名用户"
+                    },
+
+                    fontSize =
+                        15.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+                Text(
+
+                    if (
+                        user.userId ==
+                        myUserId &&
+                        myUserId.isNotBlank()
+                    ) {
+
+                        "我的设备"
+
+                    } else {
+
+                        "在线"
+                    },
+
+                    fontSize =
+                        10.sp,
+
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .onSurfaceVariant
+                )
+            }
+
+            Text(
+                "🟢",
+                fontSize =
+                    11.sp
+            )
         }
     }
 }
@@ -3502,9 +3840,7 @@ private fun ChannelsPage(
             )
         }
 
-        channels.forEach {
-
-                channel ->
+        channels.forEach { channel ->
 
             Card(
 
@@ -3643,6 +3979,9 @@ private fun ChannelsPage(
 /*
  * ================================================================
  * 设置
+ *
+ * 注意：
+ * 连接 / 断开已经移回一级首页。
  * ================================================================
  */
 
@@ -3651,6 +3990,7 @@ private fun SettingsPage(
     modifier: Modifier,
     nickname: String,
     myUserId: String,
+    networkType: String,
     onBack: () -> Unit,
     onOpenNickname: () -> Unit
 ) {
@@ -3664,12 +4004,13 @@ private fun SettingsPage(
                     rememberScrollState()
                 )
                 .padding(
-                    16.dp
+                    horizontal = 16.dp,
+                    vertical = 10.dp
                 ),
 
         verticalArrangement =
             Arrangement.spacedBy(
-                12.dp
+                10.dp
             )
     ) {
 
@@ -3679,11 +4020,15 @@ private fun SettingsPage(
                 "设置",
 
             subtitle =
-                "账号与应用信息",
+                "个人与应用信息",
 
             onBack =
                 onBack
         )
+
+        /*
+         * 昵称
+         */
 
         Card(
 
@@ -3692,36 +4037,151 @@ private fun SettingsPage(
 
             shape =
                 RoundedCornerShape(
-                    18.dp
+                    19.dp
+                )
+        ) {
+
+            Row(
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            15.dp
+                        ),
+
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                Box(
+
+                    modifier =
+                        Modifier
+                            .size(44.dp)
+                            .clip(
+                                CircleShape
+                            )
+                            .background(
+                                MaterialTheme
+                                    .colorScheme
+                                    .primaryContainer
+                            ),
+
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+                        "👤",
+                        fontSize =
+                            21.sp
+                    )
+                }
+
+                Spacer(
+                    Modifier.width(
+                        11.dp
+                    )
+                )
+
+                Column(
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        )
+                ) {
+
+                    Text(
+
+                        "昵称",
+
+                        fontSize =
+                            12.sp,
+
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant
+                    )
+
+                    Text(
+
+                        nickname.ifBlank {
+                            "未设置"
+                        },
+
+                        fontSize =
+                            17.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+
+                OutlinedButton(
+
+                    onClick =
+                        onOpenNickname
+
+                ) {
+
+                    Text(
+                        "修改"
+                    )
+                }
+            }
+        }
+
+        /*
+         * 网络
+         */
+
+        Card(
+
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            shape =
+                RoundedCornerShape(
+                    19.dp
                 )
         ) {
 
             Column(
 
-                Modifier.padding(
-                    16.dp
-                )
+                modifier =
+                    Modifier.padding(
+                        15.dp
+                    )
             ) {
 
                 Text(
 
-                    "昵称",
+                    "网络状态",
 
                     fontSize =
                         12.sp,
 
                     color =
-                        Color.Gray
+                        MaterialTheme
+                            .colorScheme
+                            .onSurfaceVariant
+                )
+
+                Spacer(
+                    Modifier.height(
+                        4.dp
+                    )
                 )
 
                 Text(
 
-                    nickname.ifBlank {
-                        "未设置"
-                    },
+                    networkType,
 
                     fontSize =
-                        20.sp,
+                        15.sp,
 
                     fontWeight =
                         FontWeight.Bold
@@ -3729,69 +4189,141 @@ private fun SettingsPage(
 
                 Spacer(
                     Modifier.height(
-                        10.dp
+                        4.dp
                     )
                 )
 
-                OutlinedButton(
+                Text(
 
-                    onClick =
-                        onOpenNickname,
+                    "网络数据会持续保留，直到收到新的检测结果。",
 
-                    modifier =
-                        Modifier.fillMaxWidth()
+                    fontSize =
+                        11.sp,
 
-                ) {
-
-                    Text(
-                        "修改昵称"
-                    )
-                }
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .onSurfaceVariant
+                )
             }
         }
 
-        InfoCard(
+        /*
+         * 用户 ID
+         */
 
-            title =
-                "用户标识",
+        Card(
 
-            value =
-                myUserId.ifBlank {
-                    "连接后由服务器分配"
-                }
-        )
+            modifier =
+                Modifier.fillMaxWidth(),
 
-        InfoCard(
+            shape =
+                RoundedCornerShape(
+                    19.dp
+                )
+        ) {
 
-            title =
-                "服务器",
+            Column(
 
-            value =
-                "兄弟服务器",
+                Modifier.padding(
+                    15.dp
+                )
+            ) {
 
-            extra =
-                "服务器地址已隐藏"
-        )
+                Text(
 
-        InfoCard(
+                    "用户标识",
 
-            title =
-                "版本",
+                    fontSize =
+                        12.sp,
 
-            value =
-                "V20.1"
-        )
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .onSurfaceVariant
+                )
 
-        Text(
+                Text(
 
-            "服务器地址不会显示在界面中。",
+                    myUserId.ifBlank {
+                        "连接后由服务器分配"
+                    },
 
-            fontSize =
-                12.sp,
+                    fontSize =
+                        15.sp,
 
-            color =
-                Color.Gray
-        )
+                    fontWeight =
+                        FontWeight.Bold
+                )
+            }
+        }
+
+        /*
+         * 应用
+         */
+
+        Card(
+
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            shape =
+                RoundedCornerShape(
+                    19.dp
+                )
+        ) {
+
+            Column(
+
+                Modifier.padding(
+                    15.dp
+                )
+            ) {
+
+                Text(
+
+                    "关于兄弟对讲机",
+
+                    fontSize =
+                        17.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+                Text(
+
+                    "V23.3",
+
+                    fontSize =
+                        12.sp,
+
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .onSurfaceVariant
+                )
+
+                Spacer(
+                    Modifier.height(
+                        4.dp
+                    )
+                )
+
+                Text(
+
+                    "服务器地址已隐藏",
+
+                    fontSize =
+                        11.sp,
+
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
@@ -3827,7 +4359,7 @@ private fun PttBottomBar(
                     .navigationBarsPadding()
                     .padding(
                         horizontal = 16.dp,
-                        vertical = 10.dp
+                        vertical = 9.dp
                     ),
 
             horizontalAlignment =
@@ -3861,7 +4393,7 @@ private fun PttBottomBar(
                 },
 
                 fontSize =
-                    14.sp,
+                    13.sp,
 
                 fontWeight =
                     FontWeight.Bold
@@ -3869,7 +4401,7 @@ private fun PttBottomBar(
 
             Spacer(
                 Modifier.height(
-                    7.dp
+                    6.dp
                 )
             )
 
@@ -3954,12 +4486,6 @@ private fun PttBottomBar(
                                     return@awaitEachGesture
                                 }
 
-                                /*
-                                 * 按下后立即请求抢麦。
-                                 *
-                                 * pointerInput 固定 Unit，
-                                 * 状态变化不会重新创建手势。
-                                 */
                                 pressingState(
                                     true
                                 )
@@ -4080,7 +4606,10 @@ private fun PttBottomBar(
 
 /*
  * ================================================================
- * 功能卡片
+ * FeatureCard
+ *
+ * 保留，避免影响原项目结构。
+ * 一级首页已经不再调用它。
  * ================================================================
  */
 
@@ -4408,7 +4937,7 @@ private fun EmptyCard(
 
         shape =
             RoundedCornerShape(
-                18.dp
+                15.dp
             )
     ) {
 
@@ -4418,7 +4947,7 @@ private fun EmptyCard(
                 Modifier
                     .fillMaxWidth()
                     .padding(
-                        30.dp
+                        18.dp
                     ),
 
             contentAlignment =
@@ -4429,8 +4958,13 @@ private fun EmptyCard(
 
                 text,
 
+                fontSize =
+                    12.sp,
+
                 color =
-                    Color.Gray
+                    MaterialTheme
+                        .colorScheme
+                        .onSurfaceVariant
             )
         }
     }
