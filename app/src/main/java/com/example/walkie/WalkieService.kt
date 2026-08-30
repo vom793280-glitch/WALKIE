@@ -53,7 +53,7 @@ class WalkieService : Service() {
 
     companion object {
 
-        private const val WALKIE_VERSION = "V22"
+        private const val WALKIE_VERSION = "V23.1"
 
         const val ACTION_START =
             "com.example.walkie.ACTION_START"
@@ -277,8 +277,53 @@ class WalkieService : Service() {
         private const val PLAYBACK_GAIN =
             1.0f
 
+                /*
+         * ============================================================
+         * V23.1 弱网音频协议
+         * ============================================================
+         *
+         * Header:
+         *
+         * 4 bytes  MAGIC     = W23A
+         * 4 bytes  STREAM_ID
+         * 4 bytes  SEQUENCE
+         * N bytes  OPUS
+         *
+         * StreamID：
+         *
+         * 区分：
+         *
+         * 1. 不同说话人
+         * 2. Service重新启动
+         * 3. 手机重新连接
+         *
+         * Sequence：
+         *
+         * 检测：
+         *
+         * 1. 丢包
+         * 2. 乱序
+         * 3. 重复包
+         * ============================================================
+         */
+
+        private const val AUDIO_V231_MAGIC =
+            "W23A"
+
+        private const val AUDIO_V231_HEADER_SIZE =
+            12
+
+        private const val AUDIO_V231_JITTER_CAPACITY =
+            8
+
+        private const val AUDIO_V231_MAX_WAIT_MS =
+            60L
         private const val MAX_OPUS_PACKET_SIZE =
             1208
+
+        private const val AUDIO_V231_MAX_PACKET_SIZE =
+            MAX_OPUS_PACKET_SIZE +
+                    AUDIO_V231_HEADER_SIZE
 
         private const val MAX_DECODED_PCM_SAMPLES =
             4096
@@ -409,19 +454,15 @@ class WalkieService : Service() {
      * ============================================================
      */
 
-    @Volatile
     private var deviceId =
         ""
 
-    @Volatile
     private var nickname =
         ""
 
-    @Volatile
     private var myUserId =
         ""
 
-    @Volatile
     private var myUsername =
         ""
 
@@ -431,30 +472,24 @@ class WalkieService : Service() {
      * ============================================================
      */
 
-    @Volatile
     private var udpSocket:
             DatagramSocket? =
         null
 
-    @Volatile
     private var serverAddress:
             InetAddress? =
         null
 
-    @Volatile
     private var serverIp:
             String? =
         null
 
-    @Volatile
     private var isConnected =
         false
 
-    @Volatile
     private var isNetworkAvailable =
         true
 
-    @Volatile
     private var activeNetwork:
             Network? =
         null
@@ -476,7 +511,6 @@ class WalkieService : Service() {
     private val connectionLock =
         Any()
 
-    @Volatile
     private var connectionGeneration =
         0L
 
@@ -502,15 +536,12 @@ class WalkieService : Service() {
             Job? =
         null
 
-    @Volatile
     private var backgroundHeartbeatCount =
         0L
 
-    @Volatile
     private var udpKeepAliveCount =
         0L
 
-    @Volatile
     private var udpReceiveCount =
         0L
 
@@ -528,59 +559,45 @@ class WalkieService : Service() {
     private val pingResults =
         ArrayDeque<Boolean>()
 
-    @Volatile
     private var pingSequence =
         0L
 
-    @Volatile
     private var lastNetworkPingTime =
         0L
 
-    @Volatile
     private var lastNetworkBroadcastTime =
         0L
 
-    @Volatile
     private var networkLatencyMs =
         -1L
 
-    @Volatile
     private var networkJitterMs =
         -1L
 
-    @Volatile
     private var networkLossPercent =
         100f
 
-    @Volatile
     private var networkQuality =
         "检测中"
 
-    @Volatile
     private var txAudioWindowBytes =
         0L
 
-    @Volatile
     private var txAudioWindowStart =
         0L
 
-    @Volatile
     private var networkBitrateKbps =
         0f
 
-    @Volatile
     private var networkDownloadBitrateKbps =
         0f
 
-    @Volatile
     private var rxAudioWindowBytes =
         0L
 
-    @Volatile
     private var rxAudioWindowStart =
         0L
 
-    @Volatile
     private var adaptivePlaybackRecoveryPackets =
         PLAYBACK_RECOVERY_BUFFER_PACKETS
 
@@ -591,8 +608,46 @@ class WalkieService : Service() {
      * 防止网络抖动/损坏包连续出现时，
      * 播放端一直沿用旧的稳定状态。
      */
-    @Volatile
-    private var consecutiveDecodeFailures =
+        /*
+     * ============================================================
+     * V23.1 音频流状态
+     * ============================================================
+     */
+
+    private val audioV231StreamId =
+        UUID.randomUUID()
+            .leastSignificantBits
+            .and(
+                0xFFFF_FFFFL
+            )
+
+    private var audioV231TxSequence =
+        0L
+
+    private var audioV231RxStreamId =
+        -1L
+
+    private var audioV231ExpectedSequence =
+        -1L
+
+    private var audioV231LostPackets =
+        0L
+
+    private var audioV231ReorderedPackets =
+        0L
+
+    private var audioV231DuplicatePackets =
+        0L
+
+    private var audioV231GapStartTime =
+        0L
+
+    private val audioV231JitterLock =
+        Any()
+
+    private val audioV231JitterBuffer =
+        java.util.TreeMap<Long, ByteArray>()
+private var consecutiveDecodeFailures =
         0
 
     /*
@@ -601,7 +656,6 @@ class WalkieService : Service() {
      * ============================================================
      */
 
-    @Volatile
     private var currentUserList =
         ArrayList<UserInfo>()
 
@@ -611,7 +665,6 @@ class WalkieService : Service() {
      * ============================================================
      */
 
-    @Volatile
     private var audioTrack:
             AudioTrack? =
         null
@@ -631,15 +684,12 @@ class WalkieService : Service() {
     private val playbackWorkerLock =
         Any()
 
-    @Volatile
     private var playbackWorkerStarting =
         false
 
-    @Volatile
     private var playbackRecoveryRequested =
         false
 
-    @Volatile
     private var lastUnderrunCount =
         0
 
@@ -649,7 +699,6 @@ class WalkieService : Service() {
      * ============================================================
      */
 
-    @Volatile
     private var audioRecord:
             AudioRecord? =
         null
@@ -666,7 +715,6 @@ class WalkieService : Service() {
  * 防止旧录音协程尚未完全退出时，
  * 新的 PTT 又启动第二个 AudioRecord。
  */
-    @Volatile
     private var recordingStarting =
         false
 
@@ -702,59 +750,45 @@ class WalkieService : Service() {
      * ============================================================
      */
 
-    @Volatile
     private var talkRequesting =
         false
 
-    @Volatile
     private var talkAllowed =
         false
 
-    @Volatile
     private var isSpeaking =
         false
 
-    @Volatile
     private var shuttingDown =
         false
 
-    @Volatile
     private var lastKeepAliveTime =
         0L
 
-    @Volatile
     private var lastServerActivityTime =
         0L
 
-    @Volatile
     private var currentChannel =
         "public"
 
-    @Volatile
     private var reconnectChannel =
         ""
 
-    @Volatile
     private var reconnectChannelPassword =
         ""
 
-    @Volatile
     private var currentChannelOnlineCount =
         0
 
-    @Volatile
     private var currentChannelPrivate =
         false
 
-    @Volatile
     private var currentChannelRequirePassword =
         false
 
-    @Volatile
     private var channelSwitching =
         false
 
-    @Volatile
     private var cachedChannelInfoList =
         ArrayList<ChannelInfo>()
 
@@ -1696,7 +1730,422 @@ class WalkieService : Service() {
      * ============================================================
      */
 
-    private fun initializeOpus() {
+        /*
+     * ============================================================
+     * V23.1 构建音频包
+     * ============================================================
+     */
+
+    private fun buildV231AudioPacket(
+        opusData: ByteArray
+    ): ByteArray {
+
+        val sequence =
+            audioV231TxSequence and
+                    0xFFFF_FFFFL
+
+        val result =
+            ByteArray(
+                AUDIO_V231_HEADER_SIZE +
+                        opusData.size
+            )
+
+        result[0] =
+            'W'.code.toByte()
+
+        result[1] =
+            '2'.code.toByte()
+
+        result[2] =
+            '3'.code.toByte()
+
+        result[3] =
+            'A'.code.toByte()
+
+        val streamId =
+            audioV231StreamId and
+                    0xFFFF_FFFFL
+
+        result[4] =
+            ((streamId shr 24) and 0xFF).toByte()
+
+        result[5] =
+            ((streamId shr 16) and 0xFF).toByte()
+
+        result[6] =
+            ((streamId shr 8) and 0xFF).toByte()
+
+        result[7] =
+            (streamId and 0xFF).toByte()
+
+        result[8] =
+            ((sequence shr 24) and 0xFF).toByte()
+
+        result[9] =
+            ((sequence shr 16) and 0xFF).toByte()
+
+        result[10] =
+            ((sequence shr 8) and 0xFF).toByte()
+
+        result[11] =
+            (sequence and 0xFF).toByte()
+
+        System.arraycopy(
+            opusData,
+            0,
+            result,
+            AUDIO_V231_HEADER_SIZE,
+            opusData.size
+        )
+
+        audioV231TxSequence =
+            (
+                    audioV231TxSequence +
+                            1L
+                    ) and
+                    0xFFFF_FFFFL
+
+        return result
+    }
+
+    /*
+     * ============================================================
+     * V23.1 解析音频包
+     * ============================================================
+     */
+
+    private fun parseV231AudioPacket(
+        packet: ByteArray
+    ): Triple<Long, Long, ByteArray>? {
+
+        if (
+            packet.size <=
+            AUDIO_V231_HEADER_SIZE
+        ) {
+
+            return null
+        }
+
+        if (
+            packet[0] != 'W'.code.toByte() ||
+            packet[1] != '2'.code.toByte() ||
+            packet[2] != '3'.code.toByte() ||
+            packet[3] != 'A'.code.toByte()
+        ) {
+
+            return null
+        }
+
+        val streamId =
+            (
+                    ((packet[4].toLong() and 0xFF) shl 24) or
+                            ((packet[5].toLong() and 0xFF) shl 16) or
+                            ((packet[6].toLong() and 0xFF) shl 8) or
+                            (packet[7].toLong() and 0xFF)
+                    ) and
+                    0xFFFF_FFFFL
+
+        val sequence =
+            (
+                    ((packet[8].toLong() and 0xFF) shl 24) or
+                            ((packet[9].toLong() and 0xFF) shl 16) or
+                            ((packet[10].toLong() and 0xFF) shl 8) or
+                            (packet[11].toLong() and 0xFF)
+                    ) and
+                    0xFFFF_FFFFL
+
+        val opusLength =
+            packet.size -
+                    AUDIO_V231_HEADER_SIZE
+
+        if (
+            opusLength <= 0 ||
+            opusLength > MAX_OPUS_PACKET_SIZE
+        ) {
+
+            return null
+        }
+
+        val opus =
+            ByteArray(
+                opusLength
+            )
+
+        System.arraycopy(
+            packet,
+            AUDIO_V231_HEADER_SIZE,
+            opus,
+            0,
+            opusLength
+        )
+
+        return Triple(
+            streamId,
+            sequence,
+            opus
+        )
+    }
+
+    private fun resetV231AudioJitter() {
+
+        synchronized(
+            audioV231JitterLock
+        ) {
+
+            audioV231JitterBuffer.clear()
+
+            audioV231RxStreamId =
+                -1L
+
+            audioV231ExpectedSequence =
+                -1L
+
+            audioV231GapStartTime =
+                0L
+        }
+    }
+
+    private fun isV231SequenceAhead(
+        sequence: Long,
+        expected: Long
+    ): Boolean {
+
+        val diff =
+            (
+                    sequence -
+                            expected
+                    ) and
+                    0xFFFF_FFFFL
+
+        return diff != 0L &&
+                diff < 0x8000_0000L
+    }
+
+    /*
+     * ============================================================
+     * V23.1 乱序 / 丢包处理
+     * ============================================================
+     */
+
+    private fun reorderV231Audio(
+        streamId: Long,
+        sequence: Long,
+        opusData: ByteArray
+    ): ByteArray? {
+
+        synchronized(
+            audioV231JitterLock
+        ) {
+
+            /*
+             * 新音频流：
+             *
+             * 新说话人
+             * 或Service重新启动
+             */
+            if (
+                audioV231RxStreamId !=
+                streamId
+            ) {
+
+                audioV231JitterBuffer.clear()
+
+                audioV231RxStreamId =
+                    streamId
+
+                audioV231ExpectedSequence =
+                    sequence
+
+                audioV231GapStartTime =
+                    0L
+
+                println(
+                    "WALKIE AUDIO: " +
+                            "V23.1 新音频流 " +
+                            "stream=$streamId"
+                )
+
+                audioV231ExpectedSequence =
+                    (
+                            sequence +
+                                    1L
+                            ) and
+                            0xFFFF_FFFFL
+
+                return opusData
+            }
+
+            /*
+             * 正常连续包。
+             */
+            if (
+                sequence ==
+                audioV231ExpectedSequence
+            ) {
+
+                audioV231ExpectedSequence =
+                    (
+                            audioV231ExpectedSequence +
+                                    1L
+                            ) and
+                            0xFFFF_FFFFL
+
+                audioV231GapStartTime =
+                    0L
+
+                return opusData
+            }
+
+            /*
+             * 已经过期/重复。
+             */
+            if (
+                !isV231SequenceAhead(
+                    sequence,
+                    audioV231ExpectedSequence
+                )
+            ) {
+
+                audioV231DuplicatePackets++
+
+                return null
+            }
+
+            /*
+             * 重复缓存包。
+             */
+            if (
+                audioV231JitterBuffer.containsKey(
+                    sequence
+                )
+            ) {
+
+                audioV231DuplicatePackets++
+
+                return null
+            }
+
+            /*
+             * 缓冲区满了：
+             * 淘汰最早未来包。
+             */
+            if (
+                audioV231JitterBuffer.size >=
+                AUDIO_V231_JITTER_CAPACITY
+            ) {
+
+                audioV231JitterBuffer.pollFirstEntry()
+
+                audioV231LostPackets++
+            }
+
+            audioV231JitterBuffer[
+                sequence
+            ] =
+                opusData
+
+            audioV231ReorderedPackets++
+
+            if (
+                audioV231GapStartTime ==
+                0L
+            ) {
+
+                audioV231GapStartTime =
+                    System.currentTimeMillis()
+            }
+
+            /*
+             * 缺的包刚好补到。
+             */
+            val expectedPacket =
+                audioV231JitterBuffer[
+                    audioV231ExpectedSequence
+                ]
+
+            if (
+                expectedPacket != null
+            ) {
+
+                audioV231JitterBuffer.remove(
+                    audioV231ExpectedSequence
+                )
+
+                audioV231ExpectedSequence =
+                    (
+                            audioV231ExpectedSequence +
+                                    1L
+                            ) and
+                            0xFFFF_FFFFL
+
+                audioV231GapStartTime =
+                    0L
+
+                return expectedPacket
+            }
+
+            /*
+             * 缺包等待时间达到60ms：
+             * 判定缺失。
+             */
+            val now =
+                System.currentTimeMillis()
+
+            if (
+                now -
+                        audioV231GapStartTime >=
+                AUDIO_V231_MAX_WAIT_MS
+            ) {
+
+                val lostSequence =
+                    audioV231ExpectedSequence
+
+                audioV231LostPackets++
+
+                audioV231ExpectedSequence =
+                    (
+                            audioV231ExpectedSequence +
+                                    1L
+                            ) and
+                            0xFFFF_FFFFL
+
+                audioV231GapStartTime =
+                    now
+
+                println(
+                    "WALKIE AUDIO: " +
+                            "V23.1 丢包 seq=$lostSequence " +
+                            "lost=$audioV231LostPackets"
+                )
+
+                val nextPacket =
+                    audioV231JitterBuffer.remove(
+                        audioV231ExpectedSequence
+                    )
+
+                if (
+                    nextPacket != null
+                ) {
+
+                    audioV231ExpectedSequence =
+                        (
+                                audioV231ExpectedSequence +
+                                        1L
+                                ) and
+                                0xFFFF_FFFFL
+
+                    audioV231GapStartTime =
+                        0L
+
+                    return nextPacket
+                }
+            }
+
+            return null
+        }
+    }
+
+private fun initializeOpus() {
 
         try {
 
@@ -2557,7 +3006,7 @@ class WalkieService : Service() {
              * HELLO只发送一次。
              */
             sendMessageNow(
-                "$MSG_HELLO:$deviceId"
+                "$MSG_HELLO:$deviceId:$WALKIE_VERSION"
             )
 
             val now =
@@ -3073,7 +3522,7 @@ class WalkieService : Service() {
                     if (
                         length <= 0 ||
                         length >
-                        MAX_OPUS_PACKET_SIZE
+                        AUDIO_V231_MAX_PACKET_SIZE
                     ) {
 
                         println(
@@ -3093,7 +3542,9 @@ class WalkieService : Service() {
                             length
                         )
 
-                    recordAudioReceive(length)
+                    recordAudioReceive(
+                        length
+                    )
 
                     System.arraycopy(
                         packet.data,
@@ -3103,11 +3554,54 @@ class WalkieService : Service() {
                         length
                     )
 
+                    /*
+                     * ==================================================
+                     * V23.1：
+                     * 新协议：
+                     *
+                     * W23A + StreamID + Sequence + Opus
+                     *
+                     * 旧协议：
+                     *
+                     * 直接Opus
+                     *
+                     * 两种格式同时支持。
+                     * ==================================================
+                     */
+
+                    val parsedV231 =
+                        parseV231AudioPacket(
+                            audioData
+                        )
+
+                    val opusPayload =
+                        if (
+                            parsedV231 != null
+                        ) {
+
+                            reorderV231Audio(
+                                parsedV231.first,
+                                parsedV231.second,
+                                parsedV231.third
+                            )
+
+                        } else {
+
+                            audioData
+                        }
+
+                    if (
+                        opusPayload == null
+                    ) {
+
+                        continue
+                    }
+
                     val pcmData =
                         try {
 
                             decoder.decode(
-                                audioData
+                                opusPayload
                             )
 
                         } catch (e: Throwable) {
@@ -5103,17 +5597,22 @@ class WalkieService : Service() {
 
                         try {
 
-                            val packet =
-                                DatagramPacket(
-                                    opus,
-                                    opus.size,
-                                    address,
-                                    SERVER_PORT
-                                )
-
-                            socket.send(
-                                packet
+                            val framedAudio =
+                            buildV231AudioPacket(
+                                opus
                             )
+
+                        val packet =
+                            DatagramPacket(
+                                framedAudio,
+                                framedAudio.size,
+                                address,
+                                SERVER_PORT
+                            )
+
+                        socket.send(
+                            packet
+                        )
 
                             recordAudioTransmit(
                                 opus.size
@@ -8037,4 +8536,11 @@ private fun ensureAudioPlayer() {
         super.onDestroy()
     }
 }
+
+
+
+
+
+
+
 
