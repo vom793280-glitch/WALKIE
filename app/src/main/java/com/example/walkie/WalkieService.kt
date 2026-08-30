@@ -1,4 +1,4 @@
-package com.example.walkie
+﻿package com.example.walkie
 
 import android.Manifest
 import android.app.Notification
@@ -6955,169 +6955,83 @@ class WalkieService : Service() {
   * 下一轮 playbackLoop 自动重建 AudioTrack
   */
     private fun handlePlaybackFailure(
-        track: AudioTrack
+    track: AudioTrack
+) {
+
+    synchronized(
+        audioTrackLock
     ) {
 
-        synchronized(
-            audioTrackLock
+        if (
+            audioTrack !==
+            track
         ) {
 
-            /*
-             * 防止旧 AudioTrack 误操作当前新 AudioTrack。
-             */
-            if (
-                audioTrack !==
-                track
-            ) {
-
-                return
-            }
-
-            val state =
-                try {
-
-                    track.state
-
-                } catch (
-                    _: Throwable
-                ) {
-
-                    AudioTrack.STATE_UNINITIALIZED
-                }
-
-            /*
-             * ========================================================
-             * AudioTrack 已经彻底失效
-             * ========================================================
-             */
-            if (
-                state !=
-                AudioTrack.STATE_INITIALIZED
-            ) {
-
-                /*
-                 * 先清除全局引用。
-                 *
-                 * 这样其他线程不会再拿到这个失效对象。
-                 */
-                audioTrack =
-                    null
-
-                try {
-
-                    if (
-                        track.playState ==
-                        AudioTrack.PLAYSTATE_PLAYING
-                    ) {
-
-                        track.pause()
-                    }
-
-                } catch (_: Throwable) {
-                }
-
-                try {
-
-                    track.flush()
-
-                } catch (_: Throwable) {
-                }
-
-                try {
-
-                    track.stop()
-
-                } catch (_: Throwable) {
-                }
-
-                try {
-
-                    track.release()
-
-                } catch (
-                    e: Throwable
-                ) {
-
-                    println(
-                        "WALKIE AUDIO: " +
-                                "失效AudioTrack release异常=" +
-                                e.message
-                    )
-                }
-
-                /*
-                 * 请求播放线程重新建立 AudioTrack。
-                 */
-                playbackRecoveryRequested =
-                    true
-
-                println(
-                    "WALKIE AUDIO: " +
-                            "AudioTrack已失效，已安全释放，" +
-                            "等待自动重建"
-                )
-
-                return
-            }
-
-            /*
-             * ========================================================
-             * AudioTrack 仍然有效，但是没有处于播放状态
-             * ========================================================
-             */
-            try {
-
-                if (
-                    track.playState !=
-                    AudioTrack.PLAYSTATE_PLAYING
-                ) {
-
-                    track.play()
-
-                    println(
-                        "WALKIE AUDIO: " +
-                                "AudioTrack仍有效，已恢复PLAY"
-                    )
-                }
-
-            } catch (
-                e: Throwable
-            ) {
-
-                /*
-                 * play() 也失败：
-                 * 当前实例虽然 state 看起来正常，
-                 * 实际已经不能继续使用。
-                 */
-                audioTrack =
-                    null
-
-                try {
-
-                    track.release()
-
-                } catch (_: Throwable) {
-                }
-
-                playbackRecoveryRequested =
-                    true
-
-                println(
-                    "WALKIE AUDIO: " +
-                            "AudioTrack.play恢复失败，" +
-                            "准备重新创建：${e.message}"
-                )
-            }
+            return
         }
+
+        /*
+         * ============================================================
+         * V22.2 AudioTrack 自动重建
+         * ============================================================
+         *
+         * 当 AudioTrack 因为：
+         *
+         * 1. underrun
+         * 2. write失败
+         * 3. 系统音频状态异常
+         * 4. Harmony 后台调度变化
+         *
+         * 导致播放器进入不可正常工作的状态时，
+         * 不再只执行 play()。
+         *
+         * 直接彻底释放当前 Track。
+         *
+         * 下一轮 playbackLoop()
+         * 会通过 ensureAudioPlayer()
+         * 自动创建新的 AudioTrack。
+         */
+
+        audioTrack =
+            null
+
+        try {
+
+            if (
+                track.playState ==
+                AudioTrack.PLAYSTATE_PLAYING
+            ) {
+
+                track.pause()
+            }
+
+        } catch (_: Throwable) {
+        }
+
+        try {
+
+            track.flush()
+
+        } catch (_: Throwable) {
+        }
+
+        try {
+
+            track.release()
+
+        } catch (_: Throwable) {
+        }
+
+        lastUnderrunCount =
+            0
+
+        println(
+            "WALKIE AUDIO: " +
+                    "V22.2 AudioTrack已彻底释放，准备自动重建"
+        )
     }
-
-    /*
-     * ============================================================
-     * AudioTrack
-     * ============================================================
-     */
-
-    private fun ensureAudioPlayer() {
+}
+private fun ensureAudioPlayer() {
 
         val current =
             synchronized(
@@ -8123,3 +8037,4 @@ class WalkieService : Service() {
         super.onDestroy()
     }
 }
+
