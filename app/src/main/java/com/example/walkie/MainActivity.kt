@@ -62,13 +62,13 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.walkie.ui.theme.WalkieTheme
 
-private const val WALKIE_VERSION = "V20.1"
+private const val WALKIE_VERSION = "V22"
 
 private const val DEFAULT_SERVER_IP =
     "38.146.29.169"
 
 private const val UI_PREFS =
-    "walkie_session_v20"
+    "walkie_session_v22"
 
 private const val UI_PREF_NICKNAME =
     "nickname"
