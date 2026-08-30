@@ -16,7 +16,7 @@ const (
 	// WALKIE V20
 	// ============================================================
 
-	serverVersion = "WALKIE V21"
+	serverVersion = "WALKIE V23.1"
 
 	listenAddr  = ":50000"
 	maxClients  = 32
@@ -117,6 +117,7 @@ type Client struct {
 	ChannelName string
 	IP          string
 	DeviceID    string
+	AudioV231   bool
 }
 
 // ============================================================
@@ -267,7 +268,7 @@ func main() {
 	log.Println("后台重连恢复频道: 已启用")
 	log.Println("移动网络抢麦端口跟随: 已启用")
 	log.Println("持麦期间UDP端口自动迁移: 已启用")
-	log.Println("V21 Opus透明转发: 已启用")
+	log.Println("V23.1 音频协议兼容转发: 已启用")
 	log.Println("========================================")
 	log.Println("服务器已启动，等待手机连接...")
 	log.Println("========================================")
@@ -319,32 +320,83 @@ func (s *Server) run() {
 		// ============================================================
 
 		if strings.HasPrefix(text, msgHello) {
-			deviceID := ""
 
-			if strings.HasPrefix(text, msgHello+":") {
-				deviceID = strings.TrimSpace(
-					strings.TrimPrefix(
-						text,
-						msgHello+":",
-					),
-				)
+			deviceID := ""
+			audioV231 := false
+
+			if strings.HasPrefix(
+				text,
+				msgHello+":",
+			) {
+
+				payload :=
+					strings.TrimSpace(
+						strings.TrimPrefix(
+							text,
+							msgHello+":",
+						),
+					)
+
+				parts :=
+					strings.SplitN(
+						payload,
+						":",
+						2,
+					)
+
+				if len(parts) >= 1 {
+
+					deviceID =
+						strings.TrimSpace(
+							parts[0],
+						)
+				}
+
+				if len(parts) >= 2 {
+
+					audioV231 =
+						strings.EqualFold(
+							strings.TrimSpace(
+								parts[1],
+							),
+							"V23.1",
+						)
+				}
 			}
 
-			client, accepted := s.updateClient(
-				remoteAddr,
-				deviceID,
-			)
+			client, accepted :=
+				s.updateClient(
+					remoteAddr,
+					deviceID,
+				)
 
-			if !accepted || client == nil {
+			if !accepted ||
+				client == nil {
+
 				continue
 			}
 
+			s.mu.Lock()
+
+			client.AudioV231 =
+				audioV231
+
+			s.saveSessionLocked(
+				client,
+			)
+
+			s.mu.Unlock()
+
 			log.Printf(
-				"HELLO: %s device=%s user=%s channel=%s",
+				"HELLO: %s device=%s user=%s channel=%s audioProtocol=%s",
 				remoteAddr.String(),
 				client.DeviceID,
 				client.Username,
 				client.ChannelName,
+				map[bool]string{
+					true:  "V23.1",
+					false: "V22",
+				}[audioV231],
 			)
 
 			s.sendMessage(
@@ -378,12 +430,55 @@ func (s *Server) run() {
 		// KEEP ALIVE
 		// ============================================================
 
-		if text == msgKeepAlive {
+		// ============================================================
+		// KEEP ALIVE
+		// V23.2：KEEPALIVE 携带 DeviceID
+		//
+		// 支持：
+		// WALKIE_KEEPALIVE
+		// WALKIE_KEEPALIVE:DeviceID
+		//
+		// 当手机 NAT 外网 UDP 端口发生变化时：
+		//
+		// DeviceID
+		//     ↓
+		// 找到原 Client
+		//     ↓
+		// 自动迁移 UDP 地址
+		//     ↓
+		// 保留原 UserID / 昵称 / 频道
+		// ============================================================
+
+		if text == msgKeepAlive ||
+			strings.HasPrefix(
+				text,
+				msgKeepAlive+":",
+			) {
+
+			deviceID := ""
+
+			if strings.HasPrefix(
+				text,
+				msgKeepAlive+":",
+			) {
+
+				deviceID =
+					strings.TrimSpace(
+						strings.TrimPrefix(
+							text,
+							msgKeepAlive+":",
+						),
+					)
+			}
+
 			client, accepted := s.updateClient(
 				remoteAddr,
+				deviceID,
 			)
 
-			if !accepted || client == nil {
+			if !accepted ||
+				client == nil {
+
 				continue
 			}
 
@@ -3767,6 +3862,62 @@ func sortStrings(
 }
 
 // ============================================================
+// V23.1 音频协议
+// ============================================================
+
+const (
+	v231AudioHeaderSize = 12
+	v231AudioMagic      = "W23A"
+)
+
+func isV231AudioPacket(
+	data []byte,
+) bool {
+
+	if len(data) <
+		v231AudioHeaderSize {
+
+		return false
+	}
+
+	return string(
+		data[:4],
+	) == v231AudioMagic
+}
+
+func stripV231AudioHeader(
+	data []byte,
+) []byte {
+
+	if !isV231AudioPacket(
+		data,
+	) {
+
+		return data
+	}
+
+	if len(data) <=
+		v231AudioHeaderSize {
+
+		return nil
+	}
+
+	result :=
+		make(
+			[]byte,
+			len(data)-
+				v231AudioHeaderSize,
+		)
+
+	copy(
+		result,
+		data[v231AudioHeaderSize:],
+	)
+
+	return result
+}
+
+// ============================================================
 // UDP 地址复制
 // ============================================================
 
@@ -4809,6 +4960,30 @@ func (s *Server) relayAudio(
 	 *
 	 * Opus 不在 VPS 解码/编码。
 	 */
+	/*
+	 * ============================================================
+	 * V23.1 音频兼容转发
+	 * ============================================================
+	 *
+	 * V23.1 -> V23.1
+	 *     保留完整帧
+	 *
+	 * V23.1 -> V22
+	 *     去掉12字节头
+	 *
+	 * V22 -> V23.1
+	 *     原始Opus
+	 *
+	 * V22 -> V22
+	 *     原样
+	 * ============================================================
+	 */
+
+	v231Audio :=
+		isV231AudioPacket(
+			data,
+		)
+
 	for _, client := range clients {
 
 		if client == nil ||
@@ -4817,14 +4992,37 @@ func (s *Server) relayAudio(
 			continue
 		}
 
+		payload :=
+			data
+
+		if v231Audio &&
+			!client.AudioV231 {
+
+			payload =
+				stripV231AudioHeader(
+					data,
+				)
+
+			if payload == nil ||
+				len(payload) == 0 {
+
+				s.recordDrop(
+					uint64(len(data)),
+					true,
+				)
+
+				continue
+			}
+		}
+
 		if _, err :=
 			s.conn.WriteToUDP(
-				data,
+				payload,
 				client.Addr,
 			); err != nil {
 
 			log.Printf(
-				"V21 音频转发失败: %s channel=%s error=%v",
+				"V23.1 音频转发失败: %s channel=%s error=%v",
 				client.Addr.String(),
 				channelName,
 				err,
@@ -4834,7 +5032,7 @@ func (s *Server) relayAudio(
 		}
 
 		s.recordForward(
-			uint64(len(data)),
+			uint64(len(payload)),
 		)
 	}
 }
