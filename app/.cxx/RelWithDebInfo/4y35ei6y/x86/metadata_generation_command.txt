@@ -1,0 +1,19 @@
+                        -HD:\Walkie\app\src\main\cpp
+-DCMAKE_SYSTEM_NAME=Android
+-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+-DCMAKE_SYSTEM_VERSION=27
+-DANDROID_PLATFORM=android-27
+-DANDROID_ABI=x86
+-DCMAKE_ANDROID_ARCH_ABI=x86
+-DANDROID_NDK=D:\Android\sdk\ndk\28.2.13676358
+-DCMAKE_ANDROID_NDK=D:\Android\sdk\ndk\28.2.13676358
+-DCMAKE_TOOLCHAIN_FILE=D:\Android\sdk\ndk\28.2.13676358\build\cmake\android.toolchain.cmake
+-DCMAKE_MAKE_PROGRAM=D:\Android\sdk\cmake\3.22.1\bin\ninja.exe
+-DCMAKE_CXX_FLAGS=-std=c++17
+-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=D:\Walkie\app\build\intermediates\cxx\RelWithDebInfo\4y35ei6y\obj\x86
+-DCMAKE_RUNTIME_OUTPUT_DIRECTORY=D:\Walkie\app\build\intermediates\cxx\RelWithDebInfo\4y35ei6y\obj\x86
+-DCMAKE_BUILD_TYPE=RelWithDebInfo
+-BD:\Walkie\app\.cxx\RelWithDebInfo\4y35ei6y\x86
+-GNinja
+                        Build command args: []
+                        Version: 2

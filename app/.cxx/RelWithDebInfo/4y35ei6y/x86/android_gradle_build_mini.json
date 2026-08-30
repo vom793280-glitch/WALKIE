@@ -1,0 +1,33 @@
+{
+  "buildFiles": [
+    "D:\\Walkie\\app\\src\\main\\cpp\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "D:\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "D:\\Walkie\\app\\.cxx\\RelWithDebInfo\\4y35ei6y\\x86",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "D:\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "D:\\Walkie\\app\\.cxx\\RelWithDebInfo\\4y35ei6y\\x86",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "privateradio::@6890427a1f51a3e7e1df": {
+      "artifactName": "privateradio",
+      "abi": "x86",
+      "output": "D:\\Walkie\\app\\build\\intermediates\\cxx\\RelWithDebInfo\\4y35ei6y\\obj\\x86\\libprivateradio.so",
+      "runtimeFiles": []
+    },
+    "opus::@6890427a1f51a3e7e1df": {
+      "artifactName": "opus",
+      "abi": "x86",
+      "output": "D:\\Walkie\\app\\.cxx\\RelWithDebInfo\\4y35ei6y\\x86\\libopus.a",
+      "runtimeFiles": []
+    }
+  }
+}

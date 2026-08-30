@@ -1,0 +1,4 @@
+D:/Walkie/app/.cxx/Debug/5s1a4o1a/x86/CMakeFiles/opus.dir
+D:/Walkie/app/.cxx/Debug/5s1a4o1a/x86/CMakeFiles/privateradio.dir
+D:/Walkie/app/.cxx/Debug/5s1a4o1a/x86/CMakeFiles/edit_cache.dir
+D:/Walkie/app/.cxx/Debug/5s1a4o1a/x86/CMakeFiles/rebuild_cache.dir

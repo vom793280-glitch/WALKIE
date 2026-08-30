@@ -1,0 +1,4 @@
+D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86/CMakeFiles/opus.dir
+D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86/CMakeFiles/privateradio.dir
+D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86/CMakeFiles/edit_cache.dir
+D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86/CMakeFiles/rebuild_cache.dir

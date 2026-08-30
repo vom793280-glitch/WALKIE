@@ -62,9 +62,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.walkie.ui.theme.WalkieTheme
 
-private const val WALKIE_VERSION = "V20"
+private const val WALKIE_VERSION = "V20.1"
 
-private const val DEFAULT_SERVER_IP = "38.146.29.169"
+private const val DEFAULT_SERVER_IP =
+    "38.146.29.169"
 
 private const val UI_PREFS =
     "walkie_session_v20"
@@ -77,6 +78,11 @@ data class ChannelUiInfo(
     val onlineCount: Int = 0,
     val isPrivate: Boolean = false,
     val requirePassword: Boolean = false
+)
+
+data class OnlineUserUiInfo(
+    val userId: String,
+    val nickname: String
 )
 
 class MainActivity : ComponentActivity() {
@@ -109,6 +115,14 @@ class MainActivity : ComponentActivity() {
 
     private var nickname by mutableStateOf(
         ""
+    )
+
+    private var myUserId by mutableStateOf(
+        ""
+    )
+
+    private var onlineUsers by mutableStateOf(
+        emptyList<OnlineUserUiInfo>()
     )
 
     private var channelList by mutableStateOf(
@@ -152,24 +166,54 @@ class MainActivity : ComponentActivity() {
     )
 
     /*
-     * 网络状态直接显示在首页。
-     */
+  * ============================================================
+  * V21 网络质量状态
+  * ============================================================
+  */
+
     private var networkType by mutableStateOf(
         "检测中"
+    )
+
+    private var networkLatency by mutableStateOf(
+        -1L
+    )
+
+    private var networkLoss by mutableStateOf(
+        100f
+    )
+
+    private var networkQuality by mutableStateOf(
+        "检测中"
+    )
+
+    private var networkBitrate by mutableStateOf(
+        0f
+    )
+
+    private var networkUploadBitrate by mutableStateOf(
+        0f
+    )
+
+    private var networkDownloadBitrate by mutableStateOf(
+        0f
+    )
+
+    private var networkJitter by mutableStateOf(
+        -1L
+    )
+    /*
+     * 当前页面。
+     */
+    private var currentPage by mutableStateOf(
+        "home"
     )
 
     /*
      * ============================================================
      * 系统返回
-     *
-     * 不使用 Compose BackHandler。
-     * 页面返回交给 Activity 统一处理。
      * ============================================================
      */
-
-    private var currentPage by mutableStateOf(
-        "home"
-    )
 
     private val systemBackCallback =
         object : OnBackPressedCallback(true) {
@@ -188,7 +232,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 /*
-                 * 首页才真正交给系统返回。
+                 * 首页才真正退出 Activity。
                  */
                 isEnabled =
                     false
@@ -249,9 +293,9 @@ class MainActivity : ComponentActivity() {
                 ) {
 
                     /*
-                     * ------------------------------------------------
+                     * ==================================================
                      * 连接状态
-                     * ------------------------------------------------
+                     * ==================================================
                      */
 
                     WalkieService.ACTION_CONNECTION_STATUS -> {
@@ -269,25 +313,65 @@ class MainActivity : ComponentActivity() {
                             !connected
                         ) {
 
-                            talkStatus =
-                                WalkieService.TALK_STATUS_NONE
+                            /*
+                             * V21：
+                             * 断线后立即清除旧的在线成员状态。
+                             *
+                             * 但是不要清除 currentChannel。
+                             *
+                             * WalkieService 会负责自动重连，
+                             * 并在重连成功后恢复之前的频道。
+                             */
+                            onlineUsers =
+                                emptyList()
 
                             currentOnlineCount =
                                 0
+
+                            talkStatus =
+                                WalkieService.TALK_STATUS_NONE
+
+                            myUserId =
+                                ""
+
+                            /*
+                             * 网络状态立即恢复为离线。
+                             * 等 Service 重新建立连接后，
+                             * ACTION_NETWORK_STATUS 会重新更新。
+                             */
+                            networkLatency =
+                                -1L
+
+                            networkLoss =
+                                100f
+
+                            networkQuality =
+                                "离线"
+
+                            networkBitrate =
+                                0f
+
+                            networkUploadBitrate =
+                                0f
+
+                            networkDownloadBitrate =
+                                0f
+
+                            networkJitter =
+                                -1L
                         }
 
                         updateNetworkType()
 
                         println(
-                            "WALKIE $WALKIE_VERSION: " +
-                                    "连接状态=$connected"
+                            "WALKIE $WALKIE_VERSION: 连接状态=$connected"
                         )
                     }
 
                     /*
-                     * ------------------------------------------------
+                     * ==================================================
                      * 抢麦
-                     * ------------------------------------------------
+                     * ==================================================
                      */
 
                     WalkieService.ACTION_TALK_STATUS -> {
@@ -299,27 +383,95 @@ class MainActivity : ComponentActivity() {
                                 ?: WalkieService.TALK_STATUS_NONE
 
                         println(
-                            "WALKIE $WALKIE_VERSION: " +
-                                    "TALK STATUS=$talkStatus"
+                            "WALKIE $WALKIE_VERSION: TALK STATUS=$talkStatus"
                         )
                     }
 
                     /*
-                     * ------------------------------------------------
+                     * ==================================================
+                     * 我的用户信息
+                     * ==================================================
+                     */
+
+                    WalkieService.ACTION_MY_USER_INFO -> {
+
+                        myUserId =
+                            intent.getStringExtra(
+                                WalkieService.EXTRA_MY_USER_ID
+                            )
+                                ?: myUserId
+
+                        val serverNickname =
+                            intent.getStringExtra(
+                                WalkieService.EXTRA_MY_USERNAME
+                            )
+                                ?: ""
+
+                        if (
+                            serverNickname.isNotBlank() &&
+                            !serverNickname.startsWith(
+                                "USER-"
+                            )
+                        ) {
+
+                            nickname =
+                                serverNickname
+                        }
+
+                        println(
+                            "WALKIE $WALKIE_VERSION: " +
+                                    "我的用户ID=$myUserId " +
+                                    "昵称=$nickname"
+                        )
+                    }
+
+                    /*
+                     * ==================================================
+                     * 当前频道在线人员
+                     * ==================================================
+                     */
+
+                    WalkieService.ACTION_USER_LIST -> {
+
+                        val items =
+                            intent.getStringArrayListExtra(
+                                WalkieService.EXTRA_USER_LIST
+                            )
+                                .orEmpty()
+
+                        val result =
+                            items
+                                .mapNotNull {
+                                    parseUser(it)
+                                }
+                                .distinctBy {
+                                    it.userId
+                                }
+
+                        onlineUsers =
+                            result
+
+                        /*
+                         * 用户列表是服务器当前频道成员的最终人数。
+                         */
+                        currentOnlineCount =
+                            result.size
+
+                        connectionState =
+                            true
+
+                        updateNetworkType()
+
+                        println(
+                            "WALKIE $WALKIE_VERSION: " +
+                                    "在线人员=${result.size}"
+                        )
+                    }
+
+                    /*
+                     * ==================================================
                      * 频道列表
-                     *
-                     * 收到这个广播说明：
-                     *
-                     * Activity -> Service
-                     * Service -> UDP服务器
-                     * UDP服务器 -> Service
-                     * Service -> Activity
-                     *
-                     * 整个链路已经正常。
-                     *
-                     * 所以即使 Activity 之前显示“未连接”，
-                     * 收到这里也直接恢复为在线。
-                     * ------------------------------------------------
+                     * ==================================================
                      */
 
                     WalkieService.ACTION_CHANNEL_LIST -> {
@@ -327,7 +479,8 @@ class MainActivity : ComponentActivity() {
                         val infos =
                             intent.getStringArrayListExtra(
                                 WalkieService.EXTRA_CHANNEL_INFO
-                            ).orEmpty()
+                            )
+                                .orEmpty()
 
                         val parsed =
                             infos
@@ -361,9 +514,128 @@ class MainActivity : ComponentActivity() {
                     }
 
                     /*
-                     * ------------------------------------------------
-                     * 当前频道
-                     * ------------------------------------------------
+ * ============================================================
+ * V21 网络质量
+ * ============================================================
+ */
+
+                    WalkieService.ACTION_NETWORK_STATUS -> {
+
+                        networkLatency =
+                            intent.getLongExtra(
+                                WalkieService.EXTRA_NETWORK_LATENCY,
+                                -1L
+                            )
+
+                        networkLoss =
+                            intent.getFloatExtra(
+                                WalkieService.EXTRA_NETWORK_LOSS,
+                                100f
+                            )
+                                .coerceIn(
+                                    0f,
+                                    100f
+                                )
+
+                        networkQuality =
+                            intent.getStringExtra(
+                                WalkieService.EXTRA_NETWORK_QUALITY
+                            )
+                                ?: "检测中"
+
+                        networkBitrate =
+                            intent.getFloatExtra(
+                                WalkieService.EXTRA_NETWORK_BITRATE,
+                                0f
+                            )
+                                .coerceAtLeast(
+                                    0f
+                                )
+
+                        networkUploadBitrate =
+                            intent.getFloatExtra(
+                                WalkieService.EXTRA_NETWORK_UPLOAD_BITRATE,
+                                0f
+                            )
+                                .coerceAtLeast(
+                                    0f
+                                )
+
+                        networkDownloadBitrate =
+                            intent.getFloatExtra(
+                                WalkieService.EXTRA_NETWORK_DOWNLOAD_BITRATE,
+                                0f
+                            )
+                                .coerceAtLeast(
+                                    0f
+                                )
+
+                        networkJitter =
+                            intent.getLongExtra(
+                                WalkieService.EXTRA_NETWORK_JITTER,
+                                -1L
+                            )
+                                .coerceAtLeast(
+                                    -1L
+                                )
+
+                        /*
+ * V21：
+ * 收到服务器网络质量数据时，
+ * 同时重新检测手机当前使用的网络类型。
+ */
+                        updateNetworkType()
+
+                        /*
+ * V21：
+ * 重新获取基础网络类型，
+ * 再组合 V21 网络质量信息。
+ *
+ * 避免每次广播都重复追加文字。
+ */
+                        updateNetworkType()
+
+                        val baseNetworkType =
+                            networkType
+
+                        val latencyText =
+                            if (
+                                networkLatency >= 0L
+                            ) {
+
+                                "${networkLatency}ms"
+
+                            } else {
+
+                                "--"
+                            }
+
+                        networkType =
+                            "$baseNetworkType · " +
+                                    "$networkQuality · " +
+                                    "$latencyText · " +
+                                    "丢包 ${
+                                        String.format(
+                                            "%.1f%%",
+                                            networkLoss
+                                        )
+                                    }"
+
+                        println(
+                            "WALKIE $WALKIE_VERSION: " +
+                                    "网络质量=$networkQuality " +
+                                    "延迟=${networkLatency}ms " +
+                                    "丢包=${networkLoss}% " +
+                                    "抖动=${networkJitter}ms " +
+                                    "上行=${networkUploadBitrate}kbps " +
+                                    "下行=${networkDownloadBitrate}kbps"
+                        )
+                    }
+
+                    /*
+                     * ==================================================
+                     * 当前频道状态
+                     * ==================================================
                      */
 
                     WalkieService.ACTION_CHANNEL_STATUS -> {
@@ -374,12 +646,14 @@ class MainActivity : ComponentActivity() {
                             )
                                 ?: currentChannel
 
-                        currentOnlineCount =
-                            intent.getIntExtra(
-                                WalkieService.EXTRA_CHANNEL_ONLINE_COUNT,
-                                currentOnlineCount
-                            )
-                                .coerceAtLeast(0)
+                        /*
+  * V21：
+  * 如果已经收到服务器真实成员列表，
+  * 以 onlineUsers.size 作为当前频道真实人数。
+  *
+  * CHANNEL_STATUS 里的在线人数只作为备用值，
+  * 防止旧缓存人数把真实成员人数覆盖掉。
+  */
 
                         currentPrivate =
                             intent.getBooleanExtra(
@@ -393,8 +667,6 @@ class MainActivity : ComponentActivity() {
                             )
                                 ?: ""
 
-                        connectionState =
-                            true
 
                         updateNetworkType()
 
@@ -406,9 +678,9 @@ class MainActivity : ComponentActivity() {
                     }
 
                     /*
-                     * ------------------------------------------------
+                     * ==================================================
                      * 删除频道
-                     * ------------------------------------------------
+                     * ==================================================
                      */
 
                     WalkieService.ACTION_CHANNEL_DELETED -> {
@@ -431,6 +703,9 @@ class MainActivity : ComponentActivity() {
 
                             currentPrivate =
                                 false
+
+                            onlineUsers =
+                                emptyList()
                         }
 
                         channelMessage =
@@ -454,9 +729,6 @@ class MainActivity : ComponentActivity() {
             savedInstanceState
         )
 
-        /*
-         * 注册系统返回。
-         */
         onBackPressedDispatcher.addCallback(
             this,
             systemBackCallback
@@ -474,6 +746,8 @@ class MainActivity : ComponentActivity() {
                     UI_PREF_NICKNAME,
                     ""
                 )
+                ?.trim()
+                ?.take(20)
                 ?: ""
 
         updateNetworkType()
@@ -492,6 +766,18 @@ class MainActivity : ComponentActivity() {
 
                 addAction(
                     WalkieService.ACTION_TALK_STATUS
+                )
+
+                addAction(
+                    WalkieService.ACTION_MY_USER_INFO
+                )
+
+                addAction(
+                    WalkieService.ACTION_USER_LIST
+                )
+
+                addAction(
+                    WalkieService.ACTION_NETWORK_STATUS
                 )
 
                 addAction(
@@ -545,6 +831,9 @@ class MainActivity : ComponentActivity() {
                         nickname =
                             nickname,
 
+                        myUserId =
+                            myUserId,
+
                         currentChannel =
                             currentChannel,
 
@@ -556,6 +845,9 @@ class MainActivity : ComponentActivity() {
 
                         channels =
                             channelList,
+
+                        onlineUsers =
+                            onlineUsers,
 
                         networkType =
                             networkType,
@@ -738,6 +1030,8 @@ class MainActivity : ComponentActivity() {
 
                         onStartSpeaking = {
 
+                            println("WALKIE UI: ★触发一次 START★")
+
                             startSpeaking()
                         },
 
@@ -754,21 +1048,24 @@ class MainActivity : ComponentActivity() {
     /*
      * ============================================================
      * onResume
-     *
-     * 关键修复：
-     *
-     * 不再要求 connectionState=true 才发送频道请求。
-     *
-     * 因为 Activity 刚创建的时候：
-     *
-     * connectionState=false
-     *
-     * 但 Service 可能实际上还在线。
-     *
-     * 所以必须主动问 Service。
      * ============================================================
      */
 
+    /*
+ * ============================================================
+ * V21 前台恢复
+ * ============================================================
+ *
+ * Activity 回到前台时：
+ *
+ * 1. 重新检测手机网络类型
+ * 2. 无论 Activity 自己保存的 connectionState 是什么，
+ *    都向 WalkieService 请求重新同步
+ *
+ * 注意：
+ * 真正的 UDP 连接生命周期由 WalkieService 管理。
+ * MainActivity 不负责重新创建 Socket。
+ */
     override fun onResume() {
 
         super.onResume()
@@ -776,10 +1073,31 @@ class MainActivity : ComponentActivity() {
         updateNetworkType()
 
         /*
-         * 无论 Activity 自己认为在线还是离线，
-         * 都主动询问 Service。
+         * 不使用 connectionState 判断。
+         *
+         * 因为 Activity 可能刚刚重新创建，
+         * 此时 connectionState 还是 false，
+         * 但后台 WalkieService 可能仍然在线。
+         *
+         * 这里直接请求 Service 同步频道信息。
          */
         requestChannelList()
+
+        /*
+         * 如果 Service 当前在线，
+         * 它会返回：
+         *
+         * CHANNEL_LIST
+         * CHANNEL_STATUS
+         * USER_LIST
+         * NETWORK_STATUS
+         *
+         * Activity 再根据这些广播恢复界面。
+         */
+        println(
+            "WALKIE $WALKIE_VERSION: " +
+                    "Activity 回到前台，主动请求 Service 同步状态"
+        )
     }
 
     /*
@@ -830,7 +1148,7 @@ class MainActivity : ComponentActivity() {
 
     /*
      * ============================================================
-     * 网络
+     * 网络类型
      * ============================================================
      */
 
@@ -904,6 +1222,9 @@ class MainActivity : ComponentActivity() {
                 action =
                     WalkieService.ACTION_START
 
+                /*
+                 * IP只在程序内部使用。
+                 */
                 putExtra(
                     WalkieService.EXTRA_SERVER_IP,
                     DEFAULT_SERVER_IP
@@ -930,15 +1251,13 @@ class MainActivity : ComponentActivity() {
             }
 
             println(
-                "WALKIE $WALKIE_VERSION: " +
-                        "请求连接兄弟服务器"
+                "WALKIE $WALKIE_VERSION: 请求连接兄弟服务器"
             )
 
         } catch (e: Exception) {
 
             println(
-                "WALKIE $WALKIE_VERSION: " +
-                        "连接失败=${e.message}"
+                "WALKIE $WALKIE_VERSION: 连接失败=${e.message}"
             )
         }
     }
@@ -975,7 +1294,9 @@ class MainActivity : ComponentActivity() {
     private fun saveNickname() {
 
         val value =
-            nicknameInput.trim()
+            nicknameInput
+                .trim()
+                .take(20)
 
         if (
             value.isBlank()
@@ -1001,22 +1322,49 @@ class MainActivity : ComponentActivity() {
         nicknameDialog =
             false
 
+        /*
+         * V20.1：
+         * 真正发送给 Service，
+         * Service 再发送 WALKIE_LOGIN 给 VPS。
+         */
+        val intent =
+            Intent(
+                this,
+                WalkieService::class.java
+            ).apply {
+
+                action =
+                    WalkieService.ACTION_SET_NICKNAME
+
+                putExtra(
+                    "nickname",
+                    value
+                )
+            }
+
+        try {
+
+            @Suppress("DEPRECATION")
+            startService(
+                intent
+            )
+
+        } catch (e: Exception) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "发送昵称失败=${e.message}"
+            )
+        }
+
         println(
-            "WALKIE $WALKIE_VERSION: " +
-                    "昵称=$value"
+            "WALKIE $WALKIE_VERSION: 保存昵称=$value"
         )
     }
 
     /*
      * ============================================================
      * 频道列表
-     *
-     * 注意：
-     * 这里故意不能写：
-     *
-     * if (!connectionState) return
-     *
-     * 因为本函数就是用来恢复连接显示的。
      * ============================================================
      */
 
@@ -1072,6 +1420,19 @@ class MainActivity : ComponentActivity() {
 
             return
         }
+
+        /*
+ * V21：
+ * 开始切换频道时，立即清除旧频道成员。
+ *
+ * 这样在服务器返回新频道成员列表之前，
+ * UI 不会继续显示旧频道的人。
+ */
+        onlineUsers =
+            emptyList()
+
+        currentOnlineCount =
+            0
 
         if (
             channel.isPrivate ||
@@ -1314,7 +1675,61 @@ class MainActivity : ComponentActivity() {
 
     /*
      * ============================================================
-     * 解析频道
+     * 在线用户解析
+     * ============================================================
+     */
+
+    private fun parseUser(
+        value: String
+    ): OnlineUserUiInfo? {
+
+        val separator =
+            value.indexOf('|')
+
+        if (
+            separator <= 0
+        ) {
+
+            return null
+        }
+
+        val userId =
+            value
+                .substring(
+                    0,
+                    separator
+                )
+                .trim()
+
+        val username =
+            value
+                .substring(
+                    separator + 1
+                )
+                .trim()
+                .ifBlank {
+                    "未命名用户"
+                }
+
+        if (
+            userId.isBlank()
+        ) {
+
+            return null
+        }
+
+        return OnlineUserUiInfo(
+            userId =
+                userId,
+
+            nickname =
+                username
+        )
+    }
+
+    /*
+     * ============================================================
+     * 频道解析
      * ============================================================
      */
 
@@ -1358,6 +1773,7 @@ class MainActivity : ComponentActivity() {
                 ?: 0
 
         return ChannelUiInfo(
+
             name =
                 name,
 
@@ -1391,7 +1807,7 @@ class MainActivity : ComponentActivity() {
 
 /*
  * ================================================================
- * V20 主界面
+ * V20.1 SCREEN
  * ================================================================
  */
 
@@ -1400,10 +1816,12 @@ private fun WalkieV20Screen(
     connected: Boolean,
     talkStatus: String,
     nickname: String,
+    myUserId: String,
     currentChannel: String,
     currentOnlineCount: Int,
     currentPrivate: Boolean,
     channels: List<ChannelUiInfo>,
+    onlineUsers: List<OnlineUserUiInfo>,
     networkType: String,
     page: String,
     nicknameDialog: Boolean,
@@ -1439,14 +1857,6 @@ private fun WalkieV20Screen(
     onStopSpeaking: () -> Unit
 ) {
 
-    /*
-     * ============================================================
-     * Compose 内部状态
-     *
-     * 全部 remember。
-     * ============================================================
-     */
-
     var newChannelName by remember {
         mutableStateOf("")
     }
@@ -1463,11 +1873,6 @@ private fun WalkieV20Screen(
         mutableStateOf(false)
     }
 
-    /*
-     * PTT 使用 rememberUpdatedState。
-     *
-     * pointerInput 的 key 仍然固定为 Unit。
-     */
     val currentConnected =
         rememberUpdatedState(
             connected
@@ -1652,8 +2057,11 @@ private fun WalkieV20Screen(
                             if (
                                 newChannelPrivate
                             ) {
+
                                 "🔒 私密频道"
+
                             } else {
+
                                 "🌐 公开频道"
                             }
                         )
@@ -1734,6 +2142,7 @@ private fun WalkieV20Screen(
                                                     .trim()
                                                     .isNotBlank()
                                         )
+
                 ) {
 
                     Text(
@@ -1761,7 +2170,7 @@ private fun WalkieV20Screen(
 
     /*
      * ============================================================
-     * 加入密码频道
+     * 密码
      * ============================================================
      */
 
@@ -1919,7 +2328,7 @@ private fun WalkieV20Screen(
 
     /*
      * ============================================================
-     * 页面
+     * 主框架
      * ============================================================
      */
 
@@ -2041,6 +2450,12 @@ private fun WalkieV20Screen(
                     currentOnlineCount =
                         currentOnlineCount,
 
+                    onlineUsers =
+                        onlineUsers,
+
+                    myUserId =
+                        myUserId,
+
                     onBack = {
 
                         onPageChanged(
@@ -2104,6 +2519,9 @@ private fun WalkieV20Screen(
                     nickname =
                         nickname,
 
+                    myUserId =
+                        myUserId,
+
                     onBack = {
 
                         onPageChanged(
@@ -2113,13 +2531,6 @@ private fun WalkieV20Screen(
 
                     onOpenNickname =
                         onOpenNickname
-                )
-            }
-
-            else -> {
-
-                onPageChanged(
-                    "home"
                 )
             }
         }
@@ -2200,7 +2611,7 @@ private fun HomePage(
 
                 Text(
 
-                    "V20 · 实时语音通信",
+                    "V20.1 · 实时语音通信",
 
                     fontSize =
                         13.sp,
@@ -2217,9 +2628,7 @@ private fun HomePage(
         }
 
         /*
-         * ========================================================
          * 我的昵称
-         * ========================================================
          */
 
         Card(
@@ -2321,9 +2730,7 @@ private fun HomePage(
         }
 
         /*
-         * ========================================================
          * 服务器
-         * ========================================================
          */
 
         Card(
@@ -2390,8 +2797,11 @@ private fun HomePage(
                         if (
                             connected
                         ) {
+
                             "已连接"
+
                         } else {
+
                             "未连接"
                         },
 
@@ -2448,9 +2858,7 @@ private fun HomePage(
         }
 
         /*
-         * ========================================================
          * 当前频道
-         * ========================================================
          */
 
         Card(
@@ -2572,12 +2980,7 @@ private fun HomePage(
         }
 
         /*
-         * ========================================================
-         * 第一排：在线人员 + 网络状态
-         *
-         * 网络状态直接显示在首页，
-         * 不再做网络二级页面。
-         * ========================================================
+         * 功能入口
          */
 
         Row(
@@ -2629,10 +3032,6 @@ private fun HomePage(
                     false
             )
         }
-
-        /*
-         * 第二排
-         */
 
         Row(
 
@@ -2725,7 +3124,7 @@ private fun HomePage(
                 ) {
 
                     Text(
-                        "●",
+                        "🟢",
                         fontSize =
                             15.sp
                     )
@@ -2748,7 +3147,7 @@ private fun HomePage(
 
                         Text(
 
-                            "当前频道：$currentChannel",
+                            "当前频道 $currentChannel · 在线 $currentOnlineCount 人",
 
                             fontSize =
                                 12.sp,
@@ -2771,7 +3170,7 @@ private fun HomePage(
 
 /*
  * ================================================================
- * 在线人员
+ * 在线人员页面
  * ================================================================
  */
 
@@ -2781,6 +3180,8 @@ private fun UsersPage(
     connected: Boolean,
     currentChannel: String,
     currentOnlineCount: Int,
+    onlineUsers: List<OnlineUserUiInfo>,
+    myUserId: String,
     onBack: () -> Unit
 ) {
 
@@ -2792,7 +3193,9 @@ private fun UsersPage(
                 .verticalScroll(
                     rememberScrollState()
                 )
-                .padding(16.dp),
+                .padding(
+                    16.dp
+                ),
 
         verticalArrangement =
             Arrangement.spacedBy(
@@ -2831,55 +3234,138 @@ private fun UsersPage(
                 },
 
             extra =
-                "当前 V19 服务器提供的是频道在线人数"
+                "人数来自服务器当前频道成员列表"
         )
 
-        Card(
-
-            modifier =
-                Modifier.fillMaxWidth(),
-
-            shape =
-                RoundedCornerShape(
-                    18.dp
-                )
+        if (
+            !connected
         ) {
 
-            Column(
+            EmptyCard(
+                "当前未连接服务器"
+            )
 
-                Modifier.padding(
-                    16.dp
-                )
-            ) {
+        } else if (
+            onlineUsers.isEmpty()
+        ) {
 
-                Text(
+            EmptyCard(
+                "正在同步在线人员…"
+            )
 
-                    "在线成员",
+        } else {
 
-                    fontSize =
-                        17.sp,
+            onlineUsers.forEach { user ->
 
-                    fontWeight =
-                        FontWeight.Bold
-                )
+                Card(
 
-                Spacer(
-                    Modifier.height(
-                        8.dp
-                    )
-                )
+                    modifier =
+                        Modifier.fillMaxWidth(),
 
-                Text(
+                    shape =
+                        RoundedCornerShape(
+                            18.dp
+                        )
+                ) {
 
-                    "当前服务端协议还没有返回逐个用户昵称的接口，" +
-                            "所以这里暂时显示频道总人数。",
+                    Row(
 
-                    fontSize =
-                        13.sp,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    15.dp
+                                ),
 
-                    color =
-                        Color.Gray
-                )
+                        verticalAlignment =
+                            Alignment.CenterVertically
+                    ) {
+
+                        Box(
+
+                            modifier =
+                                Modifier
+                                    .size(
+                                        44.dp
+                                    )
+                                    .clip(
+                                        CircleShape
+                                    )
+                                    .background(
+                                        MaterialTheme
+                                            .colorScheme
+                                            .primaryContainer
+                                    ),
+
+                            contentAlignment =
+                                Alignment.Center
+                        ) {
+
+                            Text(
+                                "👤",
+                                fontSize =
+                                    21.sp
+                            )
+                        }
+
+                        Spacer(
+                            Modifier.width(
+                                12.dp
+                            )
+                        )
+
+                        Column(
+
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                )
+                        ) {
+
+                            Text(
+
+                                user.nickname
+                                    .ifBlank {
+                                        "未命名用户"
+                                    },
+
+                                fontSize =
+                                    17.sp,
+
+                                fontWeight =
+                                    FontWeight.Bold
+                            )
+
+                            Text(
+
+                                if (
+                                    user.userId ==
+                                    myUserId &&
+                                    myUserId.isNotBlank()
+                                ) {
+
+                                    "我的设备"
+
+                                } else {
+
+                                    "在线"
+                                },
+
+                                fontSize =
+                                    12.sp,
+
+                                color =
+                                    Color.Gray
+                            )
+                        }
+
+                        Text(
+                            "🟢",
+                            fontSize =
+                                14.sp
+                        )
+                    }
+                }
             }
         }
     }
@@ -2887,7 +3373,7 @@ private fun UsersPage(
 
 /*
  * ================================================================
- * 频道
+ * 频道页面
  * ================================================================
  */
 
@@ -2913,7 +3399,9 @@ private fun ChannelsPage(
                 .verticalScroll(
                     rememberScrollState()
                 )
-                .padding(16.dp),
+                .padding(
+                    16.dp
+                ),
 
         verticalArrangement =
             Arrangement.spacedBy(
@@ -2953,7 +3441,9 @@ private fun ChannelsPage(
                     connected,
 
                 modifier =
-                    Modifier.weight(1f)
+                    Modifier.weight(
+                        1f
+                    )
 
             ) {
 
@@ -2971,7 +3461,9 @@ private fun ChannelsPage(
                     connected,
 
                 modifier =
-                    Modifier.weight(1f)
+                    Modifier.weight(
+                        1f
+                    )
 
             ) {
 
@@ -3030,7 +3522,9 @@ private fun ChannelsPage(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(15.dp),
+                            .padding(
+                                15.dp
+                            ),
 
                     verticalAlignment =
                         Alignment.CenterVertically
@@ -3039,7 +3533,9 @@ private fun ChannelsPage(
                     Column(
 
                         modifier =
-                            Modifier.weight(1f)
+                            Modifier.weight(
+                                1f
+                            )
                     ) {
 
                         Text(
@@ -3154,6 +3650,7 @@ private fun ChannelsPage(
 private fun SettingsPage(
     modifier: Modifier,
     nickname: String,
+    myUserId: String,
     onBack: () -> Unit,
     onOpenNickname: () -> Unit
 ) {
@@ -3166,7 +3663,9 @@ private fun SettingsPage(
                 .verticalScroll(
                     rememberScrollState()
                 )
-                .padding(16.dp),
+                .padding(
+                    16.dp
+                ),
 
         verticalArrangement =
             Arrangement.spacedBy(
@@ -3254,6 +3753,17 @@ private fun SettingsPage(
         InfoCard(
 
             title =
+                "用户标识",
+
+            value =
+                myUserId.ifBlank {
+                    "连接后由服务器分配"
+                }
+        )
+
+        InfoCard(
+
+            title =
                 "服务器",
 
             value =
@@ -3269,12 +3779,12 @@ private fun SettingsPage(
                 "版本",
 
             value =
-                "V20"
+                "V20.1"
         )
 
         Text(
 
-            "当前界面不会显示服务器 IP。",
+            "服务器地址不会显示在界面中。",
 
             fontSize =
                 12.sp,
@@ -3287,7 +3797,7 @@ private fun SettingsPage(
 
 /*
  * ================================================================
- * PTT 底部按钮
+ * PTT
  * ================================================================
  */
 
@@ -3368,7 +3878,9 @@ private fun PttBottomBar(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(76.dp)
+                        .height(
+                            76.dp
+                        )
                         .clip(
                             RoundedCornerShape(
                                 22.dp
@@ -3379,22 +3891,32 @@ private fun PttBottomBar(
                             when {
 
                                 !connected ->
-                                    Color(0xFF9E9E9E)
+                                    Color(
+                                        0xFF9E9E9E
+                                    )
 
                                 talkStatus ==
                                         WalkieService.TALK_STATUS_ALLOWED ->
-                                    Color(0xFFD32F2F)
+                                    Color(
+                                        0xFFD32F2F
+                                    )
 
                                 talkStatus ==
                                         WalkieService.TALK_STATUS_REQUESTING ->
-                                    Color(0xFFF57C00)
+                                    Color(
+                                        0xFFF57C00
+                                    )
 
                                 talkStatus ==
                                         WalkieService.TALK_STATUS_BUSY ->
-                                    Color(0xFF616161)
+                                    Color(
+                                        0xFF616161
+                                    )
 
                                 pressing ->
-                                    Color(0xFFC62828)
+                                    Color(
+                                        0xFFC62828
+                                    )
 
                                 else ->
                                     MaterialTheme
@@ -3433,11 +3955,10 @@ private fun PttBottomBar(
                                 }
 
                                 /*
-                                 * 一旦手指按下，
-                                 * 开始请求抢麦。
+                                 * 按下后立即请求抢麦。
                                  *
-                                 * pointerInput 固定为 Unit，
-                                 * 因此状态改变不会取消当前手势。
+                                 * pointerInput 固定 Unit，
+                                 * 状态变化不会重新创建手势。
                                  */
                                 pressingState(
                                     true
@@ -3598,7 +4119,9 @@ private fun FeatureCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(14.dp)
+                    .padding(
+                        14.dp
+                    )
         ) {
 
             Text(
@@ -3701,7 +4224,9 @@ private fun PageHeader(
         Column(
 
             modifier =
-                Modifier.weight(1f)
+                Modifier.weight(
+                    1f
+                )
         ) {
 
             Text(
@@ -3731,7 +4256,7 @@ private fun PageHeader(
 
 /*
  * ================================================================
- * 在线状态
+ * 状态
  * ================================================================
  */
 
@@ -3867,7 +4392,7 @@ private fun InfoCard(
 
 /*
  * ================================================================
- * 空页面
+ * 空卡片
  * ================================================================
  */
 

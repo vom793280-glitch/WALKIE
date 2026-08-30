@@ -1,0 +1,837 @@
+[
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\bands.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\bands.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\bands.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\celt.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\celt.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\celt.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\celt_decoder.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\celt_decoder.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\celt_decoder.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\celt_encoder.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\celt_encoder.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\celt_encoder.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\celt_lpc.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\celt_lpc.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\celt_lpc.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\cwrs.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\cwrs.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\cwrs.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\entcode.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\entcode.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\entcode.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\entdec.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\entdec.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\entdec.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\entenc.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\entenc.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\entenc.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\kiss_fft.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\kiss_fft.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\kiss_fft.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\laplace.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\laplace.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\laplace.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\mathops.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\mathops.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\mathops.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\mdct.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\mdct.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\mdct.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\mini_kfft.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\mini_kfft.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\mini_kfft.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\modes.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\modes.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\modes.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\opus_custom_demo.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\opus_custom_demo.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\opus_custom_demo.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\pitch.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\pitch.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\pitch.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\quant_bands.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\quant_bands.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\quant_bands.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\rate.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\rate.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\rate.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\celt\\vq.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\vq.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\celt\\vq.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\A2NLSF.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\A2NLSF.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\A2NLSF.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\CNG.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\CNG.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\CNG.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\HP_variable_cutoff.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\HP_variable_cutoff.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\HP_variable_cutoff.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\LPC_analysis_filter.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\LPC_analysis_filter.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\LPC_analysis_filter.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\LPC_fit.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\LPC_fit.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\LPC_fit.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\LPC_inv_pred_gain.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\LPC_inv_pred_gain.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\LPC_inv_pred_gain.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\LP_variable_cutoff.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\LP_variable_cutoff.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\LP_variable_cutoff.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\NLSF2A.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF2A.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF2A.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\NLSF_VQ.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_VQ.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_VQ.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\NLSF_VQ_weights_laroia.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_VQ_weights_laroia.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_VQ_weights_laroia.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\NLSF_decode.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_decode.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_decode.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\NLSF_del_dec_quant.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_del_dec_quant.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_del_dec_quant.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\NLSF_encode.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_encode.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_encode.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\NLSF_stabilize.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_stabilize.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_stabilize.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\NLSF_unpack.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_unpack.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NLSF_unpack.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\NSQ.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NSQ.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NSQ.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\NSQ_del_dec.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NSQ_del_dec.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\NSQ_del_dec.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\PLC.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\PLC.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\PLC.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\VAD.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\VAD.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\VAD.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\VQ_WMat_EC.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\VQ_WMat_EC.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\VQ_WMat_EC.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\ana_filt_bank_1.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\ana_filt_bank_1.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\ana_filt_bank_1.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\biquad_alt.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\biquad_alt.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\biquad_alt.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\bwexpander.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\bwexpander.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\bwexpander.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\bwexpander_32.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\bwexpander_32.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\bwexpander_32.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\check_control_input.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\check_control_input.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\check_control_input.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\code_signs.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\code_signs.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\code_signs.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\control_SNR.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\control_SNR.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\control_SNR.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\control_audio_bandwidth.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\control_audio_bandwidth.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\control_audio_bandwidth.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\control_codec.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\control_codec.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\control_codec.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\debug.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\debug.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\debug.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\dec_API.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\dec_API.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\dec_API.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\decode_core.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decode_core.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decode_core.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\decode_frame.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decode_frame.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decode_frame.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\decode_indices.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decode_indices.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decode_indices.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\decode_parameters.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decode_parameters.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decode_parameters.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\decode_pitch.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decode_pitch.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decode_pitch.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\decode_pulses.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decode_pulses.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decode_pulses.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\decoder_set_fs.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decoder_set_fs.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\decoder_set_fs.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\enc_API.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\enc_API.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\enc_API.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\encode_indices.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\encode_indices.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\encode_indices.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\encode_pulses.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\encode_pulses.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\encode_pulses.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\LTP_analysis_filter_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\LTP_analysis_filter_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\LTP_analysis_filter_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\LTP_scale_ctrl_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\LTP_scale_ctrl_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\LTP_scale_ctrl_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\apply_sine_window_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\apply_sine_window_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\apply_sine_window_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\autocorr_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\autocorr_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\autocorr_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\burg_modified_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\burg_modified_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\burg_modified_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\corrMatrix_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\corrMatrix_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\corrMatrix_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\encode_frame_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\encode_frame_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\encode_frame_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\find_LPC_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\find_LPC_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\find_LPC_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\find_LTP_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\find_LTP_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\find_LTP_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\find_pitch_lags_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\find_pitch_lags_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\find_pitch_lags_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\find_pred_coefs_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\find_pred_coefs_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\find_pred_coefs_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\k2a_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\k2a_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\k2a_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\k2a_Q16_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\k2a_Q16_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\k2a_Q16_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\noise_shape_analysis_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\noise_shape_analysis_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\noise_shape_analysis_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\pitch_analysis_core_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\pitch_analysis_core_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\pitch_analysis_core_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\process_gains_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\process_gains_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\process_gains_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\regularize_correlations_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\regularize_correlations_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\regularize_correlations_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\residual_energy16_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\residual_energy16_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\residual_energy16_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\residual_energy_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\residual_energy_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\residual_energy_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\schur64_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\schur64_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\schur64_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\schur_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\schur_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\schur_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\vector_ops_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\vector_ops_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\vector_ops_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\fixed\\warped_autocorrelation_FIX.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\warped_autocorrelation_FIX.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\fixed\\warped_autocorrelation_FIX.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\LPC_analysis_filter_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\LPC_analysis_filter_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\LPC_analysis_filter_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\LPC_inv_pred_gain_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\LPC_inv_pred_gain_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\LPC_inv_pred_gain_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\LTP_analysis_filter_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\LTP_analysis_filter_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\LTP_analysis_filter_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\LTP_scale_ctrl_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\LTP_scale_ctrl_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\LTP_scale_ctrl_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\apply_sine_window_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\apply_sine_window_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\apply_sine_window_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\autocorrelation_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\autocorrelation_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\autocorrelation_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\burg_modified_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\burg_modified_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\burg_modified_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\bwexpander_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\bwexpander_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\bwexpander_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\corrMatrix_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\corrMatrix_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\corrMatrix_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\encode_frame_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\encode_frame_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\encode_frame_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\energy_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\energy_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\energy_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\find_LPC_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\find_LPC_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\find_LPC_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\find_LTP_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\find_LTP_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\find_LTP_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\find_pitch_lags_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\find_pitch_lags_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\find_pitch_lags_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\find_pred_coefs_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\find_pred_coefs_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\find_pred_coefs_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\inner_product_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\inner_product_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\inner_product_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\k2a_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\k2a_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\k2a_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\noise_shape_analysis_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\noise_shape_analysis_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\noise_shape_analysis_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\pitch_analysis_core_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\pitch_analysis_core_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\pitch_analysis_core_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\process_gains_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\process_gains_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\process_gains_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\regularize_correlations_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\regularize_correlations_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\regularize_correlations_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\residual_energy_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\residual_energy_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\residual_energy_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\scale_copy_vector_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\scale_copy_vector_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\scale_copy_vector_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\scale_vector_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\scale_vector_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\scale_vector_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\schur_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\schur_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\schur_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\sort_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\sort_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\sort_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\warped_autocorrelation_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\warped_autocorrelation_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\warped_autocorrelation_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\float\\wrappers_FLP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\wrappers_FLP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\float\\wrappers_FLP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\gain_quant.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\gain_quant.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\gain_quant.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\init_decoder.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\init_decoder.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\init_decoder.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\init_encoder.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\init_encoder.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\init_encoder.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\inner_prod_aligned.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\inner_prod_aligned.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\inner_prod_aligned.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\interpolate.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\interpolate.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\interpolate.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\lin2log.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\lin2log.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\lin2log.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\log2lin.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\log2lin.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\log2lin.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\pitch_est_tables.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\pitch_est_tables.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\pitch_est_tables.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\process_NLSFs.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\process_NLSFs.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\process_NLSFs.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\quant_LTP_gains.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\quant_LTP_gains.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\quant_LTP_gains.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\resampler.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\resampler_down2.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_down2.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_down2.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\resampler_down2_3.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_down2_3.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_down2_3.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\resampler_private_AR2.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_private_AR2.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_private_AR2.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\resampler_private_IIR_FIR.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_private_IIR_FIR.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_private_IIR_FIR.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\resampler_private_down_FIR.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_private_down_FIR.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_private_down_FIR.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\resampler_private_up2_HQ.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_private_up2_HQ.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_private_up2_HQ.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\resampler_rom.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_rom.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\resampler_rom.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\shell_coder.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\shell_coder.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\shell_coder.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\sigm_Q15.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\sigm_Q15.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\sigm_Q15.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\sort.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\sort.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\sort.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\stereo_LR_to_MS.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\stereo_LR_to_MS.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\stereo_LR_to_MS.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\stereo_MS_to_LR.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\stereo_MS_to_LR.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\stereo_MS_to_LR.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\stereo_decode_pred.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\stereo_decode_pred.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\stereo_decode_pred.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\stereo_encode_pred.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\stereo_encode_pred.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\stereo_encode_pred.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\stereo_find_predictor.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\stereo_find_predictor.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\stereo_find_predictor.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\stereo_quant_pred.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\stereo_quant_pred.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\stereo_quant_pred.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\sum_sqr_shift.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\sum_sqr_shift.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\sum_sqr_shift.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\table_LSF_cos.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\table_LSF_cos.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\table_LSF_cos.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\tables_LTP.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_LTP.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_LTP.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\tables_NLSF_CB_NB_MB.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_NLSF_CB_NB_MB.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_NLSF_CB_NB_MB.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\tables_NLSF_CB_WB.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_NLSF_CB_WB.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_NLSF_CB_WB.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\tables_gain.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_gain.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_gain.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\tables_other.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_other.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_other.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\tables_pitch_lag.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_pitch_lag.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_pitch_lag.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\silk\\tables_pulses_per_block.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_pulses_per_block.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\silk\\tables_pulses_per_block.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\analysis.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\analysis.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\analysis.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\extensions.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\extensions.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\extensions.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\mapping_matrix.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\mapping_matrix.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\mapping_matrix.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\mlp.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\mlp.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\mlp.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\mlp_data.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\mlp_data.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\mlp_data.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\opus.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\opus_compare.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_compare.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_compare.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\opus_decoder.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_decoder.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_decoder.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\opus_demo.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_demo.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_demo.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\opus_encoder.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_encoder.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_encoder.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\opus_multistream.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_multistream.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_multistream.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\opus_multistream_decoder.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_multistream_decoder.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_multistream_decoder.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\opus_multistream_encoder.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_multistream_encoder.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_multistream_encoder.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\opus_projection_decoder.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_projection_decoder.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_projection_decoder.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\opus_projection_encoder.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_projection_encoder.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\opus_projection_encoder.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\qext_compare.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\qext_compare.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\qext_compare.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\repacketizer.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\repacketizer.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\repacketizer.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DOPUS_BUILD -DVAR_ARRAYS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O2 -g -DNDEBUG -fPIC -o CMakeFiles\\opus.dir\\opus\\src\\repacketizer_demo.c.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\repacketizer_demo.c",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus\\src\\repacketizer_demo.c"
+},
+{
+  "directory": "D:/Walkie/app/.cxx/RelWithDebInfo/4y35ei6y/x86",
+  "command": "D:\\Android\\sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=i686-none-linux-android27 --sysroot=D:/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dprivateradio_EXPORTS -ID:/Walkie/app/src/main/cpp/opus/include -ID:/Walkie/app/src/main/cpp/opus/celt -ID:/Walkie/app/src/main/cpp/opus/silk -ID:/Walkie/app/src/main/cpp/opus/silk/fixed -ID:/Walkie/app/src/main/cpp/opus/silk/float -ID:/Walkie/app/src/main/cpp/opus/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles\\privateradio.dir\\opus_jni.cpp.o -c D:\\Walkie\\app\\src\\main\\cpp\\opus_jni.cpp",
+  "file": "D:\\Walkie\\app\\src\\main\\cpp\\opus_jni.cpp"
+}
+]
