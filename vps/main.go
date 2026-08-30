@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net"
@@ -11,19 +13,25 @@ import (
 
 const (
 	// ============================================================
-	// WALKIE V11
-	// Android / VPS 版本统一：V11
+	// WALKIE V20
 	// ============================================================
 
-	serverVersion = "WALKIE V11"
+	serverVersion = "WALKIE V21"
 
-	listenAddr    = ":50000"
-	maxClients    = 32
-	maxChannels   = 32
-	maxUsers      = 128
-	clientTimeout = 60 * time.Second
-	talkTimeout   = 30 * time.Second
+	listenAddr  = ":50000"
+	maxClients  = 32
+	maxChannels = 32
+	maxUsers    = 128
+
+	// UDP 心跳 5 秒一次。
+	// 90 秒没有任何客户端数据才清理。
+	clientTimeout = 90 * time.Second
+
+	talkTimeout = 30 * time.Second
+
 	maxPacketSize = 1500
+
+	maxConnectionsPerIP = 999
 
 	defaultChannel = "public"
 
@@ -35,9 +43,11 @@ const (
 	msgConnected = "WALKIE_CONNECTED"
 	msgKeepAlive = "WALKIE_KEEPALIVE"
 	msgGoodbye   = "WALKIE_GOODBYE"
+	msgNetPing   = "WALKIE_NET_PING"
+	msgNetPong   = "WALKIE_NET_PONG"
 
 	// ============================================================
-	// 抢麦协议
+	// 抢麦
 	// ============================================================
 
 	msgTalkStart   = "WALKIE_TALK_START"
@@ -46,11 +56,36 @@ const (
 	msgTalkBusy    = "WALKIE_TALK_BUSY"
 	msgTalkRelease = "WALKIE_TALK_RELEASED"
 
+	msgTalkBroadcast = "WALKIE_TALKING"
+
 	// ============================================================
 	// 用户
 	// ============================================================
 
-	msgUserOK = "WALKIE_USER_OK"
+	msgUserOK     = "WALKIE_USER_OK"
+	msgUserStatus = "WALKIE_USER_STATUS"
+
+	/*
+	 * V20 新增：
+	 *
+	 * 客户端可发送：
+	 *
+	 * WALKIE_SET_NICKNAME:昵称
+	 *
+	 * 服务端收到后保存，并立即广播在线人员列表。
+	 */
+	msgSetNickname = "WALKIE_SET_NICKNAME"
+
+	/*
+	 * V20 新增：
+	 *
+	 * 服务端发送：
+	 *
+	 * WALKIE_USER_LIST:频道:userid|nickname;userid|nickname
+	 *
+	 * 只返回当前频道成员。
+	 */
+	msgUserList = "WALKIE_USER_LIST"
 
 	// ============================================================
 	// 频道
@@ -63,6 +98,8 @@ const (
 	msgChannelDeleted = "WALKIE_CHANNEL_DELETED"
 	msgChannelError   = "WALKIE_CHANNEL_ERROR"
 	msgChannelInfo    = "WALKIE_CHANNEL_INFO"
+
+	msgChannelMembers = "WALKIE_CHANNEL_MEMBERS"
 
 	channelPublic  = "PUBLIC"
 	channelPrivate = "PRIVATE"
@@ -78,6 +115,21 @@ type Client struct {
 	UserID      string
 	Username    string
 	ChannelName string
+	IP          string
+	DeviceID    string
+}
+
+// ============================================================
+// Session
+// ============================================================
+
+type Session struct {
+	UserID      string
+	Username    string
+	ChannelName string
+	LastSeen    time.Time
+	IP          string
+	DeviceID    string
 }
 
 // ============================================================
@@ -93,12 +145,30 @@ type Channel struct {
 }
 
 // ============================================================
-// 抢麦状态
+// 抢麦
 // ============================================================
 
 type TalkState struct {
 	Addr      *net.UDPAddr
+	UserID    string
+	Username  string
+	IP        string
 	StartTime time.Time
+}
+
+// ============================================================
+// 统计
+// ============================================================
+
+type AudioStats struct {
+	ReceivedPackets  uint64
+	ReceivedBytes    uint64
+	ForwardedPackets uint64
+	ForwardedBytes   uint64
+	DroppedPackets   uint64
+	DroppedBytes     uint64
+	InvalidPackets   uint64
+	LastReport       time.Time
 }
 
 // ============================================================
@@ -113,6 +183,11 @@ type Server struct {
 	users    map[string]*Client
 	channels map[string]*Channel
 	talkers  map[string]*TalkState
+	sessions map[string]*Session
+
+	ipConnections map[string]int
+
+	stats AudioStats
 }
 
 // ============================================================
@@ -120,22 +195,14 @@ type Server struct {
 // ============================================================
 
 func main() {
-
-	log.SetFlags(
-		log.Ldate |
-			log.Ltime |
-			log.Lmicroseconds,
-	)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 
 	addr, err := net.ResolveUDPAddr(
 		"udp",
 		listenAddr,
 	)
 	if err != nil {
-		log.Fatal(
-			"解析 UDP 地址失败:",
-			err,
-		)
+		log.Fatal("解析 UDP 地址失败:", err)
 	}
 
 	conn, err := net.ListenUDP(
@@ -143,37 +210,23 @@ func main() {
 		addr,
 	)
 	if err != nil {
-		log.Fatal(
-			"监听 UDP 50000 失败:",
-			err,
-		)
+		log.Fatal("监听 UDP 50000 失败:", err)
 	}
 
 	defer conn.Close()
 
 	server := &Server{
-		conn: conn,
-
-		clients: make(
-			map[string]*Client,
-		),
-
-		users: make(
-			map[string]*Client,
-		),
-
-		channels: make(
-			map[string]*Channel,
-		),
-
-		talkers: make(
-			map[string]*TalkState,
-		),
+		conn:          conn,
+		clients:       make(map[string]*Client),
+		users:         make(map[string]*Client),
+		channels:      make(map[string]*Channel),
+		talkers:       make(map[string]*TalkState),
+		sessions:      make(map[string]*Session),
+		ipConnections: make(map[string]int),
+		stats: AudioStats{
+			LastReport: time.Now(),
+		},
 	}
-
-	// ============================================================
-	// 默认公共频道
-	// ============================================================
 
 	server.channels[defaultChannel] = &Channel{
 		Name:        defaultChannel,
@@ -192,21 +245,36 @@ func main() {
 	log.Println("最大用户:", maxUsers)
 	log.Println("客户端超时:", clientTimeout)
 	log.Println("讲话超时:", talkTimeout)
+	log.Println("UDP最大包:", maxPacketSize)
+	log.Println("单IP连接限制:", maxConnectionsPerIP)
 	log.Println("默认频道:", defaultChannel)
 	log.Println("公开频道: 已启用")
 	log.Println("私密频道: 已启用")
 	log.Println("频道密码: 已启用")
-	log.Println("在线人数: 已启用")
-	log.Println("删除频道: 已启用")
-	log.Println("创建者权限: 已启用")
-	log.Println("频道隔离: 已启用")
-	log.Println("抢麦功能: 已启用")
-	log.Println("长按讲话: 已启用")
+	log.Println("在线人数实时同步: 已启用")
+	log.Println("设备ID稳定会话: 已启用")
+	log.Println("重复设备连接清理: 已启用")
+	log.Println("KEEPALIVE应答: 已启用")
+	log.Println("频道成员列表: 已启用")
+	log.Println("在线人员昵称列表: 已启用")
+	log.Println("昵称同步: 已启用")
+	log.Println("频道人数实时同步: 已启用")
+	log.Println("抢麦广播: 已启用")
+	log.Println("抢麦自动释放: 已启用")
+	log.Println("断线释放麦权: 已启用")
+	log.Println("UDP异常包过滤: 已启用")
+	log.Println("音频统计: 已启用")
+	log.Println("后台重连恢复频道: 已启用")
+	log.Println("移动网络抢麦端口跟随: 已启用")
+	log.Println("持麦期间UDP端口自动迁移: 已启用")
+	log.Println("V21 Opus透明转发: 已启用")
+	log.Println("========================================")
 	log.Println("服务器已启动，等待手机连接...")
 	log.Println("========================================")
 
 	go server.talkTimeoutLoop()
 	go server.cleanupLoop()
+	go server.statsLoop()
 
 	server.run()
 }
@@ -216,22 +284,28 @@ func main() {
 // ============================================================
 
 func (s *Server) run() {
-
-	buffer := make([]byte, maxPacketSize)
+	buffer := make([]byte, 65535)
 
 	for {
-
 		n, remoteAddr, err := s.conn.ReadFromUDP(buffer)
-
 		if err != nil {
-			log.Println(
-				"读取 UDP 数据失败:",
-				err,
-			)
+			log.Println("读取 UDP 数据失败:", err)
 			continue
 		}
 
-		if n <= 0 {
+		if remoteAddr == nil || n <= 0 {
+			continue
+		}
+
+		if n > maxPacketSize {
+			s.recordDrop(uint64(n), true)
+
+			log.Printf(
+				"丢弃超大 UDP 包: %s size=%d",
+				remoteAddr.String(),
+				n,
+			)
+
 			continue
 		}
 
@@ -240,17 +314,35 @@ func (s *Server) run() {
 
 		text := string(data)
 
-		// ========================================================
+		// ============================================================
 		// HELLO
-		// ========================================================
+		// ============================================================
 
-		if text == msgHello {
+		if strings.HasPrefix(text, msgHello) {
+			deviceID := ""
 
-			client := s.updateClient(remoteAddr)
+			if strings.HasPrefix(text, msgHello+":") {
+				deviceID = strings.TrimSpace(
+					strings.TrimPrefix(
+						text,
+						msgHello+":",
+					),
+				)
+			}
+
+			client, accepted := s.updateClient(
+				remoteAddr,
+				deviceID,
+			)
+
+			if !accepted || client == nil {
+				continue
+			}
 
 			log.Printf(
-				"收到连接请求: %s user=%s channel=%s",
+				"HELLO: %s device=%s user=%s channel=%s",
 				remoteAddr.String(),
+				client.DeviceID,
 				client.Username,
 				client.ChannelName,
 			)
@@ -260,60 +352,223 @@ func (s *Server) run() {
 				msgConnected,
 			)
 
-			continue
-		}
+			s.sendUserStatusToClient(
+				remoteAddr,
+			)
 
-		// ========================================================
-		// KEEP ALIVE
-		// ========================================================
+			s.sendChannelInfoToClient(
+				remoteAddr,
+			)
 
-		if text == msgKeepAlive {
+			s.sendUserListToClient(
+				remoteAddr,
+				client.ChannelName,
+			)
 
-			client := s.updateClient(remoteAddr)
+			s.broadcastChannelList()
 
-			log.Printf(
-				"收到心跳: %s user=%s channel=%s",
-				remoteAddr.String(),
-				client.Username,
+			s.broadcastChannelMembers(
 				client.ChannelName,
 			)
 
 			continue
 		}
 
-		// ========================================================
+		// ============================================================
+		// KEEP ALIVE
+		// ============================================================
+
+		if text == msgKeepAlive {
+			client, accepted := s.updateClient(
+				remoteAddr,
+			)
+
+			if !accepted || client == nil {
+				continue
+			}
+
+			s.sendMessage(
+				remoteAddr,
+				msgKeepAlive,
+			)
+
+			continue
+		}
+
+		// ============================================================
 		// GOODBYE
-		// ========================================================
+		// ============================================================
+
+		// ============================================================
+		// 网络探测
+		// ============================================================
+
+		/*
+		 * Android V21 发送：
+		 *
+		 * WALKIE_NET_PING:sequence:timestamp
+		 *
+		 * VPS 返回：
+		 *
+		 * WALKIE_NET_PONG:sequence:timestamp
+		 *
+		 * 这个控制包必须在进入音频处理之前被消耗。
+		 */
+
+		if strings.HasPrefix(
+			text,
+			msgNetPing+":",
+		) {
+
+			/*
+			 * ========================================================
+			 * V21 网络探测
+			 *
+			 * PING 绝不能调用 updateClient()。
+			 *
+			 * Android 可能在 HELLO 之前发送 PING。
+			 * 如果这里创建 Client，就会产生：
+			 *
+			 * device=""
+			 * USER-xxxxx
+			 *
+			 * 的匿名幽灵连接。
+			 *
+			 * 因此：
+			 *
+			 * PING -> PONG
+			 *
+			 * 只做应答，不创建 Client。
+			 * 正式在线状态仍由 HELLO / KEEPALIVE 维护。
+			 * ========================================================
+			 */
+
+			payload :=
+				strings.TrimPrefix(
+					text,
+					msgNetPing+":",
+				)
+
+			parts :=
+				strings.SplitN(
+					payload,
+					":",
+					2,
+				)
+
+			if len(parts) >= 1 {
+
+				sequence :=
+					strings.TrimSpace(
+						parts[0],
+					)
+
+				timestamp :=
+					""
+
+				if len(parts) >= 2 {
+
+					timestamp =
+						strings.TrimSpace(
+							parts[1],
+						)
+				}
+
+				s.sendMessage(
+					remoteAddr,
+					msgNetPong+
+						":"+
+						sequence+
+						":"+
+						timestamp,
+				)
+			}
+
+			continue
+		}
 
 		if text == msgGoodbye {
-
-			s.removeClient(remoteAddr)
+			channelName := s.removeClient(
+				remoteAddr,
+			)
 
 			log.Printf(
 				"客户端断开: %s",
 				remoteAddr.String(),
 			)
 
+			s.broadcastChannelList()
+
+			if channelName != "" {
+				s.broadcastChannelMembers(
+					channelName,
+				)
+			}
+
 			continue
 		}
 
-		// ========================================================
+		// ============================================================
 		// 登录
-		// ========================================================
+		// ============================================================
 
 		if strings.HasPrefix(
 			text,
 			"WALKIE_LOGIN:",
 		) {
-
-			username := strings.TrimSpace(
-				strings.TrimPrefix(
-					text,
-					"WALKIE_LOGIN:",
-				),
+			payload := strings.TrimPrefix(
+				text,
+				"WALKIE_LOGIN:",
 			)
 
+			parts := strings.SplitN(
+				payload,
+				":",
+				2,
+			)
+
+			deviceID := ""
+			username := ""
+
+			if len(parts) >= 1 {
+				deviceID =
+					strings.TrimSpace(
+						parts[0],
+					)
+			}
+
+			if len(parts) >= 2 {
+				username =
+					strings.TrimSpace(
+						parts[1],
+					)
+			}
+
 			s.handleLogin(
+				remoteAddr,
+				deviceID,
+				username,
+			)
+
+			continue
+		}
+
+		// ============================================================
+		// V20 昵称设置
+		// ============================================================
+
+		if strings.HasPrefix(
+			text,
+			msgSetNickname+":",
+		) {
+
+			username :=
+				strings.TrimPrefix(
+					text,
+					msgSetNickname+":",
+				)
+
+			s.handleSetNickname(
 				remoteAddr,
 				username,
 			)
@@ -321,12 +576,33 @@ func (s *Server) run() {
 			continue
 		}
 
-		// ========================================================
-		// 获取频道列表
-		// ========================================================
+		// ============================================================
+		// V20 用户列表
+		// ============================================================
 
-		if text == "WALKIE_CHANNEL_LIST" {
+		if text == msgUserList {
+			client, accepted :=
+				s.updateClient(
+					remoteAddr,
+				)
 
+			if accepted &&
+				client != nil {
+
+				s.sendUserListToClient(
+					remoteAddr,
+					client.ChannelName,
+				)
+			}
+
+			continue
+		}
+
+		// ============================================================
+		// 频道列表
+		// ============================================================
+
+		if text == msgChannelList {
 			s.handleChannelList(
 				remoteAddr,
 			)
@@ -334,25 +610,19 @@ func (s *Server) run() {
 			continue
 		}
 
-		// ========================================================
+		// ============================================================
 		// 创建频道
-		//
-		// 公开：
-		// WALKIE_CREATE_CHANNEL:频道名:PUBLIC
-		//
-		// 私密：
-		// WALKIE_CREATE_CHANNEL:频道名:PRIVATE:密码
-		// ========================================================
+		// ============================================================
 
 		if strings.HasPrefix(
 			text,
 			"WALKIE_CREATE_CHANNEL:",
 		) {
-
-			payload := strings.TrimPrefix(
-				text,
-				"WALKIE_CREATE_CHANNEL:",
-			)
+			payload :=
+				strings.TrimPrefix(
+					text,
+					"WALKIE_CREATE_CHANNEL:",
+				)
 
 			s.handleCreateChannel(
 				remoteAddr,
@@ -362,25 +632,19 @@ func (s *Server) run() {
 			continue
 		}
 
-		// ========================================================
+		// ============================================================
 		// 加入频道
-		//
-		// 公开：
-		// WALKIE_JOIN_CHANNEL:频道名
-		//
-		// 私密：
-		// WALKIE_JOIN_CHANNEL:频道名:密码
-		// ========================================================
+		// ============================================================
 
 		if strings.HasPrefix(
 			text,
 			"WALKIE_JOIN_CHANNEL:",
 		) {
-
-			payload := strings.TrimPrefix(
-				text,
-				"WALKIE_JOIN_CHANNEL:",
-			)
+			payload :=
+				strings.TrimPrefix(
+					text,
+					"WALKIE_JOIN_CHANNEL:",
+				)
 
 			s.handleJoinChannel(
 				remoteAddr,
@@ -390,21 +654,19 @@ func (s *Server) run() {
 			continue
 		}
 
-		// ========================================================
+		// ============================================================
 		// 删除频道
-		//
-		// WALKIE_DELETE_CHANNEL:频道名
-		// ========================================================
+		// ============================================================
 
 		if strings.HasPrefix(
 			text,
 			"WALKIE_DELETE_CHANNEL:",
 		) {
-
-			channelName := strings.TrimPrefix(
-				text,
-				"WALKIE_DELETE_CHANNEL:",
-			)
+			channelName :=
+				strings.TrimPrefix(
+					text,
+					"WALKIE_DELETE_CHANNEL:",
+				)
 
 			s.handleDeleteChannel(
 				remoteAddr,
@@ -414,12 +676,11 @@ func (s *Server) run() {
 			continue
 		}
 
-		// ========================================================
+		// ============================================================
 		// 离开频道
-		// ========================================================
+		// ============================================================
 
 		if text == "WALKIE_LEAVE_CHANNEL" {
-
 			s.handleLeaveChannel(
 				remoteAddr,
 			)
@@ -427,12 +688,11 @@ func (s *Server) run() {
 			continue
 		}
 
-		// ========================================================
+		// ============================================================
 		// 当前频道信息
-		// ========================================================
+		// ============================================================
 
-		if text == "WALKIE_CHANNEL_INFO" {
-
+		if text == msgChannelInfo {
 			s.handleChannelInfo(
 				remoteAddr,
 			)
@@ -440,21 +700,38 @@ func (s *Server) run() {
 			continue
 		}
 
-		// ========================================================
+		// ============================================================
+		// 当前频道成员
+		// ============================================================
+
+		if text == msgChannelMembers {
+			client, accepted :=
+				s.updateClient(
+					remoteAddr,
+				)
+
+			if accepted &&
+				client != nil {
+
+				s.sendChannelMembers(
+					remoteAddr,
+					client.ChannelName,
+				)
+
+				s.sendUserListToClient(
+					remoteAddr,
+					client.ChannelName,
+				)
+			}
+
+			continue
+		}
+
+		// ============================================================
 		// 抢麦
-		// ========================================================
+		// ============================================================
 
 		if text == msgTalkStart {
-
-			client := s.updateClient(remoteAddr)
-
-			log.Printf(
-				"收到抢麦请求: %s user=%s channel=%s",
-				remoteAddr.String(),
-				client.Username,
-				client.ChannelName,
-			)
-
 			s.handleTalkStart(
 				remoteAddr,
 			)
@@ -462,21 +739,11 @@ func (s *Server) run() {
 			continue
 		}
 
-		// ========================================================
+		// ============================================================
 		// 释放麦权
-		// ========================================================
+		// ============================================================
 
 		if text == msgTalkStop {
-
-			client := s.updateClient(remoteAddr)
-
-			log.Printf(
-				"收到停止讲话: %s user=%s channel=%s",
-				remoteAddr.String(),
-				client.Username,
-				client.ChannelName,
-			)
-
 			s.handleTalkStop(
 				remoteAddr,
 			)
@@ -484,18 +751,58 @@ func (s *Server) run() {
 			continue
 		}
 
-		// ========================================================
+		// ============================================================
 		// 音频
-		// ========================================================
+		// ============================================================
 
-		client := s.updateClient(remoteAddr)
+		senderClient :=
+			s.clients[remoteAddr.String()]
 
-		log.Printf(
-			"收到 UDP 音频: %d 字节，来自 %s user=%s channel=%s",
-			n,
-			remoteAddr.String(),
-			client.Username,
-			client.ChannelName,
+		/*
+		 * 未知 UDP 地址不能自动创建匿名 Client。
+		 *
+		 * 只有两种情况允许进入音频：
+		 *
+		 * 1. 当前 UDP 地址已经属于正式 Client
+		 * 2. 当前持麦用户因为 NAT / 移动网络导致
+		 *    UDP 源端口发生变化，并且能够成功迁移
+		 */
+		if senderClient == nil {
+
+			/*
+			 * 尝试把持麦用户迁移到新的 UDP 端口。
+			 */
+			if !s.migrateTalkerByAddress(
+				remoteAddr,
+			) {
+
+				s.recordDrop(
+					uint64(n),
+					true,
+				)
+
+				continue
+			}
+
+			/*
+			 * 迁移成功后重新获取 Client。
+			 */
+			senderClient =
+				s.clients[remoteAddr.String()]
+
+			if senderClient == nil {
+
+				s.recordDrop(
+					uint64(n),
+					true,
+				)
+
+				continue
+			}
+		}
+
+		s.recordReceived(
+			uint64(n),
 		)
 
 		s.relayAudio(
@@ -513,34 +820,21 @@ func (s *Server) sendMessage(
 	addr *net.UDPAddr,
 	message string,
 ) {
-
 	if addr == nil {
 		return
 	}
 
-	data := []byte(message)
-
-	_, err := s.conn.WriteToUDP(
-		data,
+	if _, err := s.conn.WriteToUDP(
+		[]byte(message),
 		addr,
-	)
-
-	if err != nil {
+	); err != nil {
 
 		log.Printf(
 			"发送消息失败: %s -> %v",
 			addr.String(),
 			err,
 		)
-
-		return
 	}
-
-	log.Printf(
-		"发送消息: %s -> %s",
-		message,
-		addr.String(),
-	)
 }
 
 // ============================================================
@@ -549,75 +843,813 @@ func (s *Server) sendMessage(
 
 func (s *Server) updateClient(
 	addr *net.UDPAddr,
-) *Client {
+	deviceIDs ...string,
+) (*Client, bool) {
 
-	key := addr.String()
+	deviceID := ""
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	now := time.Now()
-
-	if client, exists := s.clients[key]; exists {
-
-		client.LastSeen = now
-
-		return client
+	if len(deviceIDs) > 0 {
+		deviceID =
+			strings.TrimSpace(
+				deviceIDs[0],
+			)
 	}
 
-	if len(s.clients) >= maxClients {
+	if addr == nil {
+		return nil, false
+	}
 
-		log.Println(
-			"客户端数量达到上限:",
-			key,
+	key := addr.String()
+	ip := addr.IP.String()
+	now := time.Now()
+
+	var migratedOldKey string
+	var migratedChannel string
+
+	s.mu.Lock()
+
+	// ============================================================
+	// 1. 当前 UDP 地址已经存在
+	// ============================================================
+
+	if client, exists :=
+		s.clients[key]; exists {
+
+		client.LastSeen =
+			now
+
+		if client.ChannelName == "" {
+			client.ChannelName =
+				defaultChannel
+		}
+
+		if client.Username == "" {
+			client.Username =
+				fmt.Sprintf(
+					"USER-%d",
+					addr.Port,
+				)
+		}
+
+		if deviceID != "" {
+
+			duplicateKey := ""
+			var duplicate *Client
+
+			for k, other := range s.clients {
+
+				if k == key ||
+					other == nil {
+
+					continue
+				}
+
+				if other.DeviceID != "" &&
+					other.DeviceID == deviceID {
+
+					duplicateKey =
+						k
+
+					duplicate =
+						other
+
+					break
+				}
+			}
+
+			if duplicate != nil {
+
+				client.UserID =
+					duplicate.UserID
+
+				client.Username =
+					duplicate.Username
+
+				if duplicate.ChannelName != "" {
+					client.ChannelName =
+						duplicate.ChannelName
+				}
+
+				client.DeviceID =
+					deviceID
+
+				delete(
+					s.clients,
+					duplicateKey,
+				)
+
+				if duplicate.IP != "" &&
+					s.ipConnections[duplicate.IP] > 0 {
+
+					s.ipConnections[duplicate.IP]--
+
+					if s.ipConnections[duplicate.IP] <= 0 {
+
+						delete(
+							s.ipConnections,
+							duplicate.IP,
+						)
+					}
+				}
+
+				if duplicate.UserID != "" {
+
+					if existing, exists :=
+						s.users[duplicate.UserID]; exists &&
+						existing == duplicate {
+
+						delete(
+							s.users,
+							duplicate.UserID,
+						)
+					}
+				}
+
+				if talker, ok :=
+					s.talkers[duplicate.ChannelName]; ok {
+
+					if talker.Addr != nil &&
+						talker.Addr.String() ==
+							duplicateKey {
+
+						talker.Addr =
+							cloneUDPAddr(addr)
+
+						talker.IP =
+							ip
+					}
+				}
+
+				migratedOldKey =
+					duplicateKey
+
+				migratedChannel =
+					client.ChannelName
+
+			} else {
+
+				client.DeviceID =
+					deviceID
+			}
+		}
+
+		s.users[client.UserID] = client
+
+		s.saveSessionLocked(
+			client,
 		)
 
-		return &Client{
-			Addr:        addr,
-			UserID:      "LIMITED",
-			Username:    "LIMITED",
-			ChannelName: defaultChannel,
-			LastSeen:    now,
+		s.mu.Unlock()
+
+		if migratedOldKey != "" {
+
+			log.Printf(
+				"设备重连迁移: old=%s new=%s device=%s user=%s channel=%s",
+				migratedOldKey,
+				key,
+				deviceID,
+				client.Username,
+				migratedChannel,
+			)
+
+			s.broadcastChannelList()
+
+			s.broadcastChannelMembers(
+				migratedChannel,
+			)
+		}
+
+		return client, true
+	}
+
+	// ============================================================
+	// 2. DeviceID 优先寻找旧 UDP 端点
+	// ============================================================
+
+	if deviceID != "" {
+
+		for oldKey, oldClient := range s.clients {
+
+			if oldClient == nil ||
+				oldClient.DeviceID != deviceID {
+
+				continue
+			}
+
+			oldIP :=
+				oldClient.IP
+
+			oldChannel :=
+				oldClient.ChannelName
+
+			oldUserID :=
+				oldClient.UserID
+
+			oldClient.Addr =
+				cloneUDPAddr(addr)
+
+			oldClient.IP =
+				ip
+
+			oldClient.LastSeen =
+				now
+
+			oldClient.DeviceID =
+				deviceID
+
+			delete(
+				s.clients,
+				oldKey,
+			)
+
+			s.clients[key] =
+				oldClient
+
+			if oldIP != "" &&
+				s.ipConnections[oldIP] > 0 {
+
+				s.ipConnections[oldIP]--
+
+				if s.ipConnections[oldIP] <= 0 {
+
+					delete(
+						s.ipConnections,
+						oldIP,
+					)
+				}
+			}
+
+			s.ipConnections[ip]++
+
+			// ====================================================
+			// 持麦状态跟随 DeviceID 迁移
+			// ====================================================
+
+			if talker, ok :=
+				s.talkers[oldChannel]; ok {
+
+				if talker.UserID ==
+					oldUserID {
+
+					talker.Addr =
+						cloneUDPAddr(
+							addr,
+						)
+
+					talker.IP =
+						ip
+
+					log.Printf(
+						"持麦端口跟随设备迁移: old=%s new=%s device=%s user=%s channel=%s",
+						oldKey,
+						key,
+						deviceID,
+						oldClient.Username,
+						oldChannel,
+					)
+				}
+			}
+
+			s.users[oldClient.UserID] = oldClient
+
+			s.saveSessionLocked(
+				oldClient,
+			)
+
+			s.mu.Unlock()
+
+			log.Printf(
+				"设备UDP端口迁移: old=%s new=%s device=%s user=%s channel=%s",
+				oldKey,
+				key,
+				deviceID,
+				oldClient.Username,
+				oldClient.ChannelName,
+			)
+
+			s.broadcastChannelList()
+
+			s.broadcastChannelMembers(
+				oldChannel,
+			)
+
+			return oldClient, true
 		}
 	}
 
-	userID := fmt.Sprintf(
-		"U-%s-%d",
-		normalizeIP(addr.IP.String()),
-		addr.Port,
-	)
+	// ============================================================
+	// 3. 客户端数量限制
+	// ============================================================
 
-	username := fmt.Sprintf(
-		"USER-%d",
-		addr.Port,
-	)
+	if len(s.clients) >=
+		maxClients {
+
+		s.mu.Unlock()
+
+		s.sendMessage(
+			addr,
+			msgChannelError+":CLIENT_LIMIT",
+		)
+
+		return nil, false
+	}
+
+	userID :=
+		makeUserID(
+			ip,
+			addr.Port,
+			deviceID,
+		)
+
+	username :=
+		fmt.Sprintf(
+			"USER-%d",
+			addr.Port,
+		)
+
+	channelName :=
+		defaultChannel
+
+	// ============================================================
+	// 4. Session 恢复
+	// ============================================================
+
+	var oldSession *Session
+
+	if deviceID != "" {
+
+		if session :=
+			s.sessions[sessionKey(deviceID)]; session != nil {
+
+			oldSession =
+				session
+		}
+	}
+
+	if oldSession == nil {
+
+		if session :=
+			s.sessions[userID]; session != nil {
+
+			oldSession =
+				session
+		}
+	}
 
 	client := &Client{
-		Addr:        addr,
+		Addr:        cloneUDPAddr(addr),
 		LastSeen:    now,
 		UserID:      userID,
 		Username:    username,
-		ChannelName: defaultChannel,
+		ChannelName: channelName,
+		IP:          ip,
+		DeviceID:    deviceID,
 	}
 
-	s.clients[key] = client
+	if oldSession != nil {
 
-	if len(s.users) < maxUsers {
-		s.users[userID] = client
+		if oldSession.UserID != "" {
+			client.UserID =
+				oldSession.UserID
+		}
+
+		if oldSession.Username != "" {
+			client.Username =
+				oldSession.Username
+		}
+
+		if oldSession.ChannelName != "" {
+			client.ChannelName =
+				oldSession.ChannelName
+		}
+
+		if oldSession.DeviceID != "" {
+			client.DeviceID =
+				oldSession.DeviceID
+		}
+
+		log.Printf(
+			"恢复 Session: ip=%s device=%s userID=%s username=%s channel=%s",
+			ip,
+			deviceID,
+			client.UserID,
+			client.Username,
+			client.ChannelName,
+		)
 	}
 
-	log.Println(
-		"新客户端:",
-		key,
-		"userID=",
-		userID,
-		"username=",
-		username,
-		"channel=",
-		defaultChannel,
+	// ============================================================
+	// 5. 同 UserID 已在线
+	// ============================================================
+
+	if existing :=
+		s.users[client.UserID]; existing != nil &&
+		existing != client {
+
+		oldKey := ""
+
+		for k, other := range s.clients {
+
+			if other == existing {
+				oldKey =
+					k
+				break
+			}
+		}
+
+		if oldKey != "" {
+
+			oldIP :=
+				existing.IP
+
+			oldChannel :=
+				existing.ChannelName
+
+			existing.Addr =
+				cloneUDPAddr(addr)
+
+			existing.IP =
+				ip
+
+			existing.LastSeen =
+				now
+
+			existing.DeviceID =
+				deviceID
+
+			delete(
+				s.clients,
+				oldKey,
+			)
+
+			s.clients[key] =
+				existing
+
+			if oldIP != "" &&
+				s.ipConnections[oldIP] > 0 {
+
+				s.ipConnections[oldIP]--
+
+				if s.ipConnections[oldIP] <= 0 {
+
+					delete(
+						s.ipConnections,
+						oldIP,
+					)
+				}
+			}
+
+			s.ipConnections[ip]++
+
+			if talker, ok :=
+				s.talkers[oldChannel]; ok {
+
+				if talker.UserID ==
+					existing.UserID {
+
+					talker.Addr =
+						cloneUDPAddr(
+							addr,
+						)
+
+					talker.IP =
+						ip
+
+					log.Printf(
+						"用户会话迁移同时更新持麦端口: old=%s new=%s user=%s channel=%s",
+						oldKey,
+						key,
+						existing.Username,
+						oldChannel,
+					)
+				}
+			}
+
+			s.saveSessionLocked(
+				existing,
+			)
+
+			s.mu.Unlock()
+
+			log.Printf(
+				"用户会话迁移: old=%s new=%s userID=%s username=%s channel=%s",
+				oldKey,
+				key,
+				existing.UserID,
+				existing.Username,
+				existing.ChannelName,
+			)
+
+			s.broadcastChannelList()
+
+			s.broadcastChannelMembers(
+				existing.ChannelName,
+			)
+
+			return existing, true
+		}
+	}
+
+	// ============================================================
+	// 6. 用户数量限制
+	// ============================================================
+
+	if len(s.users) >=
+		maxUsers {
+
+		s.mu.Unlock()
+
+		s.sendMessage(
+			addr,
+			msgChannelError+":USER_LIMIT",
+		)
+
+		return nil, false
+	}
+
+	// ============================================================
+	// 7. 正式创建客户端
+	// ============================================================
+
+	s.clients[key] =
+		client
+
+	s.users[client.UserID] = client
+
+	s.ipConnections[ip]++
+
+	s.saveSessionLocked(
+		client,
 	)
 
-	return client
+	s.mu.Unlock()
+
+	log.Printf(
+		"新客户端: addr=%s ip=%s userID=%s username=%s channel=%s device=%s",
+		key,
+		ip,
+		client.UserID,
+		client.Username,
+		client.ChannelName,
+		client.DeviceID,
+	)
+
+	s.broadcastChannelList()
+
+	s.broadcastChannelMembers(
+		client.ChannelName,
+	)
+
+	return client, true
+}
+
+// ============================================================
+// 持麦用户 UDP 端口迁移
+// ============================================================
+
+func (s *Server) migrateTalkerByAddress(
+	addr *net.UDPAddr,
+) bool {
+
+	if addr == nil {
+		return false
+	}
+
+	ip :=
+		addr.IP.String()
+
+	key :=
+		addr.String()
+
+	now :=
+		time.Now()
+
+	type migration struct {
+		oldKey   string
+		channel  string
+		username string
+		userID   string
+	}
+
+	var migrated *migration
+
+	s.mu.Lock()
+
+	for channelName, talker := range s.talkers {
+
+		if talker == nil ||
+			talker.UserID == "" ||
+			talker.IP == "" {
+
+			continue
+		}
+
+		if talker.IP != ip {
+			continue
+		}
+
+		if now.Sub(talker.StartTime) >
+			talkTimeout {
+
+			continue
+		}
+
+		var clientKey string
+		var client *Client
+
+		for k, c := range s.clients {
+
+			if c == nil {
+				continue
+			}
+
+			if c.UserID !=
+				talker.UserID {
+
+				continue
+			}
+
+			clientKey =
+				k
+
+			client =
+				c
+
+			break
+		}
+
+		if client == nil {
+			continue
+		}
+
+		if clientKey ==
+			key {
+
+			s.mu.Unlock()
+
+			return true
+		}
+
+		oldIP :=
+			client.IP
+
+		oldChannel :=
+			client.ChannelName
+
+		delete(
+			s.clients,
+			clientKey,
+		)
+
+		client.Addr =
+			cloneUDPAddr(addr)
+
+		client.IP =
+			ip
+
+		client.LastSeen =
+			now
+
+		s.clients[key] =
+			client
+
+		if oldIP != "" &&
+			s.ipConnections[oldIP] > 0 {
+
+			s.ipConnections[oldIP]--
+
+			if s.ipConnections[oldIP] <= 0 {
+
+				delete(
+					s.ipConnections,
+					oldIP,
+				)
+			}
+		}
+
+		s.ipConnections[ip]++
+
+		talker.Addr =
+			cloneUDPAddr(addr)
+
+		talker.IP =
+			ip
+
+		client.LastSeen =
+			now
+
+		s.saveSessionLocked(
+			client,
+		)
+
+		migrated =
+			&migration{
+				oldKey:   clientKey,
+				channel:  oldChannel,
+				username: client.Username,
+				userID:   client.UserID,
+			}
+
+		_ = channelName
+
+		break
+	}
+
+	s.mu.Unlock()
+
+	if migrated == nil {
+		return false
+	}
+
+	log.Printf(
+		"★持麦期间UDP端口迁移★ old=%s new=%s user=%s userID=%s channel=%s",
+		migrated.oldKey,
+		key,
+		migrated.username,
+		migrated.userID,
+		migrated.channel,
+	)
+
+	s.broadcastChannelList()
+
+	s.broadcastChannelMembers(
+		migrated.channel,
+	)
+
+	return true
+}
+
+// ============================================================
+// 保存 Session
+// ============================================================
+
+func (s *Server) saveSessionLocked(
+	client *Client,
+) {
+	if client == nil {
+		return
+	}
+
+	session :=
+		&Session{
+			UserID:      client.UserID,
+			Username:    client.Username,
+			ChannelName: client.ChannelName,
+			LastSeen:    time.Now(),
+			IP:          client.IP,
+			DeviceID:    client.DeviceID,
+		}
+
+	s.sessions[client.UserID] = session
+
+	if client.DeviceID != "" {
+
+		s.sessions[sessionKey(
+			client.DeviceID,
+		)] = session
+	}
+}
+
+// ============================================================
+// Session key
+// ============================================================
+
+func sessionKey(
+	deviceID string,
+) string {
+
+	return "device:" +
+		deviceID
+}
+
+// ============================================================
+// UserID
+// ============================================================
+
+func makeUserID(
+	ip string,
+	port int,
+	deviceID string,
+) string {
+
+	if deviceID != "" {
+
+		sum :=
+			sha256.Sum256(
+				[]byte(deviceID),
+			)
+
+		return "U-D-" +
+			hex.EncodeToString(
+				sum[:8],
+			)
+	}
+
+	return fmt.Sprintf(
+		"U-%s-%d",
+		normalizeIP(ip),
+		port,
+	)
 }
 
 // ============================================================
@@ -628,17 +1660,19 @@ func normalizeIP(
 	ip string,
 ) string {
 
-	ip = strings.ReplaceAll(
-		ip,
-		":",
-		"_",
-	)
+	ip =
+		strings.ReplaceAll(
+			ip,
+			":",
+			"_",
+		)
 
-	ip = strings.ReplaceAll(
-		ip,
-		".",
-		"_",
-	)
+	ip =
+		strings.ReplaceAll(
+			ip,
+			".",
+			"_",
+		)
 
 	return ip
 }
@@ -649,50 +1683,117 @@ func normalizeIP(
 
 func (s *Server) removeClient(
 	addr *net.UDPAddr,
-) {
+) string {
 
-	key := addr.String()
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	client, exists := s.clients[key]
-
-	if !exists {
-		return
+	if addr == nil {
+		return ""
 	}
 
-	channelName := client.ChannelName
+	key :=
+		addr.String()
 
-	if talker, exists := s.talkers[channelName]; exists {
+	s.mu.Lock()
 
-		if talker.Addr.String() == key {
+	client, exists :=
+		s.clients[key]
+
+	if !exists {
+		s.mu.Unlock()
+		return ""
+	}
+
+	channelName :=
+		client.ChannelName
+
+	talkReleased :=
+		false
+
+	talkUsername :=
+		client.Username
+
+	if talker, exists :=
+		s.talkers[channelName]; exists {
+
+		if talker.Addr != nil &&
+			talker.Addr.String() == key {
+
+			talkUsername =
+				talker.Username
 
 			delete(
 				s.talkers,
 				channelName,
 			)
+
+			talkReleased =
+				true
 		}
 	}
+
+	client.LastSeen =
+		time.Now()
+
+	s.saveSessionLocked(
+		client,
+	)
 
 	delete(
 		s.clients,
 		key,
 	)
 
+	if client.IP != "" &&
+		s.ipConnections[client.IP] > 0 {
+
+		s.ipConnections[client.IP]--
+
+		if s.ipConnections[client.IP] <= 0 {
+
+			delete(
+				s.ipConnections,
+				client.IP,
+			)
+		}
+	}
+
 	if client.UserID != "" {
 
-		delete(
-			s.users,
-			client.UserID,
+		if existing, exists :=
+			s.users[client.UserID]; exists &&
+			existing == client {
+
+			delete(
+				s.users,
+				client.UserID,
+			)
+		}
+	}
+
+	s.mu.Unlock()
+
+	log.Printf(
+		"客户端已删除: user=%s channel=%s addr=%s device=%s",
+		client.Username,
+		channelName,
+		key,
+		client.DeviceID,
+	)
+
+	if talkReleased {
+
+		s.broadcastTalkReleased(
+			channelName,
+			talkUsername,
 		)
 	}
 
-	log.Printf(
-		"客户端已删除: user=%s channel=%s",
-		client.Username,
+	s.broadcastChannelList()
+
+	s.broadcastChannelMembers(
 		channelName,
 	)
+
+	return channelName
 }
 
 // ============================================================
@@ -701,48 +1802,204 @@ func (s *Server) removeClient(
 
 func (s *Server) handleLogin(
 	addr *net.UDPAddr,
+	deviceID string,
 	username string,
 ) {
 
-	client := s.updateClient(addr)
-
-	username = strings.TrimSpace(username)
-
-	if username == "" {
-
-		username = fmt.Sprintf(
-			"USER-%d",
-			addr.Port,
+	client, accepted :=
+		s.updateClient(
+			addr,
+			deviceID,
 		)
+
+	if !accepted ||
+		client == nil {
+
+		return
 	}
 
-	runes := []rune(username)
+	username =
+		strings.TrimSpace(
+			username,
+		)
+
+	if username == "" {
+		username =
+			client.Username
+	}
+
+	if username == "" {
+		username =
+			fmt.Sprintf(
+				"USER-%d",
+				addr.Port,
+			)
+	}
+
+	runes :=
+		[]rune(
+			username,
+		)
 
 	if len(runes) > 20 {
 
-		username = string(
-			runes[:20],
-		)
+		username =
+			string(
+				runes[:20],
+			)
 	}
+
+	username =
+		cleanUsername(
+			username,
+		)
 
 	s.mu.Lock()
 
-	client.Username = username
+	client.DeviceID =
+		deviceID
+
+	client.Username =
+		username
+
+	client.LastSeen =
+		time.Now()
+
+	s.users[client.UserID] = client
+
+	s.saveSessionLocked(
+		client,
+	)
+
+	channelName :=
+		client.ChannelName
+
+	userID :=
+		client.UserID
 
 	s.mu.Unlock()
 
-	response := fmt.Sprintf(
-		"%s:%s:%s:%s",
-		msgUserOK,
-		client.UserID,
-		client.Username,
-		client.ChannelName,
-	)
+	response :=
+		fmt.Sprintf(
+			"%s:%s:%s:%s",
+			msgUserOK,
+			userID,
+			username,
+			channelName,
+		)
 
 	s.sendMessage(
 		addr,
 		response,
 	)
+
+	s.sendUserStatusToClient(
+		addr,
+	)
+
+	s.sendUserListToClient(
+		addr,
+		channelName,
+	)
+
+	s.broadcastChannelMembers(
+		channelName,
+	)
+
+	s.broadcastChannelList()
+
+	log.Printf(
+		"用户登录/昵称更新: user=%s userID=%s channel=%s device=%s",
+		username,
+		userID,
+		channelName,
+		deviceID,
+	)
+}
+
+// ============================================================
+// V20 设置昵称
+// ============================================================
+
+func (s *Server) handleSetNickname(
+	addr *net.UDPAddr,
+	username string,
+) {
+
+	client, accepted :=
+		s.updateClient(
+			addr,
+		)
+
+	if !accepted ||
+		client == nil {
+
+		return
+	}
+
+	username =
+		cleanUsername(
+			username,
+		)
+
+	if username == "" {
+		username =
+			fmt.Sprintf(
+				"USER-%d",
+				addr.Port,
+			)
+	}
+
+	s.mu.Lock()
+
+	client.Username =
+		username
+
+	client.LastSeen =
+		time.Now()
+
+	s.users[client.UserID] = client
+
+	s.saveSessionLocked(
+		client,
+	)
+
+	channelName :=
+		client.ChannelName
+
+	userID :=
+		client.UserID
+
+	s.mu.Unlock()
+
+	log.Printf(
+		"昵称更新: user=%s userID=%s channel=%s device=%s",
+		username,
+		userID,
+		channelName,
+		client.DeviceID,
+	)
+
+	s.sendMessage(
+		addr,
+		fmt.Sprintf(
+			"%s:%s:%s:%s",
+			msgUserOK,
+			userID,
+			username,
+			channelName,
+		),
+	)
+
+	s.sendUserStatusToClient(
+		addr,
+	)
+
+	s.broadcastChannelMembers(
+		channelName,
+	)
+
+	s.broadcastChannelList()
 }
 
 // ============================================================
@@ -754,12 +2011,20 @@ func (s *Server) handleCreateChannel(
 	payload string,
 ) {
 
-	client := s.updateClient(addr)
+	client, accepted :=
+		s.updateClient(addr)
 
-	parts := strings.Split(
-		payload,
-		":",
-	)
+	if !accepted ||
+		client == nil {
+
+		return
+	}
+
+	parts :=
+		strings.Split(
+			payload,
+			":",
+		)
 
 	if len(parts) < 1 {
 
@@ -771,9 +2036,10 @@ func (s *Server) handleCreateChannel(
 		return
 	}
 
-	channelName := cleanChannelName(
-		parts[0],
-	)
+	channelName :=
+		cleanChannelName(
+			parts[0],
+		)
 
 	if channelName == "" {
 
@@ -785,27 +2051,44 @@ func (s *Server) handleCreateChannel(
 		return
 	}
 
-	channelType := channelPublic
+	if channelName ==
+		defaultChannel {
 
-	password := ""
+		s.sendMessage(
+			addr,
+			msgChannelError+":RESERVED",
+		)
+
+		return
+	}
+
+	channelType :=
+		channelPublic
+
+	password :=
+		""
 
 	if len(parts) >= 2 {
 
-		t := strings.ToUpper(
-			strings.TrimSpace(
-				parts[1],
-			),
-		)
+		t :=
+			strings.ToUpper(
+				strings.TrimSpace(
+					parts[1],
+				),
+			)
 
-		if t == channelPrivate {
+		if t ==
+			channelPrivate {
 
-			channelType = channelPrivate
+			channelType =
+				channelPrivate
 
 			if len(parts) >= 3 {
 
-				password = strings.TrimSpace(
-					parts[2],
-				)
+				password =
+					strings.TrimSpace(
+						parts[2],
+					)
 			}
 
 			if password == "" {
@@ -818,18 +2101,24 @@ func (s *Server) handleCreateChannel(
 				return
 			}
 
-			if len([]rune(password)) > 32 {
+			if len(
+				[]rune(password),
+			) > 32 {
 
-				password = string(
-					[]rune(password)[:32],
-				)
+				password =
+					string(
+						[]rune(
+							password,
+						)[:32],
+					)
 			}
 		}
 	}
 
 	s.mu.Lock()
 
-	if _, exists := s.channels[channelName]; exists {
+	if _, exists :=
+		s.channels[channelName]; exists {
 
 		s.mu.Unlock()
 
@@ -841,7 +2130,8 @@ func (s *Server) handleCreateChannel(
 		return
 	}
 
-	if len(s.channels) >= maxChannels {
+	if len(s.channels) >=
+		maxChannels {
 
 		s.mu.Unlock()
 
@@ -853,13 +2143,14 @@ func (s *Server) handleCreateChannel(
 		return
 	}
 
-	s.channels[channelName] = &Channel{
-		Name:        channelName,
-		CreatorID:   client.UserID,
-		CreatedAt:   time.Now(),
-		ChannelType: channelType,
-		Password:    password,
-	}
+	s.channels[channelName] =
+		&Channel{
+			Name:        channelName,
+			CreatorID:   client.UserID,
+			CreatedAt:   time.Now(),
+			ChannelType: channelType,
+			Password:    password,
+		}
 
 	s.mu.Unlock()
 
@@ -870,12 +2161,13 @@ func (s *Server) handleCreateChannel(
 		channelType,
 	)
 
-	response := fmt.Sprintf(
-		"%s:%s:%s",
-		msgChannelCreated,
-		channelName,
-		channelType,
-	)
+	response :=
+		fmt.Sprintf(
+			"%s:%s:%s",
+			msgChannelCreated,
+			channelName,
+			channelType,
+		)
 
 	s.sendMessage(
 		addr,
@@ -887,17 +2179,6 @@ func (s *Server) handleCreateChannel(
 
 // ============================================================
 // 删除频道
-//
-// 权限：只有创建者可以删除
-//
-// public：不能删除
-//
-// 删除后：
-// 1. 删除频道
-// 2. 释放麦权
-// 3. 所有频道成员进入 public
-// 4. 通知这些用户
-// 5. 全员刷新频道列表
 // ============================================================
 
 func (s *Server) handleDeleteChannel(
@@ -905,11 +2186,19 @@ func (s *Server) handleDeleteChannel(
 	channelName string,
 ) {
 
-	client := s.updateClient(addr)
+	client, accepted :=
+		s.updateClient(addr)
 
-	channelName = cleanChannelName(
-		channelName,
-	)
+	if !accepted ||
+		client == nil {
+
+		return
+	}
+
+	channelName =
+		cleanChannelName(
+			channelName,
+		)
 
 	if channelName == "" {
 
@@ -938,7 +2227,8 @@ func (s *Server) handleDeleteChannel(
 		return
 	}
 
-	if channelName == defaultChannel {
+	if channelName ==
+		defaultChannel {
 
 		s.mu.Unlock()
 
@@ -950,15 +2240,10 @@ func (s *Server) handleDeleteChannel(
 		return
 	}
 
-	if channel.CreatorID != client.UserID {
+	if channel.CreatorID !=
+		client.UserID {
 
 		s.mu.Unlock()
-
-		log.Printf(
-			"删除频道失败：无权限 user=%s channel=%s",
-			client.Username,
-			channelName,
-		)
 
 		s.sendMessage(
 			addr,
@@ -968,24 +2253,16 @@ func (s *Server) handleDeleteChannel(
 		return
 	}
 
-	// ------------------------------------------------------------
-	// 删除抢麦状态
-	// ------------------------------------------------------------
-
 	delete(
 		s.talkers,
 		channelName,
 	)
 
-	// ------------------------------------------------------------
-	// 收集频道成员
-	// 同时移动到 public
-	// ------------------------------------------------------------
-
-	movedClients := make(
-		[]*Client,
-		0,
-	)
+	movedClients :=
+		make(
+			[]*Client,
+			0,
+		)
 
 	for _, other := range s.clients {
 
@@ -1001,15 +2278,16 @@ func (s *Server) handleDeleteChannel(
 		other.LastSeen =
 			time.Now()
 
-		movedClients = append(
-			movedClients,
+		s.saveSessionLocked(
 			other,
 		)
-	}
 
-	// ------------------------------------------------------------
-	// 删除频道
-	// ------------------------------------------------------------
+		movedClients =
+			append(
+				movedClients,
+				other,
+			)
+	}
 
 	delete(
 		s.channels,
@@ -1023,58 +2301,43 @@ func (s *Server) handleDeleteChannel(
 
 	s.mu.Unlock()
 
-	log.Println(
-		"========================================",
-	)
-
 	log.Printf(
-		"删除频道成功: channel=%s creator=%s",
+		"删除频道: channel=%s creator=%s moved=%d",
 		channelName,
 		client.Username,
-	)
-
-	log.Printf(
-		"移动用户数量: %d",
 		len(movedClients),
 	)
 
-	log.Println(
-		"========================================",
-	)
-
-	// ------------------------------------------------------------
-	// 通知频道成员回到 public
-	// ------------------------------------------------------------
-
 	for _, other := range movedClients {
-
-		response := fmt.Sprintf(
-			"%s:%s:%d",
-			msgChannelLeft,
-			defaultChannel,
-			publicCount,
-		)
 
 		s.sendMessage(
 			other.Addr,
-			response,
+			fmt.Sprintf(
+				"%s:%s:%d",
+				msgChannelLeft,
+				defaultChannel,
+				publicCount,
+			),
+		)
+
+		s.sendUserListToClient(
+			other.Addr,
+			defaultChannel,
 		)
 	}
 
-	// ------------------------------------------------------------
-	// 通知删除者删除成功
-	// ------------------------------------------------------------
-
 	s.sendMessage(
 		addr,
-		msgChannelDeleted+":"+channelName,
+		msgChannelDeleted+
+			":"+
+			channelName,
 	)
 
-	// ------------------------------------------------------------
-	// 所有客户端刷新频道列表
-	// ------------------------------------------------------------
-
 	s.broadcastChannelList()
+
+	s.broadcastChannelMembers(
+		defaultChannel,
+	)
 }
 
 // ============================================================
@@ -1086,25 +2349,40 @@ func (s *Server) handleJoinChannel(
 	payload string,
 ) {
 
-	client := s.updateClient(addr)
+	client, accepted :=
+		s.updateClient(addr)
 
-	parts := strings.SplitN(
-		payload,
-		":",
-		2,
-	)
+	if !accepted ||
+		client == nil {
 
-	channelName := cleanChannelName(
-		parts[0],
-	)
+		return
+	}
 
-	password := ""
+	parts :=
+		strings.SplitN(
+			payload,
+			":",
+			2,
+		)
+
+	if len(parts) == 0 {
+		return
+	}
+
+	channelName :=
+		cleanChannelName(
+			parts[0],
+		)
+
+	password :=
+		""
 
 	if len(parts) == 2 {
 
-		password = strings.TrimSpace(
-			parts[1],
-		)
+		password =
+			strings.TrimSpace(
+				parts[1],
+			)
 	}
 
 	s.mu.Lock()
@@ -1125,45 +2403,77 @@ func (s *Server) handleJoinChannel(
 	}
 
 	if channel.ChannelType ==
-		channelPrivate {
-
-		if password !=
+		channelPrivate &&
+		password !=
 			channel.Password {
 
-			s.mu.Unlock()
+		s.mu.Unlock()
 
-			log.Printf(
-				"私密频道密码错误: user=%s channel=%s",
-				client.Username,
-				channelName,
-			)
+		s.sendMessage(
+			addr,
+			msgChannelError+":BAD_PASSWORD",
+		)
 
-			s.sendMessage(
-				addr,
-				msgChannelError+":BAD_PASSWORD",
-			)
-
-			return
-		}
+		return
 	}
 
 	oldChannel :=
 		client.ChannelName
 
-	// ------------------------------------------------------------
-	// 换频道时释放旧频道麦权
-	// ------------------------------------------------------------
+	if oldChannel ==
+		channelName {
+
+		memberCount :=
+			s.channelMemberCountLocked(
+				channelName,
+			)
+
+		channelType :=
+			channel.ChannelType
+
+		s.mu.Unlock()
+
+		s.sendMessage(
+			addr,
+			fmt.Sprintf(
+				"%s:%s:%s:%d",
+				msgChannelJoined,
+				channelName,
+				channelType,
+				memberCount,
+			),
+		)
+
+		s.sendChannelMembers(
+			addr,
+			channelName,
+		)
+
+		s.sendUserListToClient(
+			addr,
+			channelName,
+		)
+
+		return
+	}
+
+	talkReleased :=
+		false
 
 	if talker, exists :=
 		s.talkers[oldChannel]; exists {
 
-		if talker.Addr.String() ==
-			addr.String() {
+		if talker.Addr != nil &&
+			talker.Addr.String() ==
+				addr.String() {
 
 			delete(
 				s.talkers,
 				oldChannel,
 			)
+
+			talkReleased =
+				true
 		}
 	}
 
@@ -1172,6 +2482,10 @@ func (s *Server) handleJoinChannel(
 
 	client.LastSeen =
 		time.Now()
+
+	s.saveSessionLocked(
+		client,
+	)
 
 	memberCount :=
 		s.channelMemberCountLocked(
@@ -1183,20 +2497,39 @@ func (s *Server) handleJoinChannel(
 
 	s.mu.Unlock()
 
-	response := fmt.Sprintf(
-		"%s:%s:%s:%d",
-		msgChannelJoined,
-		channelName,
-		channelType,
-		memberCount,
-	)
+	if talkReleased {
+
+		s.broadcastTalkReleased(
+			oldChannel,
+			client.Username,
+		)
+	}
 
 	s.sendMessage(
 		addr,
-		response,
+		fmt.Sprintf(
+			"%s:%s:%s:%d",
+			msgChannelJoined,
+			channelName,
+			channelType,
+			memberCount,
+		),
+	)
+
+	s.sendUserListToClient(
+		addr,
+		channelName,
 	)
 
 	s.broadcastChannelList()
+
+	s.broadcastChannelMembers(
+		oldChannel,
+	)
+
+	s.broadcastChannelMembers(
+		channelName,
+	)
 
 	log.Printf(
 		"加入频道: user=%s old=%s new=%s type=%s count=%d",
@@ -1216,23 +2549,121 @@ func (s *Server) handleLeaveChannel(
 	addr *net.UDPAddr,
 ) {
 
-	client := s.updateClient(addr)
+	if addr == nil {
+		return
+	}
+
+	key :=
+		addr.String()
 
 	s.mu.Lock()
+
+	client, exists :=
+		s.clients[key]
+
+	s.mu.Unlock()
+
+	if !exists {
+
+		var accepted bool
+
+		client, accepted =
+			s.updateClient(
+				addr,
+			)
+
+		if !accepted ||
+			client == nil {
+
+			return
+		}
+	}
+
+	s.mu.Lock()
+
+	client, exists =
+		s.clients[key]
+
+	if !exists ||
+		client == nil {
+
+		s.mu.Unlock()
+		return
+	}
 
 	oldChannel :=
 		client.ChannelName
 
+	if oldChannel == "" {
+
+		oldChannel =
+			defaultChannel
+	}
+
+	if oldChannel ==
+		defaultChannel {
+
+		client.LastSeen =
+			time.Now()
+
+		s.saveSessionLocked(
+			client,
+		)
+
+		publicCount :=
+			s.channelMemberCountLocked(
+				defaultChannel,
+			)
+
+		s.mu.Unlock()
+
+		s.sendMessage(
+			addr,
+			fmt.Sprintf(
+				"%s:%s:%d",
+				msgChannelLeft,
+				defaultChannel,
+				publicCount,
+			),
+		)
+
+		s.sendUserListToClient(
+			addr,
+			defaultChannel,
+		)
+
+		s.broadcastChannelList()
+
+		s.broadcastChannelMembers(
+			defaultChannel,
+		)
+
+		return
+	}
+
+	talkReleased :=
+		false
+
+	talkUsername :=
+		client.Username
+
 	if talker, exists :=
 		s.talkers[oldChannel]; exists {
 
-		if talker.Addr.String() ==
-			addr.String() {
+		if talker.Addr != nil &&
+			talker.Addr.String() ==
+				key {
+
+			talkUsername =
+				talker.Username
 
 			delete(
 				s.talkers,
 				oldChannel,
 			)
+
+			talkReleased =
+				true
 		}
 	}
 
@@ -1242,26 +2673,58 @@ func (s *Server) handleLeaveChannel(
 	client.LastSeen =
 		time.Now()
 
-	memberCount :=
+	s.saveSessionLocked(
+		client,
+	)
+
+	oldChannelCount :=
+		s.channelMemberCountLocked(
+			oldChannel,
+		)
+
+	publicCount :=
 		s.channelMemberCountLocked(
 			defaultChannel,
 		)
 
 	s.mu.Unlock()
 
-	response := fmt.Sprintf(
-		"%s:%s:%d",
-		msgChannelLeft,
-		defaultChannel,
-		memberCount,
-	)
+	if talkReleased {
+
+		s.broadcastTalkReleased(
+			oldChannel,
+			talkUsername,
+		)
+	}
 
 	s.sendMessage(
 		addr,
-		response,
+		fmt.Sprintf(
+			"%s:%s:%d",
+			msgChannelLeft,
+			defaultChannel,
+			publicCount,
+		),
 	)
 
 	s.broadcastChannelList()
+
+	s.broadcastChannelMembers(
+		oldChannel,
+	)
+
+	s.broadcastChannelMembers(
+		defaultChannel,
+	)
+
+	log.Printf(
+		"离开频道: user=%s old=%s new=%s oldCount=%d publicCount=%d",
+		client.Username,
+		oldChannel,
+		defaultChannel,
+		oldChannelCount,
+		publicCount,
+	)
 }
 
 // ============================================================
@@ -1272,7 +2735,14 @@ func (s *Server) handleChannelList(
 	addr *net.UDPAddr,
 ) {
 
-	s.updateClient(addr)
+	_, accepted :=
+		s.updateClient(
+			addr,
+		)
+
+	if !accepted {
+		return
+	}
 
 	s.mu.RLock()
 
@@ -1305,27 +2775,35 @@ func (s *Server) broadcastChannelList() {
 			len(s.clients),
 		)
 
-	now := time.Now()
+	now :=
+		time.Now()
 
-	for _, client :=
-		range s.clients {
+	for _, client := range s.clients {
+
+		if client == nil ||
+			client.Addr == nil {
+
+			continue
+		}
 
 		if now.Sub(
 			client.LastSeen,
-		) <= clientTimeout {
+		) <=
+			clientTimeout {
 
 			addresses =
 				append(
 					addresses,
-					client.Addr,
+					cloneUDPAddr(
+						client.Addr,
+					),
 				)
 		}
 	}
 
 	s.mu.RUnlock()
 
-	for _, addr :=
-		range addresses {
+	for _, addr := range addresses {
 
 		s.sendMessage(
 			addr,
@@ -1336,15 +2814,6 @@ func (s *Server) broadcastChannelList() {
 
 // ============================================================
 // 构造频道列表
-//
-// 返回：
-//
-// WALKIE_CHANNEL_LIST:
-// public,PUBLIC,2;
-// 测试,PUBLIC,3;
-// 私密,PRIVATE,1
-//
-// 不发送密码
 // ============================================================
 
 func (s *Server) buildChannelListLocked() string {
@@ -1356,8 +2825,7 @@ func (s *Server) buildChannelListLocked() string {
 			len(s.channels),
 		)
 
-	for name :=
-		range s.channels {
+	for name := range s.channels {
 
 		names =
 			append(
@@ -1366,7 +2834,9 @@ func (s *Server) buildChannelListLocked() string {
 			)
 	}
 
-	sortStrings(names)
+	sortStrings(
+		names,
+	)
 
 	items :=
 		make(
@@ -1375,8 +2845,7 @@ func (s *Server) buildChannelListLocked() string {
 			len(names),
 		)
 
-	for _, name :=
-		range names {
+	for _, name := range names {
 
 		channel :=
 			s.channels[name]
@@ -1414,8 +2883,29 @@ func (s *Server) handleChannelInfo(
 	addr *net.UDPAddr,
 ) {
 
-	client :=
-		s.updateClient(addr)
+	s.sendChannelInfoToClient(
+		addr,
+	)
+}
+
+// ============================================================
+// 给客户端发送频道信息
+// ============================================================
+
+func (s *Server) sendChannelInfoToClient(
+	addr *net.UDPAddr,
+) {
+
+	client, accepted :=
+		s.updateClient(
+			addr,
+		)
+
+	if !accepted ||
+		client == nil {
+
+		return
+	}
 
 	s.mu.RLock()
 
@@ -1448,33 +2938,68 @@ func (s *Server) handleChannelInfo(
 			count,
 		)
 
+	channelName :=
+		client.ChannelName
+
 	s.mu.RUnlock()
 
 	s.sendMessage(
 		addr,
 		response,
 	)
+
+	s.sendChannelMembers(
+		addr,
+		channelName,
+	)
+
+	s.sendUserListToClient(
+		addr,
+		channelName,
+	)
 }
 
 // ============================================================
-// 统计频道在线人数
-//
-// 调用时必须已经持有锁
+// 频道人数
 // ============================================================
 
 func (s *Server) channelMemberCountLocked(
 	channelName string,
 ) int {
 
-	count := 0
+	if channelName == "" {
+		return 0
+	}
 
-	now := time.Now()
+	/*
+	 * ========================================================
+	 * V21 在线人数唯一数据源
+	 *
+	 * 只统计：
+	 * 1. 当前频道
+	 * 2. 未超时
+	 * 3. 有效 UserID
+	 *
+	 * 同一个 UserID 即使因为：
+	 * Wi-Fi / 移动网络 / UDP 端口变化
+	 * 暂时留下多个 Client，
+	 * 最终也只计算 1 人。
+	 * ========================================================
+	 */
 
-	for _, client :=
-		range s.clients {
+	users :=
+		make(
+			map[string]bool,
+		)
 
-		if client.ChannelName !=
-			channelName {
+	now :=
+		time.Now()
+
+	for _, client := range s.clients {
+
+		if client == nil ||
+			client.ChannelName !=
+				channelName {
 
 			continue
 		}
@@ -1486,14 +3011,597 @@ func (s *Server) channelMemberCountLocked(
 			continue
 		}
 
-		count++
+		userID :=
+			strings.TrimSpace(
+				client.UserID,
+			)
+
+		/*
+		 * 没有 UserID 的临时 UDP Client
+		 * 不参与真实在线人数统计。
+		 */
+		if userID == "" {
+			continue
+		}
+
+		users[userID] = true
 	}
 
-	return count
+	return len(users)
 }
 
 // ============================================================
-// 清理频道名称
+// 频道成员列表
+//
+// 老协议继续保留：
+//
+// WALKIE_CHANNEL_MEMBERS:
+// channel:
+// userid,username,online,lastSeen;
+//
+// ============================================================
+
+func (s *Server) buildChannelMembersLocked(
+	channelName string,
+) string {
+
+	type member struct {
+		id       string
+		username string
+		lastSeen int64
+	}
+
+	membersByID :=
+		make(
+			map[string]member,
+		)
+
+	now :=
+		time.Now()
+
+	for _, client := range s.clients {
+
+		if client == nil ||
+			client.ChannelName !=
+				channelName {
+
+			continue
+		}
+
+		if now.Sub(
+			client.LastSeen,
+		) > clientTimeout {
+
+			continue
+		}
+
+		id :=
+			strings.TrimSpace(
+				client.UserID,
+			)
+
+		/*
+		 * 没有正式 UserID 的匿名 Client 不进入频道成员。
+		 */
+		if id == "" {
+
+			continue
+		}
+
+		username :=
+			strings.TrimSpace(
+				client.Username,
+			)
+
+		/*
+		 * USER-xxxx 是尚未完成昵称登录的临时连接。
+		 * 这类连接不能显示在 Android 在线人员列表。
+		 */
+		if username == "" ||
+			strings.HasPrefix(
+				username,
+				"USER-",
+			) {
+
+			continue
+		}
+
+		current :=
+			member{
+				id:       id,
+				username: username,
+				lastSeen: client.LastSeen.Unix(),
+			}
+
+		existing, ok :=
+			membersByID[id]
+
+		if !ok ||
+			current.lastSeen >
+				existing.lastSeen {
+
+			membersByID[id] =
+				current
+		}
+	}
+
+	members :=
+		make(
+			[]member,
+			0,
+			len(membersByID),
+		)
+
+	for _, m := range membersByID {
+
+		members =
+			append(
+				members,
+				m,
+			)
+	}
+
+	for i := 0; i < len(members); i++ {
+
+		for j := i + 1; j < len(members); j++ {
+
+			if members[j].username <
+				members[i].username {
+
+				members[i],
+					members[j] =
+					members[j],
+					members[i]
+			}
+		}
+	}
+
+	items :=
+		make(
+			[]string,
+			0,
+			len(members),
+		)
+
+	for _, m := range members {
+
+		items =
+			append(
+				items,
+				fmt.Sprintf(
+					"%s,%s,online,%d",
+					cleanUsername(
+						m.id,
+					),
+					cleanUsername(
+						m.username,
+					),
+					m.lastSeen,
+				),
+			)
+	}
+
+	return msgChannelMembers +
+		":" +
+		cleanChannelName(
+			channelName,
+		) +
+		":" +
+		strings.Join(
+			items,
+			";",
+		)
+}
+
+func (s *Server) buildUserListLocked(
+	channelName string,
+) string {
+
+	type userInfo struct {
+		id       string
+		username string
+		lastSeen int64
+	}
+
+	usersByID :=
+		make(
+			map[string]userInfo,
+		)
+
+	now :=
+		time.Now()
+
+	for _, client := range s.clients {
+
+		if client == nil ||
+			client.ChannelName !=
+				channelName {
+
+			continue
+		}
+
+		if now.Sub(
+			client.LastSeen,
+		) > clientTimeout {
+
+			continue
+		}
+
+		/*
+		 * 只允许正式 UserID。
+		 *
+		 * 绝不再使用 UDP Addr 生成临时用户 ID。
+		 *
+		 * 这样：
+		 *
+		 * device="" / UserID为空
+		 * USER-xxxx 临时连接
+		 *
+		 * 都不会进入 Android 在线列表。
+		 */
+		id :=
+			cleanUsername(
+				client.UserID,
+			)
+
+		if id == "" {
+
+			continue
+		}
+
+		username :=
+			cleanUsername(
+				client.Username,
+			)
+
+		/*
+		 * USER-xxxx 是尚未完成昵称登录的临时名称。
+		 * 不发送给 Android。
+		 */
+		if username == "" ||
+			strings.HasPrefix(
+				username,
+				"USER-",
+			) {
+
+			continue
+		}
+
+		current :=
+			userInfo{
+				id:       id,
+				username: username,
+				lastSeen: client.LastSeen.Unix(),
+			}
+
+		existing, exists :=
+			usersByID[id]
+
+		if !exists ||
+			current.lastSeen >
+				existing.lastSeen {
+
+			usersByID[id] =
+				current
+		}
+	}
+
+	users :=
+		make(
+			[]userInfo,
+			0,
+			len(usersByID),
+		)
+
+	for _, item := range usersByID {
+
+		users =
+			append(
+				users,
+				item,
+			)
+	}
+
+	for i := 0; i < len(users); i++ {
+
+		for j := i + 1; j < len(users); j++ {
+
+			if users[j].username <
+				users[i].username {
+
+				users[i],
+					users[j] =
+					users[j],
+					users[i]
+			}
+		}
+	}
+
+	items :=
+		make(
+			[]string,
+			0,
+			len(users),
+		)
+
+	for _, user := range users {
+
+		items =
+			append(
+				items,
+				cleanUsername(
+					user.id,
+				)+"|"+
+					cleanUsername(
+						user.username,
+					),
+			)
+	}
+
+	log.Printf(
+		"DEBUG USER LIST: channel=%s count=%d users=%s",
+		channelName,
+		len(items),
+		strings.Join(
+			items,
+			";",
+		),
+	)
+
+	return msgUserList +
+		":" +
+		cleanChannelName(
+			channelName,
+		) +
+		":" +
+		strings.Join(
+			items,
+			";",
+		)
+}
+
+func (s *Server) sendUserListToClient(
+	addr *net.UDPAddr,
+	channelName string,
+) {
+
+	if addr == nil ||
+		channelName == "" {
+
+		return
+	}
+
+	s.mu.RLock()
+
+	response :=
+		s.buildUserListLocked(
+			channelName,
+		)
+
+	s.mu.RUnlock()
+
+	s.sendMessage(
+		addr,
+		response,
+	)
+}
+
+// ============================================================
+// 广播用户列表
+// ============================================================
+
+func (s *Server) broadcastUserList(
+	channelName string,
+) {
+
+	if channelName == "" {
+		return
+	}
+
+	s.mu.RLock()
+
+	response :=
+		s.buildUserListLocked(
+			channelName,
+		)
+
+	addresses :=
+		make(
+			[]*net.UDPAddr,
+			0,
+		)
+
+	now :=
+		time.Now()
+
+	for _, client := range s.clients {
+
+		if client == nil ||
+			client.Addr == nil ||
+			client.ChannelName !=
+				channelName {
+
+			continue
+		}
+
+		if now.Sub(
+			client.LastSeen,
+		) > clientTimeout {
+
+			continue
+		}
+
+		addresses =
+			append(
+				addresses,
+				cloneUDPAddr(
+					client.Addr,
+				),
+			)
+	}
+
+	s.mu.RUnlock()
+
+	for _, addr := range addresses {
+
+		s.sendMessage(
+			addr,
+			response,
+		)
+	}
+}
+
+// ============================================================
+// 发送频道成员
+// ============================================================
+
+func (s *Server) sendChannelMembers(
+	addr *net.UDPAddr,
+	channelName string,
+) {
+
+	s.mu.RLock()
+
+	response :=
+		s.buildChannelMembersLocked(
+			channelName,
+		)
+
+	s.mu.RUnlock()
+
+	s.sendMessage(
+		addr,
+		response,
+	)
+
+	/*
+	 * V20 同时发送新的简单用户列表。
+	 */
+	s.sendUserListToClient(
+		addr,
+		channelName,
+	)
+}
+
+// ============================================================
+// 广播频道成员
+// ============================================================
+
+func (s *Server) broadcastChannelMembers(
+	channelName string,
+) {
+
+	if channelName == "" {
+		return
+	}
+
+	s.mu.RLock()
+
+	response :=
+		s.buildChannelMembersLocked(
+			channelName,
+		)
+
+	addresses :=
+		make(
+			[]*net.UDPAddr,
+			0,
+		)
+
+	now :=
+		time.Now()
+
+	for _, client := range s.clients {
+
+		if client == nil ||
+			client.Addr == nil ||
+			client.ChannelName !=
+				channelName {
+
+			continue
+		}
+
+		if now.Sub(
+			client.LastSeen,
+		) > clientTimeout {
+
+			continue
+		}
+
+		addresses =
+			append(
+				addresses,
+				cloneUDPAddr(
+					client.Addr,
+				),
+			)
+	}
+
+	s.mu.RUnlock()
+
+	for _, addr := range addresses {
+
+		s.sendMessage(
+			addr,
+			response,
+		)
+	}
+
+	/*
+	 * V20 新的在线人员昵称列表。
+	 */
+	s.broadcastUserList(
+		channelName,
+	)
+}
+
+// ============================================================
+// 用户状态
+// ============================================================
+
+func (s *Server) sendUserStatusToClient(
+	addr *net.UDPAddr,
+) {
+
+	client, accepted :=
+		s.updateClient(
+			addr,
+		)
+
+	if !accepted ||
+		client == nil {
+
+		return
+	}
+
+	s.mu.RLock()
+
+	response :=
+		fmt.Sprintf(
+			"%s:%s:%s:online:%d:%s",
+			msgUserStatus,
+			cleanUsername(
+				client.UserID,
+			),
+			cleanUsername(
+				client.Username,
+			),
+			client.LastSeen.Unix(),
+			cleanChannelName(
+				client.ChannelName,
+			),
+		)
+
+	s.mu.RUnlock()
+
+	s.sendMessage(
+		addr,
+		response,
+	)
+}
+
+// ============================================================
+// 清理频道名
 // ============================================================
 
 func cleanChannelName(
@@ -1501,7 +3609,9 @@ func cleanChannelName(
 ) string {
 
 	name =
-		strings.TrimSpace(name)
+		strings.TrimSpace(
+			name,
+		)
 
 	name =
 		strings.ReplaceAll(
@@ -1546,13 +3656,86 @@ func cleanChannelName(
 		)
 
 	runes :=
-		[]rune(name)
+		[]rune(
+			name,
+		)
 
 	if len(runes) > 24 {
 
 		name =
 			string(
 				runes[:24],
+			)
+	}
+
+	return name
+}
+
+// ============================================================
+// 清理用户名
+// ============================================================
+
+func cleanUsername(
+	name string,
+) string {
+
+	name =
+		strings.TrimSpace(
+			name,
+		)
+
+	name =
+		strings.ReplaceAll(
+			name,
+			":",
+			"",
+		)
+
+	name =
+		strings.ReplaceAll(
+			name,
+			";",
+			"",
+		)
+
+	name =
+		strings.ReplaceAll(
+			name,
+			",",
+			"",
+		)
+
+	name =
+		strings.ReplaceAll(
+			name,
+			"|",
+			"",
+		)
+
+	name =
+		strings.ReplaceAll(
+			name,
+			"\n",
+			"",
+		)
+
+	name =
+		strings.ReplaceAll(
+			name,
+			"\r",
+			"",
+		)
+
+	runes :=
+		[]rune(
+			name,
+		)
+
+	if len(runes) > 20 {
+
+		name =
+			string(
+				runes[:20],
 			)
 	}
 
@@ -1584,6 +3767,36 @@ func sortStrings(
 }
 
 // ============================================================
+// UDP 地址复制
+// ============================================================
+
+func cloneUDPAddr(
+	addr *net.UDPAddr,
+) *net.UDPAddr {
+
+	if addr == nil {
+		return nil
+	}
+
+	ip :=
+		make(
+			net.IP,
+			len(addr.IP),
+		)
+
+	copy(
+		ip,
+		addr.IP,
+	)
+
+	return &net.UDPAddr{
+		IP:   ip,
+		Port: addr.Port,
+		Zone: addr.Zone,
+	}
+}
+
+// ============================================================
 // 抢麦
 // ============================================================
 
@@ -1591,20 +3804,21 @@ func (s *Server) handleTalkStart(
 	addr *net.UDPAddr,
 ) {
 
+	client, accepted :=
+		s.updateClient(
+			addr,
+		)
+
+	if !accepted ||
+		client == nil {
+
+		return
+	}
+
 	key :=
 		addr.String()
 
-	client :=
-		s.updateClient(addr)
-
 	s.mu.Lock()
-
-	if _, exists :=
-		s.clients[key]; !exists {
-
-		s.mu.Unlock()
-		return
-	}
 
 	channelName :=
 		client.ChannelName
@@ -1614,8 +3828,8 @@ func (s *Server) handleTalkStart(
 
 	if exists {
 
-		if talker.Addr.String() ==
-			key {
+		if talker.Addr != nil &&
+			talker.Addr.String() == key {
 
 			s.mu.Unlock()
 
@@ -1627,6 +3841,9 @@ func (s *Server) handleTalkStart(
 			return
 		}
 
+		busyUsername :=
+			talker.Username
+
 		s.mu.Unlock()
 
 		s.sendMessage(
@@ -1634,44 +3851,160 @@ func (s *Server) handleTalkStart(
 			msgTalkBusy,
 		)
 
+		s.sendMessage(
+			addr,
+			fmt.Sprintf(
+				"%s:%s:%s",
+				msgTalkBroadcast,
+				channelName,
+				cleanUsername(
+					busyUsername,
+				),
+			),
+		)
+
 		return
 	}
 
 	s.talkers[channelName] =
 		&TalkState{
-			Addr:      addr,
+			Addr:      cloneUDPAddr(addr),
+			UserID:    client.UserID,
+			Username:  client.Username,
+			IP:        client.IP,
 			StartTime: time.Now(),
 		}
 
 	s.mu.Unlock()
 
-	log.Println(
-		"========================================",
-	)
-
-	log.Println(
-		"抢麦成功:",
-		key,
-	)
-
-	log.Println(
-		"用户名:",
+	log.Printf(
+		"抢麦成功: user=%s channel=%s addr=%s device=%s",
 		client.Username,
-	)
-
-	log.Println(
-		"频道:",
 		channelName,
-	)
-
-	log.Println(
-		"========================================",
+		addr.String(),
+		client.DeviceID,
 	)
 
 	s.sendMessage(
 		addr,
 		msgTalkOK,
 	)
+
+	s.broadcastTalkStart(
+		channelName,
+		client.Username,
+	)
+}
+
+// ============================================================
+// 广播有人讲话
+// ============================================================
+
+func (s *Server) broadcastTalkStart(
+	channelName string,
+	username string,
+) {
+
+	message :=
+		fmt.Sprintf(
+			"%s:%s:%s",
+			msgTalkBroadcast,
+			cleanChannelName(
+				channelName,
+			),
+			cleanUsername(
+				username,
+			),
+		)
+
+	s.broadcastToChannel(
+		channelName,
+		message,
+	)
+}
+
+// ============================================================
+// 广播讲话结束
+// ============================================================
+
+func (s *Server) broadcastTalkReleased(
+	channelName string,
+	username string,
+) {
+
+	message :=
+		fmt.Sprintf(
+			"%s:%s:%s",
+			msgTalkRelease,
+			cleanChannelName(
+				channelName,
+			),
+			cleanUsername(
+				username,
+			),
+		)
+
+	s.broadcastToChannel(
+		channelName,
+		message,
+	)
+}
+
+// ============================================================
+// 频道广播
+// ============================================================
+
+func (s *Server) broadcastToChannel(
+	channelName string,
+	message string,
+) {
+
+	s.mu.RLock()
+
+	addresses :=
+		make(
+			[]*net.UDPAddr,
+			0,
+		)
+
+	now :=
+		time.Now()
+
+	for _, client := range s.clients {
+
+		if client == nil ||
+			client.Addr == nil ||
+			client.ChannelName !=
+				channelName {
+
+			continue
+		}
+
+		if now.Sub(
+			client.LastSeen,
+		) > clientTimeout {
+
+			continue
+		}
+
+		addresses =
+			append(
+				addresses,
+				cloneUDPAddr(
+					client.Addr,
+				),
+			)
+	}
+
+	s.mu.RUnlock()
+
+	for _, addr := range addresses {
+
+		s.sendMessage(
+			addr,
+			message,
+		)
+	}
 }
 
 // ============================================================
@@ -1682,11 +4015,35 @@ func (s *Server) handleTalkStop(
 	addr *net.UDPAddr,
 ) {
 
+	client, accepted :=
+		s.updateClient(
+			addr,
+		)
+
+	if !accepted ||
+		client == nil {
+
+		if !s.migrateTalkerByAddress(
+			addr,
+		) {
+
+			return
+		}
+
+		client, accepted =
+			s.updateClient(
+				addr,
+			)
+
+		if !accepted ||
+			client == nil {
+
+			return
+		}
+	}
+
 	key :=
 		addr.String()
-
-	client :=
-		s.updateClient(addr)
 
 	s.mu.Lock()
 
@@ -1702,12 +4059,34 @@ func (s *Server) handleTalkStop(
 		return
 	}
 
-	if talker.Addr.String() !=
-		key {
+	if talker.Addr == nil ||
+		talker.Addr.String() != key {
 
-		s.mu.Unlock()
-		return
+		if talker.UserID ==
+			client.UserID {
+
+			talker.Addr =
+				cloneUDPAddr(addr)
+
+			talker.IP =
+				client.IP
+
+			log.Printf(
+				"释放麦权时跟随UDP端口: new=%s user=%s channel=%s",
+				key,
+				client.Username,
+				channelName,
+			)
+
+		} else {
+
+			s.mu.Unlock()
+			return
+		}
 	}
+
+	username :=
+		talker.Username
 
 	delete(
 		s.talkers,
@@ -1718,7 +4097,7 @@ func (s *Server) handleTalkStop(
 
 	log.Printf(
 		"讲话结束: user=%s channel=%s",
-		client.Username,
+		username,
 		channelName,
 	)
 
@@ -1726,10 +4105,15 @@ func (s *Server) handleTalkStop(
 		addr,
 		msgTalkRelease,
 	)
+
+	s.broadcastTalkReleased(
+		channelName,
+		username,
+	)
 }
 
 // ============================================================
-// 讲话 30 秒自动释放
+// 讲话自动释放
 // ============================================================
 
 func (s *Server) talkTimeoutLoop() {
@@ -1743,43 +4127,78 @@ func (s *Server) talkTimeoutLoop() {
 
 	for range ticker.C {
 
+		type releaseInfo struct {
+			channel  string
+			addr     *net.UDPAddr
+			username string
+		}
+
+		releases :=
+			make(
+				[]releaseInfo,
+				0,
+			)
+
+		now :=
+			time.Now()
+
 		s.mu.Lock()
 
-		for channelName, talker :=
-			range s.talkers {
+		for channelName, talker := range s.talkers {
 
-			if time.Since(
+			if talker == nil {
+				delete(
+					s.talkers,
+					channelName,
+				)
+				continue
+			}
+
+			if now.Sub(
 				talker.StartTime,
 			) < talkTimeout {
 
 				continue
 			}
 
-			addr :=
-				talker.Addr
+			releases =
+				append(
+					releases,
+					releaseInfo{
+						channel: channelName,
+						addr: cloneUDPAddr(
+							talker.Addr,
+						),
+						username: talker.Username,
+					},
+				)
 
 			delete(
 				s.talkers,
 				channelName,
 			)
-
-			s.mu.Unlock()
-
-			log.Printf(
-				"讲话超过30秒，自动释放: channel=%s addr=%s",
-				channelName,
-				addr.String(),
-			)
-
-			s.sendMessage(
-				addr,
-				msgTalkRelease,
-			)
-
-			s.mu.Lock()
 		}
 
 		s.mu.Unlock()
+
+		for _, release := range releases {
+
+			log.Printf(
+				"讲话超过30秒自动释放: channel=%s user=%s",
+				release.channel,
+				release.username,
+			)
+
+			s.sendMessage(
+				release.addr,
+				msgTalkRelease,
+			)
+
+			s.broadcastTalkReleased(
+				release.channel,
+				release.username,
+			)
+		}
 	}
 }
 
@@ -1801,12 +4220,29 @@ func (s *Server) cleanupLoop() {
 		now :=
 			time.Now()
 
-		removed := false
+		removedChannels :=
+			make(
+				map[string]bool,
+			)
+
+		releasedUsers :=
+			make(
+				map[string]string,
+			)
 
 		s.mu.Lock()
 
-		for key, client :=
-			range s.clients {
+		for key, client := range s.clients {
+
+			if client == nil {
+
+				delete(
+					s.clients,
+					key,
+				)
+
+				continue
+			}
 
 			if now.Sub(
 				client.LastSeen,
@@ -1821,13 +4257,19 @@ func (s *Server) cleanupLoop() {
 			if talker, exists :=
 				s.talkers[channelName]; exists {
 
-				if talker.Addr.String() ==
-					key {
+				if talker.Addr != nil &&
+					talker.Addr.String() ==
+						key {
 
 					delete(
 						s.talkers,
 						channelName,
 					)
+
+					removedChannels[channelName] = true
+
+					releasedUsers[channelName] =
+						talker.Username
 				}
 			}
 
@@ -1836,38 +4278,242 @@ func (s *Server) cleanupLoop() {
 				key,
 			)
 
-			if client.UserID != "" {
+			if client.IP != "" &&
+				s.ipConnections[client.IP] > 0 {
 
-				delete(
-					s.users,
-					client.UserID,
-				)
+				s.ipConnections[client.IP]--
+
+				if s.ipConnections[client.IP] <= 0 {
+
+					delete(
+						s.ipConnections,
+						client.IP,
+					)
+				}
 			}
 
-			removed = true
+			if client.UserID != "" {
+
+				if existing, exists :=
+					s.users[client.UserID]; exists &&
+					existing == client {
+
+					delete(
+						s.users,
+						client.UserID,
+					)
+				}
+			}
 
 			log.Printf(
-				"清理超时客户端: %s user=%s channel=%s",
-				key,
+				"清理超时客户端: user=%s channel=%s addr=%s device=%s lastSeen=%s",
 				client.Username,
 				channelName,
+				key,
+				client.DeviceID,
+				client.LastSeen.Format(
+					time.RFC3339,
+				),
 			)
+		}
+
+		for id, session := range s.sessions {
+
+			if session == nil ||
+				now.Sub(
+					session.LastSeen,
+				) > 10*clientTimeout {
+
+				delete(
+					s.sessions,
+					id,
+				)
+			}
 		}
 
 		s.mu.Unlock()
 
-		if removed {
+		s.broadcastChannelList()
 
-			s.broadcastChannelList()
+		for channelName := range removedChannels {
+
+			username :=
+				releasedUsers[channelName]
+
+			if username == "" {
+				username = "system"
+			}
+
+			s.broadcastTalkReleased(
+				channelName,
+				username,
+			)
+
+			s.broadcastChannelMembers(
+				channelName,
+			)
 		}
 	}
 }
 
 // ============================================================
+// 音频统计：收到
+// ============================================================
+
+func (s *Server) recordReceived(
+	bytes uint64,
+) {
+
+	s.mu.Lock()
+
+	s.stats.ReceivedPackets++
+	s.stats.ReceivedBytes += bytes
+
+	s.mu.Unlock()
+}
+
+// ============================================================
+// 音频统计：丢弃
+// ============================================================
+
+func (s *Server) recordDrop(
+	bytes uint64,
+	invalid bool,
+) {
+
+	s.mu.Lock()
+
+	s.stats.DroppedPackets++
+	s.stats.DroppedBytes += bytes
+
+	if invalid {
+		s.stats.InvalidPackets++
+	}
+
+	s.mu.Unlock()
+}
+
+// ============================================================
+// 音频统计：转发
+// ============================================================
+
+func (s *Server) recordForward(
+	bytes uint64,
+) {
+
+	s.mu.Lock()
+
+	s.stats.ForwardedPackets++
+	s.stats.ForwardedBytes += bytes
+
+	s.mu.Unlock()
+}
+
+// ============================================================
+// 统计
+// ============================================================
+
+func (s *Server) statsLoop() {
+
+	ticker :=
+		time.NewTicker(
+			30 * time.Second,
+		)
+
+	defer ticker.Stop()
+
+	for range ticker.C {
+
+		s.mu.Lock()
+
+		receivedPackets :=
+			s.stats.ReceivedPackets
+
+		receivedBytes :=
+			s.stats.ReceivedBytes
+
+		forwardedPackets :=
+			s.stats.ForwardedPackets
+
+		forwardedBytes :=
+			s.stats.ForwardedBytes
+
+		droppedPackets :=
+			s.stats.DroppedPackets
+
+		droppedBytes :=
+			s.stats.DroppedBytes
+
+		invalidPackets :=
+			s.stats.InvalidPackets
+
+		online :=
+			len(s.clients)
+
+		/*
+		 * 当前真实在线用户：
+		 * 1. DeviceID 非空
+		 * 2. Client 未超时
+		 * 3. 同一个 DeviceID 只计算一次
+		 * 4. 匿名 Client(device="") 不计入
+		 */
+		onlineDeviceIDs :=
+			make(
+				map[string]struct{},
+			)
+
+		now :=
+			time.Now()
+
+		for _, client := range s.clients {
+
+			if client == nil ||
+				client.DeviceID == "" ||
+				client.Addr == nil {
+
+				continue
+			}
+
+			if now.Sub(
+				client.LastSeen,
+			) > clientTimeout {
+
+				continue
+			}
+
+			onlineDeviceIDs[client.DeviceID] = struct{}{}
+		}
+
+		userCount :=
+			len(onlineDeviceIDs)
+
+		channelCount :=
+			len(s.channels)
+
+		talkCount :=
+			len(s.talkers)
+
+		s.mu.Unlock()
+
+		log.Printf(
+			"音频统计: 收包=%d/%dB 转发=%d/%dB 丢弃=%d/%dB 异常=%d 在线连接=%d 在线用户=%d 频道=%d 抢麦=%d",
+			receivedPackets,
+			receivedBytes,
+			forwardedPackets,
+			forwardedBytes,
+			droppedPackets,
+			droppedBytes,
+			invalidPackets,
+			online,
+			userCount,
+			channelCount,
+			talkCount,
+		)
+	}
+}
+
+// ============================================================
 // 音频转发
-//
-// 只有当前频道抢到麦的人可以发送
-// 只转发到同频道用户
 // ============================================================
 
 func (s *Server) relayAudio(
@@ -1875,36 +4521,242 @@ func (s *Server) relayAudio(
 	sender *net.UDPAddr,
 ) {
 
+	if sender == nil {
+		return
+	}
+
+	if len(data) <= 0 ||
+		len(data) > maxPacketSize {
+
+		s.recordDrop(
+			uint64(len(data)),
+			true,
+		)
+
+		return
+	}
+
 	senderKey :=
 		sender.String()
 
+	/*
+	 * V21：
+	 * 先按照当前 UDP 地址查找客户端。
+	 */
 	s.mu.RLock()
 
 	senderClient,
 		exists :=
 		s.clients[senderKey]
 
-	if !exists {
+	s.mu.RUnlock()
+
+	/*
+	 * V21：
+	 * 如果 UDP 端口发生变化，
+	 * 尝试把当前持麦用户迁移到新端口。
+	 */
+	if !exists ||
+		senderClient == nil {
+
+		if !s.migrateTalkerByAddress(
+			sender,
+		) {
+
+			s.recordDrop(
+				uint64(len(data)),
+				true,
+			)
+
+			return
+		}
+
+		s.mu.RLock()
+
+		senderClient =
+			s.clients[senderKey]
 
 		s.mu.RUnlock()
-		return
+
+		if senderClient == nil {
+
+			s.recordDrop(
+				uint64(len(data)),
+				true,
+			)
+
+			return
+		}
 	}
+
+	/*
+	 * 检查当前发送者是否拥有当前频道麦权。
+	 */
+	s.mu.RLock()
 
 	channelName :=
 		senderClient.ChannelName
 
-	talker,
-		exists :=
+	talker :=
 		s.talkers[channelName]
 
-	if !exists ||
-		talker.Addr.String() !=
-			senderKey {
+	validTalker :=
+		false
 
-		s.mu.RUnlock()
+	if talker != nil {
+
+		/*
+		 * 正常情况：
+		 * talker 地址与当前 UDP 地址一致。
+		 */
+		if talker.Addr != nil &&
+			talker.Addr.String() ==
+				senderKey {
+
+			validTalker =
+				true
+		}
+
+		/*
+		 * 同一个 UserID：
+		 * 允许 NAT / 移动网络导致的 UDP 端口变化。
+		 */
+		if !validTalker &&
+			talker.UserID != "" &&
+			talker.UserID ==
+				senderClient.UserID {
+
+			validTalker =
+				true
+		}
+
+		/*
+		 * 最后一层保护：
+		 * 同 IP 且仍在本次抢麦有效时间内。
+		 */
+		if !validTalker &&
+			talker.IP != "" &&
+			talker.IP ==
+				senderClient.IP &&
+			time.Since(
+				talker.StartTime,
+			) <= talkTimeout {
+
+			validTalker =
+				true
+		}
+	}
+
+	s.mu.RUnlock()
+
+	/*
+	 * 如果地址已经变化，
+	 * 再主动执行一次持麦端口迁移。
+	 */
+	if !validTalker {
+
+		if s.migrateTalkerByAddress(
+			sender,
+		) {
+
+			s.mu.RLock()
+
+			senderClient =
+				s.clients[senderKey]
+
+			if senderClient != nil {
+
+				channelName =
+					senderClient.ChannelName
+			}
+
+			talker =
+				s.talkers[channelName]
+
+			validTalker =
+				talker != nil &&
+					talker.Addr != nil &&
+					talker.Addr.String() ==
+						senderKey
+
+			s.mu.RUnlock()
+		}
+	}
+
+	/*
+	 * 最终不是持麦者，丢弃。
+	 */
+	if !validTalker {
+
+		s.recordDrop(
+			uint64(len(data)),
+			false,
+		)
+
 		return
 	}
 
+	/*
+	 * 更新当前客户端和持麦地址。
+	 */
+	s.mu.Lock()
+
+	senderClient =
+		s.clients[senderKey]
+
+	if senderClient == nil {
+
+		s.mu.Unlock()
+
+		s.recordDrop(
+			uint64(len(data)),
+			true,
+		)
+
+		return
+	}
+
+	channelName =
+		senderClient.ChannelName
+
+	talker =
+		s.talkers[channelName]
+
+	if talker == nil {
+
+		s.mu.Unlock()
+
+		s.recordDrop(
+			uint64(len(data)),
+			false,
+		)
+
+		return
+	}
+
+	if talker.Addr == nil ||
+		talker.Addr.String() !=
+			senderKey {
+
+		talker.Addr =
+			cloneUDPAddr(
+				sender,
+			)
+
+		talker.IP =
+			senderClient.IP
+	}
+
+	senderClient.LastSeen =
+		time.Now()
+
+	s.saveSessionLocked(
+		senderClient,
+	)
+
+	/*
+	 * 收集同频道在线客户端。
+	 */
 	clients :=
 		make(
 			[]*Client,
@@ -1912,10 +4764,16 @@ func (s *Server) relayAudio(
 			len(s.clients),
 		)
 
-	now := time.Now()
+	now :=
+		time.Now()
 
-	for _, client :=
-		range s.clients {
+	for _, client := range s.clients {
+
+		if client == nil ||
+			client.Addr == nil {
+
+			continue
+		}
 
 		if now.Sub(
 			client.LastSeen,
@@ -1930,6 +4788,12 @@ func (s *Server) relayAudio(
 			continue
 		}
 
+		if client.Addr.String() ==
+			senderKey {
+
+			continue
+		}
+
 		clients =
 			append(
 				clients,
@@ -1937,41 +4801,40 @@ func (s *Server) relayAudio(
 			)
 	}
 
-	s.mu.RUnlock()
+	s.mu.Unlock()
 
-	for _, client :=
-		range clients {
+	/*
+	 * V21：
+	 * 音频原包透明转发。
+	 *
+	 * Opus 不在 VPS 解码/编码。
+	 */
+	for _, client := range clients {
 
-		if client.Addr.String() ==
-			senderKey {
+		if client == nil ||
+			client.Addr == nil {
 
 			continue
 		}
 
-		_, err :=
+		if _, err :=
 			s.conn.WriteToUDP(
 				data,
 				client.Addr,
-			)
-
-		if err != nil {
+			); err != nil {
 
 			log.Printf(
-				"转发失败: %s: %v",
+				"V21 音频转发失败: %s channel=%s error=%v",
 				client.Addr.String(),
+				channelName,
 				err,
 			)
 
 			continue
 		}
 
-		log.Printf(
-			"转发音频: %d 字节 %s -> %s channel=%s",
-			len(data),
-			senderKey,
-			client.Addr.String(),
-			channelName,
+		s.recordForward(
+			uint64(len(data)),
 		)
 	}
 }
-

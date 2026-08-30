@@ -1,0 +1,24 @@
+[Unit]
+Description=WALKIE V20 UDP Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/walkie/walkie-v20
+WorkingDirectory=/opt/walkie
+
+Restart=always
+RestartSec=3
+
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+StandardOutput=append:/opt/walkie/walkie.log
+StandardError=append:/opt/walkie/walkie-error.log
+
+# 后台运行
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
