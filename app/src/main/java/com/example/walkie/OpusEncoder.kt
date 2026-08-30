@@ -1,9 +1,6 @@
-package com.example.walkie
+﻿package com.example.walkie
 
 import android.util.Log
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.util.concurrent.atomic.AtomicInteger
 
 class OpusEncoder {
 
@@ -20,40 +17,20 @@ class OpusEncoder {
 
         /*
          * 20ms @ 16kHz / mono
+         *
+         * 16000 × 0.02 = 320 samples
          */
         const val FRAME_SIZE =
             320
 
         /*
-         * V15 音频包头：
+         * 最大 Opus Payload。
          *
-         * W A K 1
-         *
-         * 4 bytes
-         */
-        private val AUDIO_MAGIC =
-            byteArrayOf(
-                0x57,
-                0x41,
-                0x4B,
-                0x31
-            )
-
-        /*
-         * 4 bytes sequence
-         */
-        private const val AUDIO_HEADER_SIZE =
-            8
-
-        /*
-         * 与服务器 maxPacketSize 1500 保持安全距离。
+         * WalkieService 后续还会添加自己的
+         * W23A 音频协议头。
          */
         private const val MAX_OPUS_PAYLOAD_SIZE =
             1200
-
-        private const val MAX_FRAMED_PACKET_SIZE =
-            AUDIO_HEADER_SIZE +
-                    MAX_OPUS_PAYLOAD_SIZE
 
         private var nativeLibraryLoaded =
             false
@@ -91,36 +68,19 @@ class OpusEncoder {
     }
 
     /*
-     * ============================================================
-     * Native
-     * ============================================================
+     * Native Encoder 句柄。
      */
-
     @Volatile
     private var nativeHandle:
             Long =
         0L
 
+    /*
+     * 防止 encode() 与 release()
+     * 同时操作 Native Encoder。
+     */
     private val nativeLock =
         Any()
-
-    /*
-     * ============================================================
-     * V15 音频序号
-     * ============================================================
-     *
-     * 每发送一个 Opus 包：
-     *
-     * 0
-     * 1
-     * 2
-     * 3
-     *
-     * 溢出以后从 Int.MIN_VALUE 自然继续，
-     * 接收端使用无符号差值判断。
-     */
-    private val sequence =
-        AtomicInteger(0)
 
     /*
      * ============================================================
@@ -177,13 +137,13 @@ class OpusEncoder {
 
         } else {
 
-            Log.e(
-                TAG,
-                "Opus Encoder 初始化失败：Native Library 未加载"
-            )
-
             nativeHandle =
                 0L
+
+            Log.e(
+                TAG,
+                "Opus Encoder 初始化失败"
+            )
         }
     }
 
@@ -192,14 +152,28 @@ class OpusEncoder {
      * 编码
      * ============================================================
      *
-     * 返回：
+     * 返回值：
      *
-     * [4字节 MAGIC][4字节 SEQUENCE][Opus]
+     *     纯 Opus Payload
+     *
+     * 注意：
+     *
+     * WalkieService 会在外层统一添加：
+     *
+     *     W23A
+     *     StreamID
+     *     Sequence
+     *
+     * 所以这里不能再次添加任何音频协议头。
      */
+
     fun encode(
         pcm: ShortArray
     ): ByteArray? {
 
+        /*
+         * 20ms / 16kHz / mono
+         */
         if (
             pcm.size !=
             FRAME_SIZE
@@ -230,30 +204,35 @@ class OpusEncoder {
                         "Opus Encoder 未初始化或已释放"
                     )
 
-                    return null
-                }
+                    null
 
-                try {
+                } else {
 
-                    nativeEncode(
-                        handle,
-                        pcm
-                    )
+                    try {
 
-                } catch (
-                    e: Throwable
-                ) {
+                        nativeEncode(
+                            handle,
+                            pcm
+                        )
 
-                    Log.e(
-                        TAG,
-                        "Opus Native Encode 异常",
-                        e
-                    )
+                    } catch (
+                        e: Throwable
+                    ) {
 
-                    return null
+                        Log.e(
+                            TAG,
+                            "Opus Native Encode 异常",
+                            e
+                        )
+
+                        null
+                    }
                 }
             }
 
+        /*
+         * 编码失败。
+         */
         if (
             opusPayload == null ||
             opusPayload.isEmpty()
@@ -262,6 +241,9 @@ class OpusEncoder {
             return null
         }
 
+        /*
+         * 防止异常数据包过大。
+         */
         if (
             opusPayload.size >
             MAX_OPUS_PAYLOAD_SIZE
@@ -276,104 +258,11 @@ class OpusEncoder {
         }
 
         /*
-         * V15 序号。
+         * 核心：
+         *
+         * 直接返回 Native Opus 数据。
          */
-        val seq =
-            sequence.getAndIncrement()
-
-        /*
-         * [MAGIC 4][SEQ 4][OPUS]
-         */
-        val packet =
-            ByteArray(
-                MAX_FRAMED_PACKET_SIZE.coerceAtMost(
-                    AUDIO_HEADER_SIZE +
-                            opusPayload.size
-                )
-            )
-
-        /*
-         * 实际长度：
-         */
-        val actualLength =
-            AUDIO_HEADER_SIZE +
-                    opusPayload.size
-
-        if (
-            packet.size <
-            actualLength
-        ) {
-
-            return null
-        }
-
-        /*
-         * MAGIC
-         */
-        packet[0] =
-            AUDIO_MAGIC[0]
-
-        packet[1] =
-            AUDIO_MAGIC[1]
-
-        packet[2] =
-            AUDIO_MAGIC[2]
-
-        packet[3] =
-            AUDIO_MAGIC[3]
-
-        /*
-         * Sequence，大端序。
-         */
-        packet[4] =
-            ((seq ushr 24) and 0xff)
-                .toByte()
-
-        packet[5] =
-            ((seq ushr 16) and 0xff)
-                .toByte()
-
-        packet[6] =
-            ((seq ushr 8) and 0xff)
-                .toByte()
-
-        packet[7] =
-            (seq and 0xff)
-                .toByte()
-
-        /*
-         * Opus Payload
-         */
-        System.arraycopy(
-            opusPayload,
-            0,
-            packet,
-            AUDIO_HEADER_SIZE,
-            opusPayload.size
-        )
-
-        /*
-         * 因为上面创建的是固定容量，
-         * 这里一定返回精确长度的副本。
-         */
-        return try {
-
-            packet.copyOf(
-                actualLength
-            )
-
-        } catch (
-            e: Throwable
-        ) {
-
-            Log.e(
-                TAG,
-                "V15 音频包创建失败",
-                e
-            )
-
-            null
-        }
+        return opusPayload
     }
 
     /*

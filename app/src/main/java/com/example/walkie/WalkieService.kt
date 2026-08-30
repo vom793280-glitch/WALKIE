@@ -3062,7 +3062,7 @@ private fun initializeOpus() {
                 ) {
 
                     sendMessageNow(
-                        MSG_KEEP_ALIVE
+                        "$MSG_KEEP_ALIVE:$deviceId"
                     )
 
                     udpKeepAliveCount++
