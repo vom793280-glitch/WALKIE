@@ -1,0 +1,4 @@
+D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/opus.dir
+D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/walkieopus.dir
+D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/edit_cache.dir
+D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "ohos-module-entry": {
+    "SELECT_TARGET": "default",
+    "MODULE_BUILD_DIR": "D:\\Walkie\\HarmonyOS\\entry\\build",
+    "TARGETS": {
+      "default": {
+        "SOURCE_ROOT": "D:\\Walkie\\HarmonyOS\\entry\\src\\main",
+        "RESOURCES_PATH": [
+          "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\resources"
+        ],
+        "BUILD_PATH": {
+          "OUTPUT_PATH": "D:\\Walkie\\HarmonyOS\\entry\\build\\default\\outputs\\default",
+          "INTERMEDIA_PATH": "D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates",
+          "JS_ASSETS_PATH": "D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\loader_out\\default",
+          "JS_LITE_ASSETS_PATH": "D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\loader_out_lite\\default",
+          "RES_PATH": "D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\res\\default",
+          "RES_PROFILE_PATH": "D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\res\\default\\resources\\base\\profile",
+          "ETS_SUPER_VISUAL_PATH": "D:\\Walkie\\HarmonyOS\\entry\\build\\default\\cache\\default\\default@CompileArkTS\\esmodule",
+          "JS_SUPER_VISUAL_PATH": "D:\\Walkie\\HarmonyOS\\entry\\build\\default\\cache\\default\\default@CompileJS\\jsbundle",
+          "WORKER_LOADER": "D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\loader\\default\\loader.json",
+          "MANIFEST_JSON": "D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\manifest\\default",
+          "OUTPUT_METADATA_JSON": "D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\hap_metadata\\default\\output_metadata.json",
+          "SOURCE_MAP_DIR": "D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\source_map\\default"
+        },
+        "BUILD_OPTION": {
+          "debuggable": true
+        }
+      }
+    },
+    "BUILD_OPTION": {
+      "default-default": {
+        "debuggable": true,
+        "copyFrom": "default",
+        "strictMode": {
+          "caseSensitiveCheck": true,
+          "useNormalizedOHMUrl": true
+        },
+        "externalNativeOptions": {
+          "path": "./src/main/cpp/CMakeLists.txt",
+          "arguments": "",
+          "cppFlags": "",
+          "abiFilters": [
+            "arm64-v8a"
+          ]
+        }
+      }
+    },
+    "BUILD_PROFILE_OPT": {
+      "apiType": "stageMode",
+      "buildOption": {
+        "externalNativeOptions": {
+          "path": "./src/main/cpp/CMakeLists.txt",
+          "arguments": "",
+          "cppFlags": "",
+          "abiFilters": [
+            "arm64-v8a"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "name": "default"
+        }
+      ]
+    },
+    "BUILD_CACHE_DIR": ""
+  },
+  "ohos-project": {
+    "SELECT_PRODUCT_NAME": "default",
+    "MODULE_BUILD_DIR": "D:\\Walkie\\HarmonyOS\\build",
+    "BUNDLE_NAME": "com.walkie.brothers",
+    "VERSION_CODE": 1000000,
+    "VERSION_NAME": "1.0.0",
+    "BUILD_VERSION": "1",
+    "BUILD_PATH": {
+      "OUTPUT_PATH": "D:\\Walkie\\HarmonyOS\\build\\outputs\\default"
+    },
+    "MODULES": [
+      {
+        "name": "entry",
+        "srcPath": "D:\\Walkie\\HarmonyOS\\entry",
+        "targets": [
+          {
+            "name": "default",
+            "applyToProducts": [
+              "default"
+            ]
+          }
+        ],
+        "belongProjectPath": "D:\\Walkie\\HarmonyOS"
+      }
+    ],
+    "PROFILE_OPT": {
+      "app": {
+        "signingConfigs": [
+          {
+            "name": "default",
+            "type": "HarmonyOS",
+            "material": {
+              "certpath": "C:\\Users\\tb\\.ohos\\config\\default_HarmonyOS_cqBYNafk3_phZ9F6rEdI_k71hUI1bFwG99ZIiTHW4hk=.cer",
+              "keyAlias": "debugKey",
+              "keyPassword": "0000001AB8C948E29424120EE0AD9228EA35370DAB4D8CC3E63774E423CCF9B5449BB0A1BD726CCD2D43",
+              "profile": "C:\\Users\\tb\\.ohos\\config\\default_HarmonyOS_cqBYNafk3_phZ9F6rEdI_k71hUI1bFwG99ZIiTHW4hk=.p7b",
+              "signAlg": "SHA256withECDSA",
+              "storeFile": "C:\\Users\\tb\\.ohos\\config\\default_HarmonyOS_cqBYNafk3_phZ9F6rEdI_k71hUI1bFwG99ZIiTHW4hk=.p12",
+              "storePassword": "0000001A5CD340AFAEF214E254A61D25F1E9BD74BC8BF536BC61EB2CF8592BB9711C8A5084BB6F3A9A68"
+            }
+          }
+        ],
+        "products": [
+          {
+            "name": "default",
+            "signingConfig": "default",
+            "targetSdkVersion": "26.0.0",
+            "compatibleSdkVersion": "6.1.1(24)",
+            "runtimeOS": "HarmonyOS",
+            "buildOption": {
+              "strictMode": {
+                "caseSensitiveCheck": true,
+                "useNormalizedOHMUrl": true
+              }
+            }
+          }
+        ],
+        "buildModeSet": [
+          {
+            "name": "debug"
+          },
+          {
+            "name": "release"
+          }
+        ]
+      },
+      "modules": [
+        {
+          "name": "entry",
+          "srcPath": "./entry",
+          "targets": [
+            {
+              "name": "default",
+              "applyToProducts": [
+                "default"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "CONFIG_PROPERTIES": {
+      "enableSignTask": true,
+      "skipNativeIncremental": false,
+      "hvigor.keepDependency": true
+    },
+    "OVERALL_PROJECT_PATHS": [
+      "D:\\Walkie\\HarmonyOS"
+    ],
+    "BUILD_CACHE_DIR": ""
+  }
+}

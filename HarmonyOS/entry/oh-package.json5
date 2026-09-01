@@ -1,0 +1,11 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "Please describe the basic information.",
+  "libwalkieopus.so": "file:./src/main/cpp/types/libwalkieopus",
+  "libwalkieaudio.so": "file:./src/main/cpp/types/libwalkieaudio",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {"libwalkieopus.so": "file:./src/main/cpp/types/libwalkieopus"}
+}

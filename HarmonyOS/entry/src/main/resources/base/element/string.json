@@ -1,0 +1,20 @@
+{
+"string": [
+{
+"name": "microphone_reason",
+"value": "用于兄弟对讲机实时语音通话"
+},
+{
+"name": "module_desc",
+"value": "module description"
+},
+{
+"name": "EntryAbility_desc",
+"value": "description"
+},
+{
+"name": "EntryAbility_label",
+"value": "label"
+}
+]
+}

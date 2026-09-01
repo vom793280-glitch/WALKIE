@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="258f602e-111e-47f0-ab89-26e00a757cdc" name="更改" comment="">
+      <change afterPath="$PROJECT_DIR$/entry/src/main/cpp/types/libwalkieopus/Index.d.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/entry/src/main/cpp/types/libwalkieopus/oh-package.json5" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/entry/src/main/cpp/walkie_opus_napi.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieAudio.ets" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieAudioPacket.ets" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieClient.ets" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieOpus.ets" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieTone.ets" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/entry/src/main/resources/rawfile/walkie_talk_ok.wav" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/deploymentTargetSelector.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/deploymentTargetSelector.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/src/main/java/com/example/walkie/WalkieService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/../app/src/main/java/com/example/walkie/WalkieService.kt" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="HiLogStateProjectLevelPreference">
+    <panelStates>
+      <hilogPanelState>
+        <option name="filterName" value="选中应用的全部日志" />
+        <option name="logPanelType" value="ONLINE" />
+        <option name="processName" value="com.walkie.brothers" />
+        <option name="searchFilterContent" value="WALKIE TONE" />
+      </hilogPanelState>
+    </panelStates>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3If50Nhwe9kpY1JWAO6uP1DCw0s" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "192.168.3.23:40195": "5371944581788231367406",
+    "Application.entry.executor": "Run",
+    "MODULE_HAP_TIME": "{\"192.168.3.23:40195entry\":\"2026-09-01T02:56:04.323177100Z\"}",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "ace.nodejs.version": "24.14.1",
+    "auto_debug_bundleName": "000000231C0CAB7DE0C6491242CA583B98CBF09825A05B7E62D338C51904DEBEB8D9D373D85D67CA0053EEEA32BF26B77E4CAF",
+    "auto_debug_cert_list": "000000237F7F1EE1ACBBEEF251FC2C1F1F2AA3C3F8DB31E4FFD4121F8A04616F8B97D97A6855BC6BF251CB3604EFB75D59D129",
+    "auto_debug_device_list": "00000023E3BECD453586E62D844A309BB8073A8889703E68ECE16143733FD3BE17726358AF51E1493BE66A41EAEBD627FA58B8",
+    "auto_debug_package_name": "00000023C984AF65BA162E95C7C798BE6186C9C1C9E896AE265E610D787AAF6D45298B0344FDF8CD52426224FCEB510B4949FE",
+    "auto_debug_team_id": "000000224032E370E1B98F07EFC751B33AD623F31AAC3B47D46D6F55E95A43561B2F04F4E9BCE246F6D4304762AFBC61FEBA",
+    "git-widget-placeholder": "ui-v23.3-design",
+    "last_opened_file_path": "D:/Walkie/HarmonyOS/entry/src/main/resources/rawfile",
+    "projectSizeLastTraceTimestamp-9aac69f52a70875741ffe3c3e3c4e180bf2d7e6bc9142cee167bc62c949f": "1788162764998",
+    "settings.editor.selected.configurable": "com.huawei.deveco.sdkmanager.arkuix.idea.ui.ArkUIXConfigurableProvider"
+  },
+  "keyToStringList": {
+    "reqPermissions": []
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\Walkie\HarmonyOS\entry\src\main\resources\rawfile" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\Walkie\HarmonyOS\entry\src\main\cpp" />
+      <recent name="D:\Walkie\HarmonyOS\entry\src\main\ets" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Application.entry">
+    <configuration name="entry" type="HotReLoadTask" factoryName="Hot Reload">
+      <MODULE_NAME />
+      <REINSTALL_APPLICATION>true</REINSTALL_APPLICATION>
+      <ENVIRONMENT_VARIABLES>[]</ENVIRONMENT_VARIABLES>
+      <DEBUG_LINE_ENABLE_DATA>false</DEBUG_LINE_ENABLE_DATA>
+      <AUTO_DEPENDENCIES_DATA>true</AUTO_DEPENDENCIES_DATA>
+      <WEB_VIEW_DEBUG>false</WEB_VIEW_DEBUG>
+      <INSTALL_FLAGS_CONFIG_KEY />
+      <LAUNCH_FLAGS_CONFIG_KEY />
+      <LAUNCH_ABILITY_CONFIG_TYPE>默认 Ability</LAUNCH_ABILITY_CONFIG_TYPE>
+      <LAUNCH_ABILITY_CONFIG_VALUE />
+      <SYMBOL_DIRS>[]</SYMBOL_DIRS>
+      <DEBUGGER_TYPE>Detect Automatically</DEBUGGER_TYPE>
+      <MULTI_HAP_MODULE_DATA>[]</MULTI_HAP_MODULE_DATA>
+      <SHOW_STATIC_VARIABLES>true</SHOW_STATIC_VARIABLES>
+      <LOGGING_TARGET_CHANNELS>lldb process:gdb-remote packets</LOGGING_TARGET_CHANNELS>
+      <USER_POST_ATTACH_COMMANDS>[]</USER_POST_ATTACH_COMMANDS>
+      <USER_STARTUP_COMMANDS>[]</USER_STARTUP_COMMANDS>
+      <ETS_SOURCE_PARIS>[]</ETS_SOURCE_PARIS>
+      <DEPLOY_MULTI_HAP>false</DEPLOY_MULTI_HAP>
+      <ALL_MODULES>false</ALL_MODULES>
+      <ASAN_ENABLE_DATA>false</ASAN_ENABLE_DATA>
+      <TSAN_ENABLE_DATA>false</TSAN_ENABLE_DATA>
+      <ERROR_INFO_ENHANCE_ENABLE_DATA>false</ERROR_INFO_ENHANCE_ENABLE_DATA>
+      <MULTI_THREAD_CHECK_SELECTED_DATA>false</MULTI_THREAD_CHECK_SELECTED_DATA>
+      <UBSAN_ENABLE_DATA>false</UBSAN_ENABLE_DATA>
+      <HWASAN_ENABLE_DATA>false</HWASAN_ENABLE_DATA>
+      <BINXO_ENABLE_DATA>false</BINXO_ENABLE_DATA>
+      <BLACK_COVERAGE_ENABLE_DATA>false</BLACK_COVERAGE_ENABLE_DATA>
+      <HOT_RELOAD_MODULE_NAME>entry</HOT_RELOAD_MODULE_NAME>
+      <method v="2">
+        <option name="Build.Hvigor.HotReloadBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="WALKIE [assembleHap]" type="HvigorRunConfiguration" factoryName="HvigorRunConfiguration" temporary="true">
+      <option name="applicationParameters" value="--mode module -p product=default assembleHap --analyze=normal --parallel --incremental" />
+      <option name="nodeInterpreter" value="$APPLICATION_HOME_DIR$\tools\node" />
+      <option name="scriptFile" value="$APPLICATION_HOME_DIR$\tools\hvigor\bin\hvigorw.js" />
+      <option name="workingDir" value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="WALKIE [clean]" type="HvigorRunConfiguration" factoryName="HvigorRunConfiguration" temporary="true">
+      <option name="applicationParameters" value=" -p product=default clean --analyze=normal --parallel --incremental" />
+      <option name="nodeInterpreter" value="$APPLICATION_HOME_DIR$\tools\node" />
+      <option name="scriptFile" value="$APPLICATION_HOME_DIR$\tools\hvigor\bin\hvigorw.js" />
+      <option name="workingDir" value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="entry" type="OhosDebugTask" factoryName="OpenHarmony App">
+      <MODULE_NAME>entry</MODULE_NAME>
+      <REINSTALL_APPLICATION>true</REINSTALL_APPLICATION>
+      <ENVIRONMENT_VARIABLES>[]</ENVIRONMENT_VARIABLES>
+      <DEBUG_LINE_ENABLE_DATA>false</DEBUG_LINE_ENABLE_DATA>
+      <AUTO_DEPENDENCIES_DATA>true</AUTO_DEPENDENCIES_DATA>
+      <WEB_VIEW_DEBUG>false</WEB_VIEW_DEBUG>
+      <INSTALL_FLAGS_CONFIG_KEY />
+      <LAUNCH_FLAGS_CONFIG_KEY />
+      <LAUNCH_ABILITY_CONFIG_TYPE>默认 Ability</LAUNCH_ABILITY_CONFIG_TYPE>
+      <LAUNCH_ABILITY_CONFIG_VALUE />
+      <SYMBOL_DIRS>[]</SYMBOL_DIRS>
+      <DEBUGGER_TYPE>Detect Automatically</DEBUGGER_TYPE>
+      <MULTI_HAP_MODULE_DATA>[]</MULTI_HAP_MODULE_DATA>
+      <SHOW_STATIC_VARIABLES>true</SHOW_STATIC_VARIABLES>
+      <LOGGING_TARGET_CHANNELS>lldb process:gdb-remote packets</LOGGING_TARGET_CHANNELS>
+      <USER_POST_ATTACH_COMMANDS>[]</USER_POST_ATTACH_COMMANDS>
+      <USER_STARTUP_COMMANDS>[]</USER_STARTUP_COMMANDS>
+      <ETS_SOURCE_PARIS>[]</ETS_SOURCE_PARIS>
+      <DEPLOY_MULTI_HAP>false</DEPLOY_MULTI_HAP>
+      <ALL_MODULES>false</ALL_MODULES>
+      <ASAN_ENABLE_DATA>false</ASAN_ENABLE_DATA>
+      <TSAN_ENABLE_DATA>false</TSAN_ENABLE_DATA>
+      <ERROR_INFO_ENHANCE_ENABLE_DATA>false</ERROR_INFO_ENHANCE_ENABLE_DATA>
+      <MULTI_THREAD_CHECK_SELECTED_DATA>false</MULTI_THREAD_CHECK_SELECTED_DATA>
+      <UBSAN_ENABLE_DATA>false</UBSAN_ENABLE_DATA>
+      <HWASAN_ENABLE_DATA>false</HWASAN_ENABLE_DATA>
+      <BINXO_ENABLE_DATA>false</BINXO_ENABLE_DATA>
+      <BLACK_COVERAGE_ENABLE_DATA>false</BLACK_COVERAGE_ENABLE_DATA>
+      <method v="2">
+        <option name="Build.Hvigor.BeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Hvigor.WALKIE [assembleHap]" />
+        <item itemvalue="Hvigor.WALKIE [clean]" />
+        <item itemvalue="Hvigor.WALKIE [assembleHap]" />
+        <item itemvalue="Hvigor.WALKIE [clean]" />
+        <item itemvalue="Hvigor.WALKIE [assembleHap]" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="258f602e-111e-47f0-ab89-26e00a757cdc" name="更改" comment="" />
+      <created>1788142563151</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1788142563151</updated>
+    </task>
+    <servers />
+  </component>
+</project>

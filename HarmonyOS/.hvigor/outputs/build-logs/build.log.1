@@ -1,0 +1,140 @@
+[2026-09-01T10:09:08.353] [DEBUG] debug-file - Incremental task entry:default@PackageHap pre-execution cost: 9 ms .
+[2026-09-01T10:09:08.354] [DEBUG] debug-file - Use tool [G:\DevEco Studio\sdk\default\openharmony\toolchains\lib\app_packing_tool.jar]
+ [
+  'java',
+  '-Dfile.encoding=GBK',
+  '-jar',
+  'G:\\DevEco Studio\\sdk\\default\\openharmony\\toolchains\\lib\\app_packing_tool.jar',
+  '--mode',
+  'hap',
+  '--force',
+  'true',
+  '--lib-path',
+  'D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\stripped_native_libs\\default',
+  '--json-path',
+  'D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\package\\default\\module.json',
+  '--resources-path',
+  'D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\res\\default\\resources',
+  '--index-path',
+  'D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\res\\default\\resources.index',
+  '--pack-info-path',
+  'D:\\Walkie\\HarmonyOS\\entry\\build\\default\\outputs\\default\\pack.info',
+  '--out-path',
+  'D:\\Walkie\\HarmonyOS\\entry\\build\\default\\outputs\\default\\entry-default-unsigned.hap',
+  '--ets-path',
+  'D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\loader_out\\default\\ets',
+  '--pkg-context-path',
+  'D:\\Walkie\\HarmonyOS\\entry\\build\\default\\intermediates\\loader\\default\\pkgContextInfo.json'
+]
+[2026-09-01T10:09:08.355] [DEBUG] debug-file - default@PackageHap work[98] is submitted.
+[2026-09-01T10:09:08.355] [DEBUG] debug-file - default@PackageHap work[98] is pushed to ready queue.
+[2026-09-01T10:09:08.355] [DEBUG] debug-file - A work dispatched to worker[3] failed because unable to get work from ready queue.
+[2026-09-01T10:09:08.355] [DEBUG] debug-file - default@PackageHap work[98] has been dispatched to worker[2].
+[2026-09-01T10:09:08.355] [DEBUG] debug-file - default@PackageHap work[98] is dispatched.
+[2026-09-01T10:09:08.362] [DEBUG] debug-file - entry : default@PackageHap cost memory 0.34221649169921875
+[2026-09-01T10:09:08.936] [DEBUG] debug-file - worker[2] has one work done.
+[2026-09-01T10:09:08.936] [DEBUG] debug-file - default@PackageHap work[98] done.
+[2026-09-01T10:09:08.938] [INFO] debug-file - Finished :entry:default@PackageHap... after 592 ms 
+[2026-09-01T10:09:08.939] [DEBUG] debug-file - Executing task :entry:default@PackingCheck
+[2026-09-01T10:09:08.943] [DEBUG] debug-file - entry : default@PackingCheck cost memory 0.269287109375
+[2026-09-01T10:09:08.944] [DEBUG] debug-file - runTaskFromQueue task cost before running: 2 s 942 ms 
+[2026-09-01T10:09:08.944] [INFO] debug-file - Finished :entry:default@PackingCheck... after 5 ms 
+[2026-09-01T10:09:08.945] [DEBUG] debug-file - Executing task :entry:default@SignHap
+[2026-09-01T10:09:08.947] [DEBUG] debug-file - entry:default@SignHap is not up-to-date, since the input file 'D:\Walkie\HarmonyOS\entry\build\default\outputs\default\entry-default-unsigned.hap' has been changed.
+[2026-09-01T10:09:08.947] [DEBUG] debug-file - Incremental task entry:default@SignHap pre-execution cost: 2 ms .
+[2026-09-01T10:09:08.995] [DEBUG] debug-file - java daemon socket received message:{"code":0,"message":"verify profile success"}
+[2026-09-01T10:09:08.999] [DEBUG] debug-file - java daemon socket close code:1000 reason:close by user
+[2026-09-01T10:09:09.204] [DEBUG] debug-file - java daemon socket received message:{"code":0,"message":"sign app success"}
+[2026-09-01T10:09:09.204] [DEBUG] debug-file - entry : default@SignHap cost memory 0.42313385009765625
+[2026-09-01T10:09:09.205] [DEBUG] debug-file - runTaskFromQueue task cost before running: 3 s 203 ms 
+[2026-09-01T10:09:09.205] [INFO] debug-file - Finished :entry:default@SignHap... after 260 ms 
+[2026-09-01T10:09:09.206] [DEBUG] debug-file - Executing task :entry:default@CollectDebugSymbol
+[2026-09-01T10:09:09.208] [DEBUG] debug-file - entry : default@CollectDebugSymbol cost memory 0.07013702392578125
+[2026-09-01T10:09:09.208] [DEBUG] debug-file - runTaskFromQueue task cost before running: 3 s 207 ms 
+[2026-09-01T10:09:09.208] [INFO] debug-file - Finished :entry:default@CollectDebugSymbol... after 2 ms 
+[2026-09-01T10:09:09.208] [DEBUG] debug-file - Executing task :entry:assembleHap
+[2026-09-01T10:09:09.209] [DEBUG] debug-file - entry : assembleHap cost memory 0.0134124755859375
+[2026-09-01T10:09:09.209] [DEBUG] debug-file - runTaskFromQueue task cost before running: 3 s 207 ms 
+[2026-09-01T10:09:09.209] [INFO] debug-file - Finished :entry:assembleHap... after 1 ms 
+[2026-09-01T10:09:09.209] [INFO] debug-file - BUILD SUCCESSFUL in 3 s 208 ms 
+[2026-09-01T10:09:09.210] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@PreBuild is up-to-date.
+[2026-09-01T10:09:09.210] [DEBUG] debug-file - Update task entry:default@CreateModuleInfo output file:D:\Walkie\HarmonyOS\entry\build\default\generated\profile\default\ModuleInfo.ts cache.
+[2026-09-01T10:09:09.210] [DEBUG] debug-file - Incremental task entry:default@CreateModuleInfo post-execution cost:1 ms .
+[2026-09-01T10:09:09.210] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@GenerateMetadata is up-to-date.
+[2026-09-01T10:09:09.210] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@MergeProfile is up-to-date.
+[2026-09-01T10:09:09.210] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@CreateBuildProfile is up-to-date.
+[2026-09-01T10:09:09.210] [DEBUG] debug-file - Update task entry:default@GeneratePkgSdkInfo output file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\loader\default\pkgSdkInfo.json cache.
+[2026-09-01T10:09:09.210] [DEBUG] debug-file - Incremental task entry:default@GeneratePkgSdkInfo post-execution cost:1 ms .
+[2026-09-01T10:09:09.211] [DEBUG] debug-file - Update task entry:default@ProcessIntegratedHsp output file:D:\Walkie\HarmonyOS\build\cache\default\integrated_hsp\integratedHspCache.json cache.
+[2026-09-01T10:09:09.211] [DEBUG] debug-file - Incremental task entry:default@ProcessIntegratedHsp post-execution cost:1 ms .
+[2026-09-01T10:09:09.211] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@MakePackInfo is up-to-date.
+[2026-09-01T10:09:09.211] [DEBUG] debug-file - Update task entry:default@SyscapTransform input file:G:\DevEco Studio\sdk\default\openharmony\toolchains\syscap_tool.exe cache by regenerate.
+[2026-09-01T10:09:09.211] [DEBUG] debug-file - Update task entry:default@SyscapTransform input file:G:\DevEco Studio\sdk\default\openharmony\ets\api\device-define cache by regenerate.
+[2026-09-01T10:09:09.212] [DEBUG] debug-file - Update task entry:default@SyscapTransform output file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\syscap\default\rpcid.sc cache.
+[2026-09-01T10:09:09.212] [DEBUG] debug-file - Incremental task entry:default@SyscapTransform post-execution cost:2 ms .
+[2026-09-01T10:09:09.212] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@GeneratePkgContextInfo is up-to-date.
+[2026-09-01T10:09:09.212] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@ProcessProfile is up-to-date.
+[2026-09-01T10:09:09.212] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@ProcessRouterMap is up-to-date.
+[2026-09-01T10:09:09.212] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@ProcessShareConfig is up-to-date.
+[2026-09-01T10:09:09.212] [DEBUG] debug-file - Update task entry:default@ProcessStartupConfig input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\loader\default\pkgContextInfo.json cache by regenerate.
+[2026-09-01T10:09:09.213] [DEBUG] debug-file - Update task entry:default@ProcessStartupConfig output file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\startup\default\startup_config.json cache.
+[2026-09-01T10:09:09.213] [DEBUG] debug-file - Incremental task entry:default@ProcessStartupConfig post-execution cost:1 ms .
+[2026-09-01T10:09:09.213] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@ProcessResource is up-to-date.
+[2026-09-01T10:09:09.213] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@GenerateLoaderJson is up-to-date.
+[2026-09-01T10:09:09.213] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@CompileResource is up-to-date.
+[2026-09-01T10:09:09.215] [DEBUG] debug-file - Update task entry:default@CompileArkTS input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\loader\default cache by regenerate.
+[2026-09-01T10:09:09.216] [DEBUG] debug-file - Update task entry:default@CompileArkTS input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\res\default\resources\rawfile cache by regenerate.
+[2026-09-01T10:09:09.216] [DEBUG] debug-file - Update task entry:default@CompileArkTS input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\res\default\ResourceTable.txt cache by regenerate.
+[2026-09-01T10:09:09.217] [DEBUG] debug-file - Update task entry:default@CompileArkTS input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\res\default\ark_module.json cache by regenerate.
+[2026-09-01T10:09:09.217] [DEBUG] debug-file - Update task entry:default@CompileArkTS input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\res\default\resources\base\profile cache by regenerate.
+[2026-09-01T10:09:09.218] [DEBUG] debug-file - Update task entry:default@CompileArkTS input file:D:\Walkie\HarmonyOS\entry\src\main\ets cache from map.
+[2026-09-01T10:09:09.218] [DEBUG] debug-file - Update task entry:default@CompileArkTS input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\loader\default\pkgContextInfo.json cache by regenerate.
+[2026-09-01T10:09:09.218] [DEBUG] debug-file - Update task entry:default@CompileArkTS input file:D:\Walkie\HarmonyOS\entry\build\default\generated\profile\default\BuildProfile.ets cache by regenerate.
+[2026-09-01T10:09:09.218] [DEBUG] debug-file - Update task entry:default@CompileArkTS input file:D:\Walkie\HarmonyOS\entry\src\main\cpp\types cache by regenerate.
+[2026-09-01T10:09:09.219] [DEBUG] debug-file - Update task entry:default@CompileArkTS input file:D:\Walkie\HarmonyOS\entry\src\mock\mock-config.json5 cache by regenerate.
+[2026-09-01T10:09:09.220] [DEBUG] debug-file - Update task entry:default@CompileArkTS output file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\loader_out\default\ets cache.
+[2026-09-01T10:09:09.220] [DEBUG] debug-file - Incremental task entry:default@CompileArkTS post-execution cost:8 ms .
+[2026-09-01T10:09:09.222] [DEBUG] debug-file - Update task entry:default@BuildJS input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\loader\default cache by regenerate.
+[2026-09-01T10:09:09.223] [DEBUG] debug-file - Update task entry:default@BuildJS input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\res\default\resources\rawfile cache by regenerate.
+[2026-09-01T10:09:09.223] [DEBUG] debug-file - Update task entry:default@BuildJS input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\res\default\ResourceTable.txt cache by regenerate.
+[2026-09-01T10:09:09.224] [DEBUG] debug-file - Update task entry:default@BuildJS input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\res\default\ark_module.json cache by regenerate.
+[2026-09-01T10:09:09.224] [DEBUG] debug-file - Update task entry:default@BuildJS input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\res\default\resources\base\profile cache by regenerate.
+[2026-09-01T10:09:09.225] [DEBUG] debug-file - Update task entry:default@BuildJS input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\loader\default\pkgContextInfo.json cache by regenerate.
+[2026-09-01T10:09:09.225] [DEBUG] debug-file - Update task entry:default@BuildJS output file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\loader_out\default\js cache.
+[2026-09-01T10:09:09.225] [DEBUG] debug-file - Incremental task entry:default@BuildJS post-execution cost:5 ms .
+[2026-09-01T10:09:09.225] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@ProcessLibs is up-to-date.
+[2026-09-01T10:09:09.225] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@DoNativeStrip is up-to-date.
+[2026-09-01T10:09:09.225] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@CacheNativeLibs is up-to-date.
+[2026-09-01T10:09:09.225] [DEBUG] debug-file - There is no need to refresh cache, since the incremental task entry:default@GeneratePkgModuleJson is up-to-date.
+[2026-09-01T10:09:09.225] [DEBUG] debug-file - Incremental task entry:default@ProcessCompiledResources post-execution cost:1 ms .
+[2026-09-01T10:09:09.227] [DEBUG] debug-file - Update task entry:default@PackageHap input file:D:\Walkie\HarmonyOS\entry\build\default\outputs\default\pack.info cache by regenerate.
+[2026-09-01T10:09:09.227] [DEBUG] debug-file - Update task entry:default@PackageHap input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\stripped_native_libs\default cache by regenerate.
+[2026-09-01T10:09:09.228] [DEBUG] debug-file - Update task entry:default@PackageHap input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\res\default\module.json cache by regenerate.
+[2026-09-01T10:09:09.228] [DEBUG] debug-file - Update task entry:default@PackageHap input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\res\default\resources cache by regenerate.
+[2026-09-01T10:09:09.231] [DEBUG] debug-file - Update task entry:default@PackageHap input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\res\default\resources.index cache by regenerate.
+[2026-09-01T10:09:09.232] [DEBUG] debug-file - Update task entry:default@PackageHap input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\loader_out\default\ets cache from map.
+[2026-09-01T10:09:09.232] [DEBUG] debug-file - Update task entry:default@PackageHap input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\loader\default\pkgContextInfo.json cache by regenerate.
+[2026-09-01T10:09:09.232] [DEBUG] debug-file - Update task entry:default@PackageHap input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\package\default\module.json cache by regenerate.
+[2026-09-01T10:09:09.232] [DEBUG] debug-file - Update task entry:default@PackageHap input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\loader_out\default\ets\sourceMaps.map cache by regenerate.
+[2026-09-01T10:09:09.232] [DEBUG] debug-file - Update task entry:default@PackageHap input file:D:\Walkie\HarmonyOS\entry\build\default\generated\profile\default\BuildProfile.ets cache by regenerate.
+[2026-09-01T10:09:09.233] [DEBUG] debug-file - Update task entry:default@PackageHap output file:D:\Walkie\HarmonyOS\entry\build\default\outputs\default\entry-default-unsigned.hap cache.
+[2026-09-01T10:09:09.233] [DEBUG] debug-file - Update task entry:default@PackageHap output file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\source_map\default\sourceMaps.map cache.
+[2026-09-01T10:09:09.233] [DEBUG] debug-file - Update task entry:default@PackageHap output file:D:\Walkie\HarmonyOS\entry\build\default\outputs\default\mapping\sourceMaps.map cache.
+[2026-09-01T10:09:09.234] [DEBUG] debug-file - Incremental task entry:default@PackageHap post-execution cost:9 ms .
+[2026-09-01T10:09:09.234] [DEBUG] debug-file - Update task entry:default@SignHap input file:C:\Users\tb\.ohos\config\default_HarmonyOS_cqBYNafk3_phZ9F6rEdI_k71hUI1bFwG99ZIiTHW4hk=.cer cache by regenerate.
+[2026-09-01T10:09:09.234] [DEBUG] debug-file - Update task entry:default@SignHap input file:C:\Users\tb\.ohos\config\default_HarmonyOS_cqBYNafk3_phZ9F6rEdI_k71hUI1bFwG99ZIiTHW4hk=.p7b cache by regenerate.
+[2026-09-01T10:09:09.235] [DEBUG] debug-file - Update task entry:default@SignHap input file:C:\Users\tb\.ohos\config\default_HarmonyOS_cqBYNafk3_phZ9F6rEdI_k71hUI1bFwG99ZIiTHW4hk=.p12 cache by regenerate.
+[2026-09-01T10:09:09.235] [DEBUG] debug-file - Update task entry:default@SignHap input file:D:\Walkie\HarmonyOS\entry\build\default\outputs\default\entry-default-unsigned.hap cache from map.
+[2026-09-01T10:09:09.235] [DEBUG] debug-file - Update task entry:default@SignHap output file:D:\Walkie\HarmonyOS\entry\build\default\outputs\default\entry-default-signed.hap cache.
+[2026-09-01T10:09:09.235] [DEBUG] debug-file - Incremental task entry:default@SignHap post-execution cost:2 ms .
+[2026-09-01T10:09:09.236] [DEBUG] debug-file - Update task entry:default@CollectDebugSymbol input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\loader_out\default\ets\sourceMaps.map cache by regenerate.
+[2026-09-01T10:09:09.236] [DEBUG] debug-file - Update task entry:default@CollectDebugSymbol input file:D:\Walkie\HarmonyOS\entry\build\default\intermediates\libs\default cache by regenerate.
+[2026-09-01T10:09:09.237] [DEBUG] debug-file - Update task entry:default@CollectDebugSymbol output file:D:\Walkie\HarmonyOS\entry\build\default\outputs\default\symbol cache.
+[2026-09-01T10:09:09.237] [DEBUG] debug-file - Incremental task entry:default@CollectDebugSymbol post-execution cost:3 ms .
+[2026-09-01T10:09:09.248] [DEBUG] debug-file - hvigor build process will be closed.
+[2026-09-01T10:09:09.249] [DEBUG] debug-file - java daemon socket close code:1000 reason:close by user
+[2026-09-01T10:09:09.320] [DEBUG] debug-file - session manager: send message to worker process. WorkerThreadId: 0, data: {"type":"hvigor_failed","reason":"Server has disconnected."}
+[2026-09-01T10:09:09.321] [DEBUG] debug-file - session manager: send message to worker process. WorkerThreadId: 0, data: {"type":"CloseWatch","reason":"Server has disconnected."}
+[2026-09-01T10:09:09.321] [DEBUG] debug-file - watch worker: worker id should be larger than 0. Nothing will be sent to any worker thread.
+[2026-09-01T10:09:09.321] [DEBUG] debug-file - ABORT_WORK sent to workers.
+[2026-09-01T10:09:09.321] [DEBUG] debug-file - watch worker: worker id should be larger than 0. Nothing will be sent to any worker thread.

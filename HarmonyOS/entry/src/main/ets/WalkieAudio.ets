@@ -10,13 +10,17 @@ import { WalkieAudioPacket } from './WalkieAudioPacket'
  *
  * HarmonyOS 7.0 / API 26
  *
- * 录音：
+ * V23.4
+ *
+ * 统一音频参数：
+ *
  *   16000 Hz
  *   Mono
  *   S16LE
  *   RAW
  *
  * 每帧：
+ *
  *   320 samples
  *   20 ms
  *   640 bytes PCM
@@ -25,13 +29,17 @@ import { WalkieAudioPacket } from './WalkieAudioPacket'
  *
  *   AudioCapturer
  *        ↓
- *   640B PCM
+ *   16kHz PCM
+ *        ↓
+ *   640B / 20ms
  *        ↓
  *   Native Opus
  *        ↓
  *   W23A
  *        ↓
- *   当前 WalkieUdp
+ *   单发送队列
+ *        ↓
+ *   WalkieUdp
  *        ↓
  *   VPS : 50000
  *
@@ -49,13 +57,29 @@ export class WalkieAudio {
   private static readonly FRAME_BYTES: number =
     640
 
+  /*
+   * 实时音频发送队列。
+   *
+   * 不允许弱网时无限堆积。
+   *
+   * 4 个包约等于：
+   *
+   * 4 × 20ms = 80ms
+   *
+   * 超过以后丢弃最旧数据，
+   * 保留最新音频。
+   */
+
+  private static readonly SEND_QUEUE_LIMIT: number =
+    4
+
   private udp: WalkieUdp
 
   private opus: WalkieOpus =
     new WalkieOpus()
 
   private capturer:
-    audio.AudioCapturer | null =
+  audio.AudioCapturer | null =
     null
 
   private running: boolean =
@@ -67,41 +91,93 @@ export class WalkieAudio {
   private readDataRegistered: boolean =
     false
 
+  /*
+   * PCM 累积缓冲。
+   */
+
   private pcmBuffer:
     Uint8Array =
     new Uint8Array(0)
 
-  private streamId: number =
+  /*
+   * UDP 音频发送队列。
+   */
+
+  private sendQueue:
+    Array<ArrayBuffer> =
+    []
+
+  /*
+   * 当前是否正在执行 UDP 发送。
+   *
+   * 永远只允许一个 send() 同时进行。
+   */
+
+  private sending:
+    boolean =
+    false
+
+  /*
+   * 用于区分不同一轮讲话。
+   *
+   * stop() 后旧发送循环即使异步返回，
+   * 也不能继续处理上一轮数据。
+   */
+
+  private talkGeneration:
+    number =
     0
 
-  private sequence: number =
+  /*
+   * 统计。
+   */
+
+  private streamId:
+    number =
     0
 
-  private pcmFrameCount: number =
+  private sequence:
+    number =
     0
 
-  private opusFrameCount: number =
+  private pcmFrameCount:
+    number =
     0
 
-  private packetFrameCount: number =
+  private opusFrameCount:
+    number =
     0
 
-  private sentPacketCount: number =
+  private packetFrameCount:
+    number =
     0
 
-  private totalPcmBytes: number =
+  private sentPacketCount:
+    number =
     0
 
-  private totalOpusBytes: number =
+  private droppedPacketCount:
+    number =
     0
 
-  private totalPacketBytes: number =
+  private totalPcmBytes:
+    number =
     0
 
-  private totalSentBytes: number =
+  private totalOpusBytes:
+    number =
     0
 
-  private sendErrorCount: number =
+  private totalPacketBytes:
+    number =
+    0
+
+  private totalSentBytes:
+    number =
+    0
+
+  private sendErrorCount:
+    number =
     0
 
   constructor(
@@ -145,12 +221,14 @@ export class WalkieAudio {
 
       /*
        * ========================================================
-       * 对讲/VoIP 使用 VOICE_COMMUNICATION
+       * 统一使用：
        *
-       * 华为音频规格中：
-       * VOIP 通话场景推荐：
+       * 16000 Hz
+       * Mono
+       * S16LE
+       * RAW
        *
-       * SOURCE_TYPE_VOICE_COMMUNICATION
+       * 与 Native Opus 完全一致。
        * ========================================================
        */
 
@@ -160,31 +238,36 @@ export class WalkieAudio {
         streamInfo: {
 
           samplingRate:
-            audio.AudioSamplingRate.SAMPLE_RATE_48000,
+          audio.AudioSamplingRate.SAMPLE_RATE_16000,
 
           channels:
-            audio.AudioChannel.CHANNEL_1,
+          audio.AudioChannel.CHANNEL_1,
 
           sampleFormat:
-            audio.AudioSampleFormat.SAMPLE_FORMAT_S16LE,
+          audio.AudioSampleFormat.SAMPLE_FORMAT_S16LE,
 
           encodingType:
-            audio.AudioEncodingType.ENCODING_TYPE_RAW
+          audio.AudioEncodingType.ENCODING_TYPE_RAW
         },
 
-capturerInfo: {
+        capturerInfo: {
 
-  source:
-    audio.SourceType.SOURCE_TYPE_MIC,
+          source:
+          audio.SourceType.SOURCE_TYPE_MIC,
 
-  capturerFlags:
-    0
-}
-
+          capturerFlags:
+          0
+        }
       }
 
       console.info(
         'WALKIE AUDIO: 正在创建 AudioCapturer'
+      )
+
+      console.info(
+        'WALKIE AUDIO: ' +
+          '采样率=16000Hz ' +
+          'Mono S16LE RAW'
       )
 
       const capturer:
@@ -203,16 +286,8 @@ capturerInfo: {
       return true
 
     } catch (
-      error
+    error
     ) {
-
-      /*
-       * ========================================================
-       * 不再隐藏真实错误。
-       *
-       * 这里把 code + message 全部打印出来。
-       * ========================================================
-       */
 
       const businessError:
         BusinessError =
@@ -224,17 +299,17 @@ capturerInfo: {
 
       console.error(
         'WALKIE AUDIO: ' +
-        `错误码=${businessError.code}`
+          `错误码=${businessError.code}`
       )
 
       console.error(
         'WALKIE AUDIO: ' +
-        `错误信息=${businessError.message}`
+          `错误信息=${businessError.message}`
       )
 
       console.error(
         'WALKIE AUDIO: ' +
-        `错误详情=${JSON.stringify(error)}`
+          `错误详情=${JSON.stringify(error)}`
       )
 
       this.capturer =
@@ -297,7 +372,7 @@ capturerInfo: {
       }
 
       const current:
-        audio.AudioCapturer | null =
+      audio.AudioCapturer | null =
         this.capturer
 
       if (
@@ -331,8 +406,13 @@ capturerInfo: {
       }
 
       /*
+       * ========================================================
        * 新一轮讲话。
+       * ========================================================
        */
+
+      this.talkGeneration +=
+      1
 
       this.streamId =
         this.createStreamId()
@@ -342,6 +422,12 @@ capturerInfo: {
 
       this.pcmBuffer =
         new Uint8Array(0)
+
+      /*
+       * 清除上一轮可能残留的发送包。
+       */
+
+      this.clearSendQueue()
 
       this.pcmFrameCount =
         0
@@ -353,6 +439,9 @@ capturerInfo: {
         0
 
       this.sentPacketCount =
+        0
+
+      this.droppedPacketCount =
         0
 
       this.totalPcmBytes =
@@ -372,6 +461,9 @@ capturerInfo: {
 
       /*
        * 注册 PCM 回调。
+       *
+       * 这里只做数据进入队列，
+       * 不进行 UDP 等耗时操作。
        */
 
       if (
@@ -412,17 +504,20 @@ capturerInfo: {
 
       console.info(
         'WALKIE AUDIO: ★开始讲话★ ' +
-        `stream=${this.streamId}`
+          `stream=${this.streamId} ` +
+          `generation=${this.talkGeneration}`
       )
 
       return true
 
     } catch (
-      error
+    error
     ) {
 
       this.running =
         false
+
+      this.clearSendQueue()
 
       this.opus.destroyEncoder()
 
@@ -436,12 +531,17 @@ capturerInfo: {
 
       console.error(
         'WALKIE AUDIO: ' +
-        `启动错误码=${businessError.code}`
+          `启动错误码=${businessError.code}`
       )
 
       console.error(
         'WALKIE AUDIO: ' +
-        `启动错误信息=${businessError.message}`
+          `启动错误信息=${businessError.message}`
+      )
+
+      console.error(
+        'WALKIE AUDIO: ' +
+          `启动错误详情=${JSON.stringify(error)}`
       )
 
       return false
@@ -470,7 +570,7 @@ capturerInfo: {
     }
 
     this.totalPcmBytes +=
-      data.byteLength
+    data.byteLength
 
     this.appendPcm(
       data
@@ -500,7 +600,7 @@ capturerInfo: {
       Uint8Array =
       new Uint8Array(
         oldLength +
-        incoming.length
+          incoming.length
       )
 
     if (
@@ -522,13 +622,30 @@ capturerInfo: {
       merged
 
     /*
-     * 640B = 20ms
+     * ========================================================
+     * 640B = 320 samples = 20ms @ 16kHz
+     * ========================================================
      */
 
     while (
       this.pcmBuffer.length >=
-      WalkieAudio.FRAME_BYTES
+        WalkieAudio.FRAME_BYTES
     ) {
+
+      /*
+       * 如果已经停止讲话，
+       * 不再继续产生 PCM 帧。
+       */
+
+      if (
+        !this.running
+      ) {
+
+        this.pcmBuffer =
+          new Uint8Array(0)
+
+        return
+      }
 
       const frame:
         Uint8Array =
@@ -548,7 +665,11 @@ capturerInfo: {
     }
 
     /*
-     * 缓冲保护。
+     * ========================================================
+     * 缓冲保护
+     *
+     * 最多保留 10 帧。
+     * ========================================================
      */
 
     const maxBufferBytes:
@@ -557,23 +678,24 @@ capturerInfo: {
 
     if (
       this.pcmBuffer.length >
-      maxBufferBytes
+        maxBufferBytes
     ) {
 
       this.pcmBuffer =
         this.pcmBuffer.slice(
           this.pcmBuffer.length -
-          WalkieAudio.FRAME_BYTES
+            WalkieAudio.FRAME_BYTES
         )
 
       console.warn(
-        'WALKIE AUDIO: PCM缓冲过大，已丢弃旧数据'
+        'WALKIE AUDIO: ' +
+          'PCM缓冲过大，已丢弃旧数据'
       )
     }
   }
 
   // ============================================================
-  // PCM → Opus → W23A → UDP
+  // PCM → Opus → W23A
   // ============================================================
 
   private onPcmFrame(
@@ -583,17 +705,26 @@ capturerInfo: {
 
     if (
       frame.length !==
-      WalkieAudio.FRAME_BYTES
+        WalkieAudio.FRAME_BYTES
+    ) {
+
+      return
+    }
+
+    if (
+      !this.running
     ) {
 
       return
     }
 
     this.pcmFrameCount +=
-      1
+    1
 
     /*
-     * TypedArray → 独立 ArrayBuffer。
+     * ========================================================
+     * PCM → 独立 ArrayBuffer
+     * ========================================================
      */
 
     const pcmBuffer:
@@ -619,7 +750,7 @@ capturerInfo: {
      */
 
     const opusData:
-      ArrayBuffer | null =
+    ArrayBuffer | null =
       this.opus.encode(
         pcmBuffer
       )
@@ -636,10 +767,10 @@ capturerInfo: {
     }
 
     this.opusFrameCount +=
-      1
+    1
 
     this.totalOpusBytes +=
-      opusData.byteLength
+    opusData.byteLength
 
     /*
      * ========================================================
@@ -656,13 +787,13 @@ capturerInfo: {
       )
 
     this.packetFrameCount +=
-      1
+    1
 
     this.totalPacketBytes +=
-      packet.byteLength
+    packet.byteLength
 
     /*
-     * Sequence +1。
+     * Sequence +1
      */
 
     this.sequence =
@@ -672,11 +803,11 @@ capturerInfo: {
 
     /*
      * ========================================================
-     * 发送
+     * 加入发送队列
      * ========================================================
      */
 
-    void this.sendPacket(
+    this.enqueuePacket(
       packet
     )
 
@@ -686,31 +817,33 @@ capturerInfo: {
 
     if (
       this.packetFrameCount % 25 ===
-      0
+        0
     ) {
 
       console.info(
         'WALKIE AUDIO: ' +
-        `PCM=${this.pcmFrameCount} ` +
-        `Opus=${this.opusFrameCount} ` +
-        `W23A=${this.packetFrameCount} ` +
-        `已发送=${this.sentPacketCount} ` +
-        `Opus大小=${opusData.byteLength}B ` +
-        `Packet大小=${packet.byteLength}B ` +
-        `Sequence=${this.sequence} ` +
-        `发送失败=${this.sendErrorCount}`
+          `PCM=${this.pcmFrameCount} ` +
+          `Opus=${this.opusFrameCount} ` +
+          `W23A=${this.packetFrameCount} ` +
+          `已发送=${this.sentPacketCount} ` +
+          `队列=${this.sendQueue.length} ` +
+          `丢弃=${this.droppedPacketCount} ` +
+          `Opus大小=${opusData.byteLength}B ` +
+          `Packet大小=${packet.byteLength}B ` +
+          `Sequence=${this.sequence} ` +
+          `发送失败=${this.sendErrorCount}`
       )
     }
   }
 
   // ============================================================
-  // UDP 发送
+  // 加入 UDP 音频发送队列
   // ============================================================
 
-  private async sendPacket(
+  private enqueuePacket(
     packet: ArrayBuffer
   ):
-    Promise<void> {
+    void {
 
     if (
       !this.running
@@ -719,53 +852,223 @@ capturerInfo: {
       return
     }
 
-    if (
-      !this.udp.getBound()
+    /*
+     * 队列满：
+     *
+     * 丢弃最旧包，
+     * 保留最新包。
+     *
+     * 对讲机实时语音宁可少一小段，
+     * 也不能让延迟越来越大。
+     */
+
+    while (
+      this.sendQueue.length >=
+        WalkieAudio.SEND_QUEUE_LIMIT
     ) {
 
-      this.sendErrorCount +=
-        1
+      this.sendQueue.shift()
+
+      this.droppedPacketCount +=
+      1
+    }
+
+    this.sendQueue.push(
+      packet
+    )
+
+    if (
+      this.droppedPacketCount > 0 &&
+        this.droppedPacketCount % 10 === 0
+    ) {
+
+      console.warn(
+        'WALKIE AUDIO: ' +
+          `弱网，累计丢弃旧音频包=${this.droppedPacketCount}`
+      )
+    }
+
+    /*
+     * 只启动一个发送器。
+     */
+
+    if (
+      !this.sending
+    ) {
+
+      const generation:
+        number =
+        this.talkGeneration
+
+      void this.drainSendQueue(
+        generation
+      )
+    }
+  }
+
+  // ============================================================
+  // 单发送器
+  // ============================================================
+
+  private async drainSendQueue(
+    generation: number
+  ):
+    Promise<void> {
+
+    if (
+      this.sending
+    ) {
 
       return
     }
 
+    this.sending =
+      true
+
     try {
 
-      await this.udp.send(
-        packet
-      )
+      while (
+        this.running &&
+          generation === this.talkGeneration
+      ) {
 
-      this.sentPacketCount +=
-        1
+        if (
+          this.sendQueue.length === 0
+        ) {
 
-      this.totalSentBytes +=
-        packet.byteLength
+          break
+        }
 
-    } catch (
-      error
-    ) {
+        if (
+          !this.udp.getBound()
+        ) {
 
-      this.sendErrorCount +=
-        1
+          this.sendErrorCount +=
+          1
 
-      const businessError:
-        BusinessError =
-        error as BusinessError
+          this.clearSendQueue()
 
-      console.error(
-        'WALKIE AUDIO: UDP音频发送失败'
-      )
+          break
+        }
 
-      console.error(
-        'WALKIE AUDIO: ' +
-        `发送错误码=${businessError.code}`
-      )
+        const packet:
+        ArrayBuffer | undefined =
+          this.sendQueue.shift()
 
-      console.error(
-        'WALKIE AUDIO: ' +
-        `发送错误信息=${businessError.message}`
-      )
+        if (
+          packet === undefined
+        ) {
+
+          continue
+        }
+
+        try {
+
+          await this.udp.send(
+            packet
+          )
+
+          /*
+           * 如果等待 UDP 期间讲话已经停止，
+           * 当前这个已经发出去的包不重复统计为错误。
+           */
+
+          if (
+            generation === this.talkGeneration
+          ) {
+
+            this.sentPacketCount +=
+            1
+
+            this.totalSentBytes +=
+            packet.byteLength
+          }
+
+        } catch (
+        error
+        ) {
+
+          this.sendErrorCount +=
+          1
+
+          const businessError:
+            BusinessError =
+            error as BusinessError
+
+          console.error(
+            'WALKIE AUDIO: UDP音频发送失败'
+          )
+
+          console.error(
+            'WALKIE AUDIO: ' +
+              `发送错误码=${businessError.code}`
+          )
+
+          console.error(
+            'WALKIE AUDIO: ' +
+              `发送错误信息=${businessError.message}`
+          )
+
+          /*
+           * 当前包发送失败以后，
+           * 不继续无限堆积旧音频。
+           *
+           * 保留少量最新包即可。
+           */
+
+          if (
+            this.sendQueue.length >
+              1
+          ) {
+
+            while (
+              this.sendQueue.length >
+                1
+            ) {
+
+              this.sendQueue.shift()
+
+              this.droppedPacketCount +=
+              1
+            }
+          }
+        }
+      }
+
+    } finally {
+
+      this.sending =
+        false
+
+      /*
+       * 理论上这里通常为空。
+       *
+       * 防止在发送器退出与新包加入之间
+       * 出现竞态造成队列没人处理。
+       */
+
+      if (
+        this.running &&
+          generation === this.talkGeneration &&
+          this.sendQueue.length > 0
+      ) {
+
+        void this.drainSendQueue(
+          generation
+        )
+      }
     }
+  }
+
+  // ============================================================
+  // 清空发送队列
+  // ============================================================
+
+  private clearSendQueue():
+    void {
+
+    this.sendQueue =
+      []
   }
 
   // ============================================================
@@ -779,7 +1082,7 @@ capturerInfo: {
 
     if (
       value >=
-      0xFFFF_FFFE
+        0xFFFF_FFFE
     ) {
 
       return 0
@@ -803,13 +1106,13 @@ capturerInfo: {
       number =
       Math.floor(
         Math.random() *
-        0xFFFF
+          0xFFFF
       )
 
     return (
       (
         time +
-        random
+          random
       ) >>> 0
     )
   }
@@ -823,17 +1126,36 @@ capturerInfo: {
 
     if (
       !this.running &&
-      !this.starting
+        !this.starting
     ) {
 
       return
     }
 
+    /*
+     * 先切换 generation。
+     *
+     * 让旧发送循环失效。
+     */
+
+    this.talkGeneration +=
+    1
+
+    /*
+     * 立即停止产生新的音频包。
+     */
+
     this.running =
       false
 
+    /*
+     * 清除还没有发送的旧包。
+     */
+
+    this.clearSendQueue()
+
     const current:
-      audio.AudioCapturer | null =
+    audio.AudioCapturer | null =
       this.capturer
 
     if (
@@ -845,7 +1167,7 @@ capturerInfo: {
         await current.stop()
 
       } catch (
-        error
+      error
       ) {
 
         const businessError:
@@ -854,23 +1176,33 @@ capturerInfo: {
 
         console.error(
           'WALKIE AUDIO: 停止录音失败，' +
-          `code=${businessError.code} ` +
-          `message=${businessError.message}`
+            `code=${businessError.code} ` +
+            `message=${businessError.message}`
         )
       }
     }
 
+    /*
+     * 清空未完成 PCM。
+     */
+
     this.pcmBuffer =
       new Uint8Array(0)
+
+    /*
+     * 销毁本轮 Encoder。
+     */
 
     this.opus.destroyEncoder()
 
     console.info(
       'WALKIE AUDIO: ★停止讲话★ ' +
-      `PCM=${this.pcmFrameCount} ` +
-      `Opus=${this.opusFrameCount} ` +
-      `W23A=${this.packetFrameCount} ` +
-      `发送=${this.sentPacketCount}`
+        `PCM=${this.pcmFrameCount} ` +
+        `Opus=${this.opusFrameCount} ` +
+        `W23A=${this.packetFrameCount} ` +
+        `发送=${this.sentPacketCount} ` +
+        `丢弃=${this.droppedPacketCount} ` +
+        `发送失败=${this.sendErrorCount}`
     )
   }
 
@@ -881,14 +1213,34 @@ capturerInfo: {
   public async release():
     Promise<void> {
 
+    /*
+     * 使全部旧发送循环立即失效。
+     */
+
+    this.talkGeneration +=
+    1
+
     this.running =
       false
 
     this.starting =
       false
 
+    /*
+     * 清空发送队列。
+     */
+
+    this.clearSendQueue()
+
+    /*
+     * 清空 PCM。
+     */
+
+    this.pcmBuffer =
+      new Uint8Array(0)
+
     const current:
-      audio.AudioCapturer | null =
+    audio.AudioCapturer | null =
       this.capturer
 
     if (
@@ -924,6 +1276,8 @@ capturerInfo: {
 
     this.pcmBuffer =
       new Uint8Array(0)
+
+    this.clearSendQueue()
   }
 
   // ============================================================
@@ -977,6 +1331,16 @@ capturerInfo: {
   }
 
   // ============================================================
+  // 丢弃
+  // ============================================================
+
+  public getDroppedPacketCount():
+    number {
+
+    return this.droppedPacketCount
+  }
+
+  // ============================================================
   // 发送失败
   // ============================================================
 
@@ -984,6 +1348,16 @@ capturerInfo: {
     number {
 
     return this.sendErrorCount
+  }
+
+  // ============================================================
+  // 队列长度
+  // ============================================================
+
+  public getSendQueueLength():
+    number {
+
+    return this.sendQueue.length
   }
 
   // ============================================================
