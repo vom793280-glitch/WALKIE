@@ -5,8 +5,12 @@ interface Index_Params {
     walkieClient?: WalkieClient;
     walkieTone?: WalkieTone;
     connected?: boolean;
+    appStateCheckTimer?: number | null;
+    lastAppActive?: boolean;
+    appActive?: boolean;
     nickname?: string;
     nicknamePreferences?: preferences.Preferences | null;
+    devicePreferences?: preferences.Preferences | null;
     myUserId?: string;
     currentChannel?: string;
     currentOnlineCount?: number;
@@ -46,8 +50,12 @@ class Index extends ViewPU {
         this.walkieClient = new WalkieClient();
         this.walkieTone = new WalkieTone();
         this.__connected = new ObservedPropertySimplePU(false, this, "connected");
+        this.appStateCheckTimer = null;
+        this.lastAppActive = false;
+        this.__appActive = this.createStorageLink('walkie_app_active', false, "appActive");
         this.__nickname = new ObservedPropertySimplePU('', this, "nickname");
         this.nicknamePreferences = null;
+        this.devicePreferences = null;
         this.__myUserId = new ObservedPropertySimplePU('', this, "myUserId");
         this.__currentChannel = new ObservedPropertySimplePU('public', this, "currentChannel");
         this.__currentOnlineCount = new ObservedPropertySimplePU(0, this, "currentOnlineCount");
@@ -137,11 +145,20 @@ class Index extends ViewPU {
         if (params.connected !== undefined) {
             this.connected = params.connected;
         }
+        if (params.appStateCheckTimer !== undefined) {
+            this.appStateCheckTimer = params.appStateCheckTimer;
+        }
+        if (params.lastAppActive !== undefined) {
+            this.lastAppActive = params.lastAppActive;
+        }
         if (params.nickname !== undefined) {
             this.nickname = params.nickname;
         }
         if (params.nicknamePreferences !== undefined) {
             this.nicknamePreferences = params.nicknamePreferences;
+        }
+        if (params.devicePreferences !== undefined) {
+            this.devicePreferences = params.devicePreferences;
         }
         if (params.myUserId !== undefined) {
             this.myUserId = params.myUserId;
@@ -223,6 +240,7 @@ class Index extends ViewPU {
     }
     purgeVariableDependenciesOnElmtId(rmElmtId) {
         this.__connected.purgeDependencyOnElmtId(rmElmtId);
+        this.__appActive.purgeDependencyOnElmtId(rmElmtId);
         this.__nickname.purgeDependencyOnElmtId(rmElmtId);
         this.__myUserId.purgeDependencyOnElmtId(rmElmtId);
         this.__currentChannel.purgeDependencyOnElmtId(rmElmtId);
@@ -252,6 +270,7 @@ class Index extends ViewPU {
     }
     aboutToBeDeleted() {
         this.__connected.aboutToBeDeleted();
+        this.__appActive.aboutToBeDeleted();
         this.__nickname.aboutToBeDeleted();
         this.__myUserId.aboutToBeDeleted();
         this.__currentChannel.aboutToBeDeleted();
@@ -296,6 +315,15 @@ class Index extends ViewPU {
     set connected(newValue: boolean) {
         this.__connected.set(newValue);
     }
+    private appStateCheckTimer: number | null;
+    private lastAppActive: boolean;
+    private __appActive: ObservedPropertyAbstractPU<boolean>;
+    get appActive() {
+        return this.__appActive.get();
+    }
+    set appActive(newValue: boolean) {
+        this.__appActive.set(newValue);
+    }
     private __nickname: ObservedPropertySimplePU<string>;
     get nickname() {
         return this.__nickname.get();
@@ -304,6 +332,7 @@ class Index extends ViewPU {
         this.__nickname.set(newValue);
     }
     private nicknamePreferences: preferences.Preferences | null;
+    private devicePreferences: preferences.Preferences | null;
     private __myUserId: ObservedPropertySimplePU<string>;
     get myUserId() {
         return this.__myUserId.get();
@@ -534,6 +563,57 @@ class Index extends ViewPU {
          */
         const hostContext = this.getUIContext()
             .getHostContext();
+        /*
+     * ============================================================
+     * 恢复持久化 DeviceID
+     *
+     * Android 的 DeviceID 是长期保存的。
+     *
+     * HarmonyOS 这里也保持同样行为。
+     * ============================================================
+     */
+        if (hostContext !== undefined) {
+            try {
+                this.devicePreferences =
+                    preferences.getPreferencesSync(hostContext, {
+                        name: 'walkie_device'
+                    });
+                const savedDeviceId: string = this.devicePreferences.getSync('device_id', '') as string;
+                if (savedDeviceId.length > 0) {
+                    /*
+                     * 已有 DeviceID：
+                     * 使用永久保存的身份。
+                     */
+                    this.walkieClient
+                        .setDeviceId(savedDeviceId);
+                    console.info('WALKIE: 已恢复 DeviceID=' +
+                        savedDeviceId);
+                }
+                else {
+                    /*
+                     * 第一次运行：
+                     * 保存当前生成的 DeviceID。
+                     */
+                    const newDeviceId: string = this.walkieClient
+                        .getDeviceId();
+                    this.devicePreferences
+                        .putSync('device_id', newDeviceId);
+                    this.devicePreferences
+                        .flushSync();
+                    console.info('WALKIE: 已保存新 DeviceID=' +
+                        newDeviceId);
+                }
+            }
+            catch (error) {
+                console.error('WALKIE: DeviceID 读取失败=' +
+                    JSON.stringify(error));
+            }
+        }
+        /*
+         * ============================================================
+         * 读取本地保存的昵称
+         * ============================================================
+         */
         if (hostContext !== undefined) {
             try {
                 this.nicknamePreferences =
@@ -555,12 +635,36 @@ class Index extends ViewPU {
                     JSON.stringify(error));
             }
         }
+        /*
+         * ============================================================
+         * 启动后台/断线自动恢复检查
+         * ============================================================
+         */
+        this.walkieClient
+            .startBackgroundRecovery();
+        this.lastAppActive =
+            this.appActive;
+        this.appStateCheckTimer =
+            setInterval((): void => {
+                const active: boolean = this.appActive;
+                if (active &&
+                    !this.lastAppActive) {
+                    console.info('WALKIE UI: 检测到回到前台');
+                    void this.walkieClient
+                        .onForeground();
+                }
+                this.lastAppActive =
+                    active;
+            }, 1000);
     }
     aboutToDisappear(): void {
-        /*
-         * 页面退出时关闭 UDP。
-         */
-        void this.walkieClient.close();
+        if (this.appStateCheckTimer !==
+            null) {
+            clearInterval(this.appStateCheckTimer);
+            this.appStateCheckTimer =
+                null;
+        }
+        console.info('WALKIE UI: 页面离开，保持 UDP 与后台恢复机制');
     }
     // ============================================================
     // 系统返回 / 侧滑返回
@@ -2593,11 +2697,23 @@ class Index extends ViewPU {
             state.userId;
         this.currentChannel =
             state.currentChannel;
+        /*
+         * ============================================================
+         * 在线人员过滤
+         *
+         * 服务器 USER_LIST 在重连过程中可能先到，
+         * 此时 state.userId 还没有被 USER_OK 更新。
+         *
+         * 因此：
+         *
+         * 1. UserID 与自己相同 → 排除
+         * 2. 昵称与当前自己的昵称相同 → 排除
+         *
+         * 两层判断，避免重连后把自己再次显示出来。
+         * ============================================================
+         */
         this.onlineUsers =
             state.onlineUsers;
-        /*
-         * 在线人数也只统计其他用户。
-         */
         this.currentOnlineCount =
             state.onlineUsers.length;
         this.channels =

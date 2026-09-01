@@ -21,6 +21,11 @@ import {
 
 const DOMAIN = 0x0000;
 
+AppStorage.setOrCreate(
+  'walkie_app_active',
+  false
+)
+
 export default class EntryAbility extends UIAbility {
 
   // ============================================================
@@ -267,7 +272,18 @@ export default class EntryAbility extends UIAbility {
       'testTag',
       '%{public}s',
       'Ability onForeground'
-    );
+    )
+
+    /*
+     * 通知 Index：
+     *
+     * APP 已经回到前台。
+     */
+
+    AppStorage.setOrCreate(
+      'walkie_app_active',
+      true
+    )
   }
 
   // ============================================================
@@ -281,6 +297,17 @@ export default class EntryAbility extends UIAbility {
       'testTag',
       '%{public}s',
       'Ability onBackground'
-    );
+    )
+
+    /*
+     * 通知 Index：
+     *
+     * APP 已经进入后台。
+     */
+
+    AppStorage.setOrCreate(
+      'walkie_app_active',
+      false
+    )
   }
 }

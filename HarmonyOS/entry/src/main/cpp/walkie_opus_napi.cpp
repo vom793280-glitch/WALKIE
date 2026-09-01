@@ -1,4 +1,5 @@
 #include "napi/native_api.h"
+#include "hilog/log.h"
 
 #include <opus.h>
 
@@ -44,6 +45,17 @@
 
 
 /* ============================================================
+ * HiLog
+ * ============================================================ */
+
+static constexpr int WALKIE_LOG_DOMAIN =
+    0xFF00;
+
+static constexpr const char* WALKIE_LOG_TAG =
+    "WALKIE_OPUS";
+
+
+/* ============================================================
  * Opus
  * ============================================================ */
 
@@ -73,6 +85,20 @@ static uint64_t g_pcm_callbacks =
     0;
 
 static uint64_t g_pcm_bytes =
+    0;
+
+
+/* ============================================================
+ * Decode 统计
+ * ============================================================ */
+
+static uint64_t g_decode_calls =
+    0;
+
+static uint64_t g_decode_bytes =
+    0;
+
+static uint64_t g_decode_samples =
     0;
 
 
@@ -169,9 +195,12 @@ static napi_value CreateEncoder(
         &result
     );
 
-    std::printf(
-        "WALKIE OPUS: "
-        "Encoder 创建成功\n"
+    OH_LOG_Print(
+        LOG_APP,
+        LOG_INFO,
+        WALKIE_LOG_DOMAIN,
+        WALKIE_LOG_TAG,
+        "Encoder 创建成功"
     );
 
     return result;
@@ -407,6 +436,19 @@ static napi_value CreateDecoder(
         return result;
     }
 
+    /*
+     * 重置 Decode 诊断统计。
+     */
+
+    g_decode_calls =
+        0;
+
+    g_decode_bytes =
+        0;
+
+    g_decode_samples =
+        0;
+
     napi_value result =
         nullptr;
 
@@ -416,9 +458,12 @@ static napi_value CreateDecoder(
         &result
     );
 
-    std::printf(
-        "WALKIE OPUS: "
-        "Decoder 创建成功\n"
+    OH_LOG_Print(
+        LOG_APP,
+        LOG_INFO,
+        WALKIE_LOG_DOMAIN,
+        WALKIE_LOG_TAG,
+        "Decoder 创建成功"
     );
 
     return result;
@@ -427,6 +472,33 @@ static napi_value CreateDecoder(
 
 /* ============================================================
  * Opus Decode
+ *
+ * 这一版只做诊断，不改变解码参数。
+ *
+ * 重点：
+ *
+ * 1. input
+ *    收到的 Opus 字节数
+ *
+ * 2. frames
+ *    当前 Opus 包中的帧数量
+ *
+ * 3. samplesPerFrame
+ *    当前 Opus 帧的采样数
+ *
+ * 4. decodedSamples
+ *    opus_decode() 实际解出的采样数
+ *
+ * 5. pcmBytes
+ *    最终交给 HarmonyOS 的 PCM 字节数
+ *
+ * 正常 16kHz / Mono / 20ms：
+ *
+ *   frames=1
+ *   samplesPerFrame=320
+ *   decodedSamples=320
+ *   pcmBytes=640
+ *
  * ============================================================ */
 
 static napi_value Decode(
@@ -463,6 +535,14 @@ static napi_value Decode(
         g_decoder == nullptr
     ) {
 
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "Decode 失败：Decoder 为空"
+        );
+
         return nullptr;
     }
 
@@ -487,8 +567,84 @@ static napi_value Decode(
         opusSize > 1208
     ) {
 
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "Decode 输入非法：input=%{public}llu",
+            static_cast<unsigned long long>(
+                opusSize
+            )
+        );
+
         return nullptr;
     }
+
+    /*
+     * ========================================================
+     * Opus 包结构诊断
+     * ========================================================
+     */
+
+    const unsigned char* opusBytes =
+        static_cast<const unsigned char*>(
+            opusData
+        );
+
+    const int frameCount =
+        opus_packet_get_nb_frames(
+            opusBytes,
+            static_cast<opus_int32>(
+                opusSize
+            )
+        );
+
+    const int samplesPerFrame =
+        opus_packet_get_samples_per_frame(
+            opusBytes,
+            16000
+        );
+
+    /*
+     * Opus 包是否合法。
+     */
+
+    if (
+        frameCount <= 0 ||
+        samplesPerFrame <= 0
+    ) {
+
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "WALKIE OPUS INVALID: "
+            "input=%{public}llu "
+            "frames=%{public}d "
+            "samplesPerFrame=%{public}d",
+            static_cast<unsigned long long>(
+                opusSize
+            ),
+            frameCount,
+            samplesPerFrame
+        );
+
+        return nullptr;
+    }
+
+    /*
+     * ========================================================
+     * PCM 输出缓冲区
+     *
+     * 最长支持 120ms。
+     *
+     * 16000 Hz：
+     *
+     * 16000 × 0.12 = 1920 samples
+     * ========================================================
+     */
 
     opus_int16 pcm[1920] =
         {};
@@ -496,9 +652,7 @@ static napi_value Decode(
     const int decodedSamples =
         opus_decode(
             g_decoder,
-            static_cast<const unsigned char*>(
-                opusData
-            ),
+            opusBytes,
             static_cast<opus_int32>(
                 opusSize
             ),
@@ -507,18 +661,105 @@ static napi_value Decode(
             0
         );
 
+    /*
+     * ========================================================
+     * 解码结果
+     * ========================================================
+     */
+
     if (
         decodedSamples <= 0
     ) {
 
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "WALKIE OPUS DECODE ERROR: "
+            "input=%{public}llu "
+            "frames=%{public}d "
+            "samplesPerFrame=%{public}d "
+            "decoded=%{public}d",
+            static_cast<unsigned long long>(
+                opusSize
+            ),
+            frameCount,
+            samplesPerFrame,
+            decodedSamples
+        );
+
         return nullptr;
     }
+
+    /*
+     * ========================================================
+     * PCM 输出长度
+     * ========================================================
+     */
 
     const size_t outputBytes =
         static_cast<size_t>(
             decodedSamples
         ) *
         sizeof(opus_int16);
+
+    /*
+     * ========================================================
+     * Decode 统计
+     * ========================================================
+     */
+
+    g_decode_calls +=
+        1;
+
+    g_decode_bytes +=
+        static_cast<uint64_t>(
+            opusSize
+        );
+
+    g_decode_samples +=
+        static_cast<uint64_t>(
+            decodedSamples
+        );
+
+    /*
+     * ========================================================
+     * 每包完整诊断日志
+     *
+     * 不使用 printf。
+     *
+     * 直接输出到 HarmonyOS HiLog。
+     * ========================================================
+     */
+
+    OH_LOG_Print(
+        LOG_APP,
+        LOG_INFO,
+        WALKIE_LOG_DOMAIN,
+        WALKIE_LOG_TAG,
+        "WALKIE OPUS DECODE: "
+        "input=%{public}llu "
+        "frames=%{public}d "
+        "samplesPerFrame=%{public}d "
+        "decodedSamples=%{public}d "
+        "pcmBytes=%{public}llu",
+        static_cast<unsigned long long>(
+            opusSize
+        ),
+        frameCount,
+        samplesPerFrame,
+        decodedSamples,
+        static_cast<unsigned long long>(
+            outputBytes
+        )
+    );
+
+    /*
+     * ========================================================
+     * 创建 JS ArrayBuffer
+     * ========================================================
+     */
 
     void* outputData =
         nullptr;
@@ -539,8 +780,27 @@ static napi_value Decode(
         outputData == nullptr
     ) {
 
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "WALKIE OPUS DECODE ERROR: "
+            "创建 PCM ArrayBuffer 失败 "
+            "bytes=%{public}llu",
+            static_cast<unsigned long long>(
+                outputBytes
+            )
+        );
+
         return nullptr;
     }
+
+    /*
+     * ========================================================
+     * 复制 PCM
+     * ========================================================
+     */
 
     std::memcpy(
         outputData,
@@ -573,6 +833,19 @@ static napi_value DestroyDecoder(
         g_decoder =
             nullptr;
     }
+
+    /*
+     * 清空统计。
+     */
+
+    g_decode_calls =
+        0;
+
+    g_decode_bytes =
+        0;
+
+    g_decode_samples =
+        0;
 
     napi_value result =
         nullptr;
@@ -626,9 +899,14 @@ static int32_t OnReadData(
         0
     ) {
 
-        std::printf(
-            "WALKIE OHAUDIO: "
-            "PCM callbacks=%llu bytes=%llu\n",
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_INFO,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "OHAUDIO PCM: "
+            "callbacks=%{public}llu "
+            "bytes=%{public}llu",
             static_cast<unsigned long long>(
                 g_pcm_callbacks
             ),
@@ -671,10 +949,15 @@ static bool CreateAudioCapturer()
         result != AUDIOSTREAM_SUCCESS
     ) {
 
-        std::printf(
-            "WALKIE OHAUDIO: "
-            "Builder 创建失败 ret=%d\n",
-            static_cast<int>(result)
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "OHAUDIO Builder 创建失败 ret=%{public}d",
+            static_cast<int>(
+                result
+            )
         );
 
         g_audio_builder =
@@ -699,10 +982,15 @@ static bool CreateAudioCapturer()
         result != AUDIOSTREAM_SUCCESS
     ) {
 
-        std::printf(
-            "WALKIE OHAUDIO: "
-            "SetSamplingRate 失败 ret=%d\n",
-            static_cast<int>(result)
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "OHAUDIO SetSamplingRate 失败 ret=%{public}d",
+            static_cast<int>(
+                result
+            )
         );
 
         OH_AudioStreamBuilder_Destroy(
@@ -731,10 +1019,15 @@ static bool CreateAudioCapturer()
         result != AUDIOSTREAM_SUCCESS
     ) {
 
-        std::printf(
-            "WALKIE OHAUDIO: "
-            "SetChannelCount 失败 ret=%d\n",
-            static_cast<int>(result)
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "OHAUDIO SetChannelCount 失败 ret=%{public}d",
+            static_cast<int>(
+                result
+            )
         );
 
         OH_AudioStreamBuilder_Destroy(
@@ -763,10 +1056,15 @@ static bool CreateAudioCapturer()
         result != AUDIOSTREAM_SUCCESS
     ) {
 
-        std::printf(
-            "WALKIE OHAUDIO: "
-            "SetSampleFormat 失败 ret=%d\n",
-            static_cast<int>(result)
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "OHAUDIO SetSampleFormat 失败 ret=%{public}d",
+            static_cast<int>(
+                result
+            )
         );
 
         OH_AudioStreamBuilder_Destroy(
@@ -795,10 +1093,15 @@ static bool CreateAudioCapturer()
         result != AUDIOSTREAM_SUCCESS
     ) {
 
-        std::printf(
-            "WALKIE OHAUDIO: "
-            "SetEncodingType 失败 ret=%d\n",
-            static_cast<int>(result)
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "OHAUDIO SetEncodingType 失败 ret=%{public}d",
+            static_cast<int>(
+                result
+            )
         );
 
         OH_AudioStreamBuilder_Destroy(
@@ -827,10 +1130,15 @@ static bool CreateAudioCapturer()
         result != AUDIOSTREAM_SUCCESS
     ) {
 
-        std::printf(
-            "WALKIE OHAUDIO: "
-            "SetCapturerInfo 失败 ret=%d\n",
-            static_cast<int>(result)
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "OHAUDIO SetCapturerInfo 失败 ret=%{public}d",
+            static_cast<int>(
+                result
+            )
         );
 
         OH_AudioStreamBuilder_Destroy(
@@ -846,8 +1154,6 @@ static bool CreateAudioCapturer()
     /*
      * --------------------------------------------------------
      * OHAudio 数据回调
-     *
-     * 使用官方 OnReadData Callback。
      * --------------------------------------------------------
      */
 
@@ -868,10 +1174,15 @@ static bool CreateAudioCapturer()
         result != AUDIOSTREAM_SUCCESS
     ) {
 
-        std::printf(
-            "WALKIE OHAUDIO: "
-            "SetCapturerCallback 失败 ret=%d\n",
-            static_cast<int>(result)
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "OHAUDIO SetCapturerCallback 失败 ret=%{public}d",
+            static_cast<int>(
+                result
+            )
         );
 
         OH_AudioStreamBuilder_Destroy(
@@ -904,10 +1215,15 @@ static bool CreateAudioCapturer()
         capturer == nullptr
     ) {
 
-        std::printf(
-            "WALKIE OHAUDIO: "
-            "GenerateCapturer 失败 ret=%d\n",
-            static_cast<int>(result)
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "OHAUDIO GenerateCapturer 失败 ret=%{public}d",
+            static_cast<int>(
+                result
+            )
         );
 
         OH_AudioStreamBuilder_Destroy(
@@ -936,9 +1252,12 @@ static bool CreateAudioCapturer()
     g_pcm_bytes =
         0;
 
-    std::printf(
-        "WALKIE OHAUDIO: "
-        "★Native Capturer 创建成功★\n"
+    OH_LOG_Print(
+        LOG_APP,
+        LOG_INFO,
+        WALKIE_LOG_DOMAIN,
+        WALKIE_LOG_TAG,
+        "OHAUDIO ★Native Capturer 创建成功★"
     );
 
     return true;
@@ -983,10 +1302,15 @@ static napi_value StartCapture(
         ret != AUDIOSTREAM_SUCCESS
     ) {
 
-        std::printf(
-            "WALKIE OHAUDIO: "
-            "Start 失败 ret=%d\n",
-            static_cast<int>(ret)
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_ERROR,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "OHAUDIO Start 失败 ret=%{public}d",
+            static_cast<int>(
+                ret
+            )
         );
 
         napi_value result =
@@ -1001,9 +1325,12 @@ static napi_value StartCapture(
         return result;
     }
 
-    std::printf(
-        "WALKIE OHAUDIO: "
-        "★Native Capturer 启动成功★\n"
+    OH_LOG_Print(
+        LOG_APP,
+        LOG_INFO,
+        WALKIE_LOG_DOMAIN,
+        WALKIE_LOG_TAG,
+        "OHAUDIO ★Native Capturer 启动成功★"
     );
 
     napi_value result =
@@ -1038,10 +1365,15 @@ static napi_value StopCapture(
                 g_audio_capturer
             );
 
-        std::printf(
-            "WALKIE OHAUDIO: "
-            "Stop ret=%d\n",
-            static_cast<int>(ret)
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_INFO,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "OHAUDIO Stop ret=%{public}d",
+            static_cast<int>(
+                ret
+            )
         );
     }
 
@@ -1080,10 +1412,15 @@ static napi_value ReleaseCapture(
                 g_audio_capturer
             );
 
-        std::printf(
-            "WALKIE OHAUDIO: "
-            "Release ret=%d\n",
-            static_cast<int>(ret)
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_INFO,
+            WALKIE_LOG_DOMAIN,
+            WALKIE_LOG_TAG,
+            "OHAUDIO Release ret=%{public}d",
+            static_cast<int>(
+                ret
+            )
         );
 
         g_audio_capturer =

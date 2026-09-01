@@ -54,9 +54,26 @@ struct Index {
 
   @State connected: boolean = false
 
+  private appStateCheckTimer:
+  number | null =
+    null
+
+  private lastAppActive:
+    boolean =
+    false
+
+  @StorageLink('walkie_app_active')
+  appActive:
+    boolean =
+    false
+
   @State nickname: string = ''
 
   private nicknamePreferences:
+  preferences.Preferences | null =
+    null
+
+  private devicePreferences:
   preferences.Preferences | null =
     null
 
@@ -196,6 +213,103 @@ struct Index {
       this.getUIContext()
         .getHostContext()
 
+    /*
+ * ============================================================
+ * 恢复持久化 DeviceID
+ *
+ * Android 的 DeviceID 是长期保存的。
+ *
+ * HarmonyOS 这里也保持同样行为。
+ * ============================================================
+ */
+
+    if (
+      hostContext !== undefined
+    ) {
+
+      try {
+
+        this.devicePreferences =
+          preferences.getPreferencesSync(
+            hostContext,
+            {
+              name:
+              'walkie_device'
+            }
+          )
+
+        const savedDeviceId:
+          string =
+          this.devicePreferences.getSync(
+            'device_id',
+            ''
+          ) as string
+
+        if (
+          savedDeviceId.length > 0
+        ) {
+
+          /*
+           * 已有 DeviceID：
+           * 使用永久保存的身份。
+           */
+
+          this.walkieClient
+            .setDeviceId(
+              savedDeviceId
+            )
+
+          console.info(
+            'WALKIE: 已恢复 DeviceID=' +
+              savedDeviceId
+          )
+
+        } else {
+
+          /*
+           * 第一次运行：
+           * 保存当前生成的 DeviceID。
+           */
+
+          const newDeviceId:
+            string =
+            this.walkieClient
+              .getDeviceId()
+
+          this.devicePreferences
+            .putSync(
+              'device_id',
+              newDeviceId
+            )
+
+          this.devicePreferences
+            .flushSync()
+
+          console.info(
+            'WALKIE: 已保存新 DeviceID=' +
+              newDeviceId
+          )
+        }
+
+      } catch (
+      error
+      ) {
+
+        console.error(
+          'WALKIE: DeviceID 读取失败=' +
+            JSON.stringify(
+              error
+            )
+        )
+      }
+    }
+
+    /*
+     * ============================================================
+     * 读取本地保存的昵称
+     * ============================================================
+     */
+
     if (
       hostContext !== undefined
     ) {
@@ -240,19 +354,73 @@ struct Index {
 
         console.error(
           'WALKIE: 读取昵称失败=' +
-            JSON.stringify(error)
+            JSON.stringify(
+              error
+            )
         )
       }
     }
+
+    /*
+     * ============================================================
+     * 启动后台/断线自动恢复检查
+     * ============================================================
+     */
+
+    this.walkieClient
+      .startBackgroundRecovery()
+
+    this.lastAppActive =
+      this.appActive
+
+    this.appStateCheckTimer =
+      setInterval(
+        (): void => {
+
+          const active:
+            boolean =
+            this.appActive
+
+          if (
+            active &&
+              !this.lastAppActive
+          ) {
+
+            console.info(
+              'WALKIE UI: 检测到回到前台'
+            )
+
+            void this.walkieClient
+              .onForeground()
+          }
+
+          this.lastAppActive =
+            active
+
+        },
+        1000
+      )
+
   }
 
   aboutToDisappear(): void {
 
-    /*
-     * 页面退出时关闭 UDP。
-     */
+    if (
+      this.appStateCheckTimer !==
+        null
+    ) {
 
-    void this.walkieClient.close()
+      clearInterval(
+        this.appStateCheckTimer
+      )
+
+      this.appStateCheckTimer =
+        null
+    }
+
+    console.info(
+      'WALKIE UI: 页面离开，保持 UDP 与后台恢复机制'
+    )
   }
 
   // ============================================================
@@ -2620,12 +2788,24 @@ struct Index {
     this.currentChannel =
       state.currentChannel
 
+    /*
+     * ============================================================
+     * 在线人员过滤
+     *
+     * 服务器 USER_LIST 在重连过程中可能先到，
+     * 此时 state.userId 还没有被 USER_OK 更新。
+     *
+     * 因此：
+     *
+     * 1. UserID 与自己相同 → 排除
+     * 2. 昵称与当前自己的昵称相同 → 排除
+     *
+     * 两层判断，避免重连后把自己再次显示出来。
+     * ============================================================
+     */
+
     this.onlineUsers =
       state.onlineUsers
-
-    /*
-     * 在线人数也只统计其他用户。
-     */
 
     this.currentOnlineCount =
       state.onlineUsers.length

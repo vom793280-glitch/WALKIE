@@ -8,6 +8,7 @@ import hilog from "@ohos:hilog";
 import type window from "@ohos:window";
 import type { BusinessError } from "@ohos:base";
 const DOMAIN = 0x0000;
+AppStorage.setOrCreate('walkie_app_active', false);
 export default class EntryAbility extends UIAbility {
     // ============================================================
     // Ability 创建
@@ -106,11 +107,23 @@ export default class EntryAbility extends UIAbility {
     // ============================================================
     onForeground(): void {
         hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onForeground');
+        /*
+         * 通知 Index：
+         *
+         * APP 已经回到前台。
+         */
+        AppStorage.setOrCreate('walkie_app_active', true);
     }
     // ============================================================
     // 后台
     // ============================================================
     onBackground(): void {
         hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onBackground');
+        /*
+         * 通知 Index：
+         *
+         * APP 已经进入后台。
+         */
+        AppStorage.setOrCreate('walkie_app_active', false);
     }
 }

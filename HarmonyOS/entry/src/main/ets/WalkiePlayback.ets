@@ -21,29 +21,35 @@ import {
  *
  * Android → HarmonyOS 播放
  *
- * 支持：
+ * 当前播放链路：
  *
- * 1. W23A
- *    W23A + StreamID + Sequence + Opus
- *
- * 2. Legacy
- *    直接 Opus
- *
- * 音频：
- *
- * 16000 Hz
- * Mono
- * S16LE
- * RAW
+ *   Android Opus
+ *        ↓
+ *   UDP
+ *        ↓
+ *   HarmonyOS Opus Decoder
+ *        ↓
+ *   16kHz / Mono / S16LE PCM
+ *        ↓
+ *   AudioSessionManager
+ *        ↓
+ *   SPEAKER
+ *        ↓
+ *   AudioRenderer
  *
  * 当前版本重点：
  *
- * 1. Opus 包严格按到达顺序处理
- * 2. 禁止多个 playPacket() 并发解码
- * 3. 减少语音帧乱序导致的模糊
- * 4. 保留当前已经合适的 1.6 倍音量
- * 5. 使用软限幅
- * 6. 保留 W23A + Legacy Opus
+ *   1. Opus 严格串行解码
+ *   2. 16kHz / Mono / S16LE
+ *   3. PCM 原样播放
+ *   4. AudioSession 使用 VOICE_COMMUNICATION
+ *   5. AudioSessionManager 强制 SPEAKER
+ *   6. AudioRenderer 再指定 SPEAKER
+ *   7. Renderer volume = 1.0
+ *   8. 不做重采样
+ *   9. 不做滤波
+ *   10. 不做额外 PCM 增益
+ *   11. 保留 W23A + Legacy Opus
  *
  * ============================================================
  */
@@ -51,11 +57,27 @@ import {
 export class WalkiePlayback {
 
   // ============================================================
+  // AudioSession
+  // ============================================================
+
+  private audioManager:
+    audio.AudioManager | null =
+    null
+
+  private audioSessionManager:
+    audio.AudioSessionManager | null =
+    null
+
+  private audioSessionActive:
+    boolean =
+    false
+
+  // ============================================================
   // AudioRenderer
   // ============================================================
 
   private renderer:
-  audio.AudioRenderer | null =
+    audio.AudioRenderer | null =
     null
 
   private rendererReady:
@@ -87,7 +109,7 @@ export class WalkiePlayback {
     12
 
   private currentPcm:
-  Uint8Array | null =
+    Uint8Array | null =
     null
 
   private currentPcmOffset:
@@ -95,27 +117,8 @@ export class WalkiePlayback {
     0
 
   // ============================================================
-  // 音频包处理队列
+  // Opus 包处理队列
   // ============================================================
-
-  /*
-   * 这里专门存放收到的 Opus 包。
-   *
-   * 不直接在 UDP 回调里并发执行 decode。
-   *
-   * 例如：
-   *
-   * 包1
-   * 包2
-   * 包3
-   * 包4
-   *
-   * 必须：
-   *
-   * 1 → 2 → 3 → 4
-   *
-   * 严格顺序处理。
-   */
 
   private packetQueue:
     ArrayBuffer[] =
@@ -150,35 +153,204 @@ export class WalkiePlayback {
     -1
 
   // ============================================================
-  // 播放增益
+  // 播放参数
   // ============================================================
 
-  private static readonly PLAYBACK_GAIN:
+  private static readonly PLAYBACK_VOLUME:
     number =
-    1.6
+    1.0
 
   // ============================================================
-  // PCM 范围
+  // 初始化应用级 AudioSession
   // ============================================================
 
-  private static readonly PCM_MAX:
-    number =
-    32767
+  private async ensureAudioSession():
+    Promise<boolean> {
 
-  private static readonly PCM_MIN:
-    number =
-    -32768
+    if (
+      this.audioSessionManager !== null &&
+        this.audioSessionActive
+    ) {
+
+      return true
+    }
+
+    try {
+
+      /*
+       * ========================================================
+       * 获取 AudioManager
+       * ========================================================
+       */
+
+      if (
+        this.audioManager ===
+          null
+      ) {
+
+        this.audioManager =
+          audio.getAudioManager()
+      }
+
+      /*
+       * ========================================================
+       * 获取 AudioSessionManager
+       * ========================================================
+       */
+
+      if (
+        this.audioSessionManager ===
+          null
+      ) {
+
+        this.audioSessionManager =
+          this.audioManager
+            .getSessionManager()
+      }
+
+      const sessionManager:
+        audio.AudioSessionManager =
+        this.audioSessionManager
+
+      /*
+       * ========================================================
+       * 设置 AudioSession 场景
+       *
+       * 官方要求：
+       *
+       * AudioSessionManager 的
+       * setDefaultOutputDevice()
+       * 在 VOICE_COMMUNICATION 场景下生效。
+       * ========================================================
+       */
+
+      sessionManager.setAudioSessionScene(
+        audio.AudioSessionScene.AUDIO_SESSION_SCENE_VOICE_COMMUNICATION
+      )
+
+      console.info(
+        'WALKIE PLAYBACK: ' +
+          'AudioSessionScene=VOICE_COMMUNICATION'
+      )
+
+      /*
+       * ========================================================
+       * 激活 AudioSession
+       *
+       * 允许应用级音频策略真正生效。
+       * ========================================================
+       */
+
+      if (
+        !this.audioSessionActive
+      ) {
+
+        const strategy:
+          audio.AudioSessionStrategy = {
+
+          concurrencyMode:
+          audio.AudioConcurrencyMode.CONCURRENCY_MIX_WITH_OTHERS
+        }
+
+        await sessionManager.activateAudioSession(
+          strategy
+        )
+
+        this.audioSessionActive =
+          true
+
+        console.info(
+          'WALKIE PLAYBACK: ' +
+            '★AudioSession 已激活★'
+        )
+      }
+
+      /*
+       * ========================================================
+       * ★关键★
+       *
+       * 应用级默认输出设备：
+       *
+       * SPEAKER
+       *
+       * AudioSessionManager 的优先级高于
+       * AudioRenderer.setDefaultOutputDevice。
+       * ========================================================
+       */
+
+      await sessionManager.setDefaultOutputDevice(
+        audio.DeviceType.SPEAKER
+      )
+
+      console.info(
+        'WALKIE PLAYBACK: ' +
+          '★AudioSessionManager → SPEAKER★'
+      )
+
+      /*
+       * ========================================================
+       * 读取应用级默认设备
+       *
+       * getDefaultOutputDevice()
+       * 为同步接口。
+       * ========================================================
+       */
+
+      const defaultDevice:
+        audio.DeviceType =
+        sessionManager.getDefaultOutputDevice()
+
+      if (
+        defaultDevice ===
+          audio.DeviceType.SPEAKER
+      ) {
+
+        console.info(
+          'WALKIE PLAYBACK: ' +
+            '★应用级默认输出确认 = SPEAKER★'
+        )
+
+      } else if (
+        defaultDevice ===
+          audio.DeviceType.EARPIECE
+      ) {
+
+        console.warn(
+          'WALKIE PLAYBACK: ' +
+            '应用级默认输出仍然是 EARPIECE'
+        )
+
+      } else {
+
+        console.info(
+          'WALKIE PLAYBACK: ' +
+            `应用级默认输出设备类型=${defaultDevice}`
+        )
+      }
+
+      return true
+
+    } catch (
+      error
+    ) {
+
+      const businessError:
+        BusinessError =
+        error as BusinessError
+
+      console.error(
+        'WALKIE PLAYBACK: ' +
+          'AudioSession 初始化失败 ' +
+          `code=${businessError.code} ` +
+          `message=${businessError.message}`
+      )
+
+      return false
+    }
+  }
 
   // ============================================================
-  // 软限幅起点
-  // ============================================================
-
-  private static readonly SOFT_LIMIT_START:
-    number =
-    26000
-
-  // ============================================================
-  // Renderer 创建
+  // AudioRenderer 创建
   // ============================================================
 
   private async ensureRenderer():
@@ -192,15 +364,32 @@ export class WalkiePlayback {
       return true
     }
 
+    /*
+     * ========================================================
+     * 先确保应用级 AudioSession。
+     * ========================================================
+     */
+
+    const sessionReady:
+      boolean =
+      await this.ensureAudioSession()
+
+    if (
+      !sessionReady
+    ) {
+
+      return false
+    }
+
+    /*
+     * ========================================================
+     * 防止多个地方同时创建 Renderer。
+     * ========================================================
+     */
+
     if (
       this.rendererStarting
     ) {
-
-      /*
-       * 已经有人正在创建播放器。
-       *
-       * 等待一下再重新检查。
-       */
 
       for (
         let index:
@@ -234,6 +423,17 @@ export class WalkiePlayback {
 
     try {
 
+      /*
+       * ========================================================
+       * 音频格式
+       *
+       * 16000 Hz
+       * Mono
+       * S16LE
+       * RAW
+       * ========================================================
+       */
+
       const streamInfo:
         audio.AudioStreamInfo = {
 
@@ -250,25 +450,19 @@ export class WalkiePlayback {
         audio.AudioEncodingType.ENCODING_TYPE_RAW
       }
 
+      /*
+       * ========================================================
+       * Renderer 场景
+       *
+       * 与 Android 的 VOICE_COMMUNICATION 对齐。
+       * ========================================================
+       */
+
       const rendererInfo:
         audio.AudioRendererInfo = {
 
-        /*
-         * 这是实时语音消息/对讲场景。
-         *
-         * 不使用 VOICE_COMMUNICATION，
-         * 因为该通路更偏 VoIP 通话，
-         * 系统可能优先路由到听筒。
-         *
-         * VOICE_MESSAGE 更适合当前这种：
-         *
-         * Android → 鸿蒙
-         * 实时语音消息/对讲
-         * 同时保持扬声器播放。
-         */
-
         usage:
-        audio.StreamUsage.STREAM_USAGE_VOICE_MESSAGE,
+        audio.StreamUsage.STREAM_USAGE_VOICE_COMMUNICATION,
 
         rendererFlags:
         0,
@@ -287,6 +481,12 @@ export class WalkiePlayback {
         rendererInfo
       }
 
+      /*
+       * ========================================================
+       * 创建 Renderer
+       * ========================================================
+       */
+
       const renderer:
         audio.AudioRenderer =
         await audio.createAudioRenderer(
@@ -295,6 +495,12 @@ export class WalkiePlayback {
 
       this.renderer =
         renderer
+
+      /*
+       * ========================================================
+       * writeData
+       * ========================================================
+       */
 
       renderer.on(
         'writeData',
@@ -310,6 +516,85 @@ export class WalkiePlayback {
         }
       )
 
+      /*
+       * ========================================================
+       * Renderer 级别再次指定 SPEAKER
+       *
+       * 虽然 AudioSessionManager 优先级更高，
+       * 这里仍然保留。
+       *
+       * 这样当前 Renderer 本身也明确要求 SPEAKER。
+       * ========================================================
+       */
+
+      try {
+
+        await renderer.setDefaultOutputDevice(
+          audio.DeviceType.SPEAKER
+        )
+
+        console.info(
+          'WALKIE PLAYBACK: ' +
+            '★AudioRenderer → SPEAKER★'
+        )
+
+      } catch (
+        error
+      ) {
+
+        const businessError:
+          BusinessError =
+          error as BusinessError
+
+        console.error(
+          'WALKIE PLAYBACK: ' +
+            'Renderer 设置 SPEAKER 失败 ' +
+            `code=${businessError.code} ` +
+            `message=${businessError.message}`
+        )
+      }
+
+      /*
+       * ========================================================
+       * Renderer 音量
+       *
+       * 1.0 = 不衰减。
+       * ========================================================
+       */
+
+      try {
+
+        renderer.setVolume(
+          WalkiePlayback.PLAYBACK_VOLUME
+        )
+
+        console.info(
+          'WALKIE PLAYBACK: ' +
+            '★Renderer volume=1.0★'
+        )
+
+      } catch (
+        error
+      ) {
+
+        const businessError:
+          BusinessError =
+          error as BusinessError
+
+        console.error(
+          'WALKIE PLAYBACK: ' +
+            'Renderer 设置 volume 失败 ' +
+            `code=${businessError.code} ` +
+            `message=${businessError.message}`
+        )
+      }
+
+      /*
+       * ========================================================
+       * Renderer 创建完成
+       * ========================================================
+       */
+
       this.rendererReady =
         true
 
@@ -318,10 +603,27 @@ export class WalkiePlayback {
           'AudioRenderer 创建成功'
       )
 
+      console.info(
+        'WALKIE PLAYBACK: ' +
+          'sampleRate=16000 ' +
+          'channels=1 ' +
+          'format=S16LE'
+      )
+
+      console.info(
+        'WALKIE PLAYBACK: ' +
+          'usage=VOICE_COMMUNICATION'
+      )
+
+      console.info(
+        'WALKIE PLAYBACK: ' +
+          'output=SPEAKER volume=1.0'
+      )
+
       return true
 
     } catch (
-    error
+      error
     ) {
 
       const businessError:
@@ -351,7 +653,7 @@ export class WalkiePlayback {
   }
 
   // ============================================================
-  // AudioRenderer 输出
+  // AudioRenderer PCM 输出
   // ============================================================
 
   private onWriteData(
@@ -367,7 +669,7 @@ export class WalkiePlayback {
       )
 
     /*
-     * 默认静音。
+     * 没有 PCM 时输出静音。
      */
 
     output.fill(
@@ -378,14 +680,30 @@ export class WalkiePlayback {
       number =
       0
 
+    /*
+     * ========================================================
+     * PCM 原样复制
+     *
+     * 不进行：
+     *
+     *   × 增益
+     *   × 限幅
+     *   × 滤波
+     *   × 重采样
+     *   × 格式转换
+     *
+     * Decoder 给什么，
+     * Renderer 就播放什么。
+     * ========================================================
+     */
+
     while (
       outputOffset <
         output.length
     ) {
 
       /*
-       * 当前 PCM 播完：
-       * 从 PCM 队列拿下一块。
+       * 当前 PCM 已经播放完。
        */
 
       if (
@@ -438,213 +756,26 @@ export class WalkiePlayback {
           remainingOutput
         )
 
-      const sourceStart:
-        number =
-        this.currentPcmOffset
-
       /*
-       * 正常情况下：
-       *
-       * S16LE
-       * 2 字节 = 1 sample
+       * ======================================================
+       * 保持 S16LE 原始字节顺序。
+       * ======================================================
        */
 
-      if (
-        (sourceStart & 1) !== 0 ||
-          (copyLength & 1) !== 0
-      ) {
-
-        /*
-         * 异常字节对齐时不处理增益，
-         * 避免破坏 PCM。
-         */
-
-        output.set(
-          current.subarray(
-            sourceStart,
-            sourceStart +
-              copyLength
-          ),
-          outputOffset
-        )
-
-      } else {
-
-        for (
-          let index:
-            number =
-            0;
-          index < copyLength;
-          index += 2
-        ) {
-
-          const sourceIndex:
-            number =
-            sourceStart +
-              index
-
-          const low:
-            number =
-            current[
-            sourceIndex
-            ]
-
-          const high:
-            number =
-            current[
-            sourceIndex +
-              1
-            ]
-
-          let sample:
-            number =
-            (
-              low |
-                (
-                  high <<
-                    8
-                )
-            )
-
-          /*
-           * 转有符号 16bit。
-           */
-
-          if (
-            sample >=
-              32768
-          ) {
-
-            sample -=
-            65536
-          }
-
-          /*
-           * 音量增益。
-           *
-           * 当前用户测试：
-           * 1.6 倍音量合适。
-           */
-
-          sample *=
-          WalkiePlayback.PLAYBACK_GAIN
-
-          /*
-           * ====================================================
-           * 软限幅
-           *
-           * 避免人声峰值直接硬裁剪。
-           * ====================================================
-           */
-
-          const sign:
-            number =
-            sample < 0
-              ? -1
-              : 1
-
-          let magnitude:
-            number =
-            Math.abs(
-              sample
-            )
-
-          const softStart:
-            number =
-            WalkiePlayback.SOFT_LIMIT_START
-
-          const maxValue:
-            number =
-            WalkiePlayback.PCM_MAX
-
-          if (
-            magnitude >
-              softStart
-          ) {
-
-            const over:
-              number =
-              magnitude -
-                softStart
-
-            const range:
-              number =
-              maxValue -
-                softStart
-
-            magnitude =
-              softStart +
-                (
-                  over *
-                    range
-                ) /
-                  (
-                    over +
-                      range
-                  )
-          }
-
-          let finalSample:
-            number =
-            sign *
-              magnitude
-
-          if (
-            finalSample >
-              WalkiePlayback.PCM_MAX
-          ) {
-
-            finalSample =
-              WalkiePlayback.PCM_MAX
-          }
-
-          if (
-            finalSample <
-              WalkiePlayback.PCM_MIN
-          ) {
-
-            finalSample =
-              WalkiePlayback.PCM_MIN
-          }
-
-          const integerSample:
-            number =
-            Math.round(
-              finalSample
-            )
-
-          const unsignedSample:
-            number =
-            integerSample < 0
-              ? integerSample +
-              65536
-              : integerSample
-
-          output[
-          outputOffset +
-            index
-          ] =
-            unsignedSample &
-              0xFF
-
-          output[
-          outputOffset +
-            index +
-            1
-          ] =
-            (
-              unsignedSample >>
-                8
-            ) &
-              0xFF
-        }
-      }
+      output.set(
+        current.subarray(
+          this.currentPcmOffset,
+          this.currentPcmOffset +
+            copyLength
+        ),
+        outputOffset
+      )
 
       outputOffset +=
-      copyLength
+        copyLength
 
       this.currentPcmOffset +=
-      copyLength
+        copyLength
     }
   }
 
@@ -667,7 +798,9 @@ export class WalkiePlayback {
     }
 
     /*
-     * 加入待处理队列。
+     * ========================================================
+     * Opus 包进入串行处理队列。
+     * ========================================================
      */
 
     this.packetQueue.push(
@@ -675,10 +808,9 @@ export class WalkiePlayback {
     )
 
     /*
-     * 防止队列无限增长。
-     *
-     * 如果网络瞬间拥塞，
-     * 保留最新语音。
+     * 网络堵塞时，
+     * 丢弃最老的数据，
+     * 防止延迟越来越大。
      */
 
     while (
@@ -690,13 +822,9 @@ export class WalkiePlayback {
     }
 
     /*
-     * 启动唯一的处理循环。
-     *
-     * 注意：
-     *
-     * 不使用 Promise.then 链，
-     * 避免 ArkTS 的
-     * any / unknown 推断问题。
+     * ========================================================
+     * 只允许一个处理循环。
+     * ========================================================
      */
 
     if (
@@ -708,18 +836,11 @@ export class WalkiePlayback {
   }
 
   // ============================================================
-  // 串行处理音频包
+  // 串行处理 Opus
   // ============================================================
 
   private async processPacketQueue():
     Promise<void> {
-
-    /*
-     * 先抢占处理权。
-     *
-     * 在第一个 await 之前设置，
-     * 防止第二个 playPacket() 再启动第二个循环。
-     */
 
     if (
       this.packetProcessing
@@ -727,6 +848,10 @@ export class WalkiePlayback {
 
       return
     }
+
+    /*
+     * 在第一次 await 前锁定。
+     */
 
     this.packetProcessing =
       true
@@ -739,7 +864,7 @@ export class WalkiePlayback {
       ) {
 
         const data:
-        ArrayBuffer | undefined =
+          ArrayBuffer | undefined =
           this.packetQueue.shift()
 
         if (
@@ -756,7 +881,7 @@ export class WalkiePlayback {
       }
 
     } catch (
-    error
+      error
     ) {
 
       console.error(
@@ -773,8 +898,8 @@ export class WalkiePlayback {
         false
 
       /*
-       * 如果 finally 时又来了新包，
-       * 再启动一次处理。
+       * 如果处理期间来了新包，
+       * 继续处理。
        */
 
       if (
@@ -798,7 +923,7 @@ export class WalkiePlayback {
     Promise<void> {
 
     let opusData:
-    ArrayBuffer | null =
+      ArrayBuffer | null =
       null
 
     /*
@@ -834,7 +959,7 @@ export class WalkiePlayback {
       }
 
       /*
-       * 新音频流。
+       * 新语音流。
        */
 
       if (
@@ -864,7 +989,7 @@ export class WalkiePlayback {
       }
 
       /*
-       * 丢弃重复/旧包。
+       * 丢掉旧包 / 重复包。
        */
 
       if (
@@ -896,13 +1021,6 @@ export class WalkiePlayback {
       opusData =
         data
 
-      /*
-       * 不每包打印日志，
-       * 避免实时语音时日志过多。
-       *
-       * 每收到第一个 Legacy 包时打印一次。
-       */
-
       if (
         !this.started
       ) {
@@ -914,8 +1032,15 @@ export class WalkiePlayback {
       }
     }
 
+    /*
+     * ========================================================
+     * Opus 数据检查
+     * ========================================================
+     */
+
     if (
-      opusData === null ||
+      opusData ===
+        null ||
         opusData.byteLength <=
           0
     ) {
@@ -927,18 +1052,25 @@ export class WalkiePlayback {
      * ========================================================
      * Opus 解码
      *
-     * 串行执行。
+     * 已经确认：
+     *
+     * frames=1
+     * samplesPerFrame=320
+     * decodedSamples=320
+     * pcmBytes=640
+     *
      * ========================================================
      */
 
     const pcmData:
-    ArrayBuffer | null =
+      ArrayBuffer | null =
       this.opus.decode(
         opusData
       )
 
     if (
-      pcmData === null
+      pcmData ===
+        null
     ) {
 
       console.error(
@@ -959,7 +1091,7 @@ export class WalkiePlayback {
 
     /*
      * ========================================================
-     * 创建播放器
+     * 确保 AudioRenderer
      * ========================================================
      */
 
@@ -976,7 +1108,7 @@ export class WalkiePlayback {
 
     /*
      * ========================================================
-     * PCM 入队
+     * 解码后的 PCM
      * ========================================================
      */
 
@@ -986,11 +1118,18 @@ export class WalkiePlayback {
         pcmData
       )
 
+    if (
+      pcmBytes.length <=
+        0
+    ) {
+
+      return
+    }
+
     /*
-     * 防止播放延迟无限增加。
-     *
-     * 队列满时丢最旧帧，
-     * 保留最新声音。
+     * ========================================================
+     * 防止播放延迟越来越高。
+     * ========================================================
      */
 
     while (
@@ -1001,13 +1140,21 @@ export class WalkiePlayback {
       this.pcmQueue.shift()
     }
 
+    /*
+     * ========================================================
+     * 原始 PCM 直接入队
+     * ========================================================
+     */
+
     this.pcmQueue.push(
       pcmBytes
     )
 
     /*
      * ========================================================
-     * 首次起播：
+     * 首次起播
+     *
+     * 当前 20ms / frame：
      *
      * 3 帧 ≈ 60ms
      * ========================================================
@@ -1038,11 +1185,12 @@ export class WalkiePlayback {
     }
 
     const renderer:
-    audio.AudioRenderer | null =
+      audio.AudioRenderer | null =
       this.renderer
 
     if (
-      renderer === null ||
+      renderer ===
+        null ||
         !this.rendererReady
     ) {
 
@@ -1061,13 +1209,18 @@ export class WalkiePlayback {
 
       console.info(
         'WALKIE PLAYBACK: ' +
-          `★开始播放★ ` +
+          '★开始播放★ ' +
           `queue=${this.pcmQueue.length} ` +
-          `gain=${WalkiePlayback.PLAYBACK_GAIN}`
+          'sampleRate=16000 ' +
+          'rawPCM=true ' +
+          'AudioSession=VOICE_COMMUNICATION ' +
+          'SessionOutput=SPEAKER ' +
+          'RendererOutput=SPEAKER ' +
+          'volume=1.0'
       )
 
     } catch (
-    error
+      error
     ) {
 
       const businessError:
@@ -1091,14 +1244,18 @@ export class WalkiePlayback {
     Promise<void> {
 
     /*
-     * 清空待处理 Opus。
+     * ========================================================
+     * 清空 Opus 队列
+     * ========================================================
      */
 
     this.packetQueue =
       []
 
     /*
-     * 清空 PCM。
+     * ========================================================
+     * 清空 PCM 队列
+     * ========================================================
      */
 
     this.pcmQueue =
@@ -1111,7 +1268,9 @@ export class WalkiePlayback {
       0
 
     /*
-     * 重置 W23A。
+     * ========================================================
+     * 重置流状态
+     * ========================================================
      */
 
     this.currentStreamId =
@@ -1121,18 +1280,18 @@ export class WalkiePlayback {
       -1
 
     /*
-     * 防止旧处理状态影响下一次讲话。
+     * ========================================================
+     * 停止 Renderer
+     * ========================================================
      */
 
-    this.packetProcessing =
-      false
-
     const renderer:
-    audio.AudioRenderer | null =
+      audio.AudioRenderer | null =
       this.renderer
 
     if (
-      renderer === null
+      renderer ===
+        null
     ) {
 
       this.playing =
@@ -1166,6 +1325,12 @@ export class WalkiePlayback {
   public async release():
     Promise<void> {
 
+    /*
+     * ========================================================
+     * 清空队列
+     * ========================================================
+     */
+
     this.packetQueue =
       []
 
@@ -1177,6 +1342,12 @@ export class WalkiePlayback {
 
     this.currentPcmOffset =
       0
+
+    /*
+     * ========================================================
+     * 重置流状态
+     * ========================================================
+     */
 
     this.currentStreamId =
       -1
@@ -1193,8 +1364,14 @@ export class WalkiePlayback {
     this.started =
       false
 
+    /*
+     * ========================================================
+     * 释放 Renderer
+     * ========================================================
+     */
+
     const renderer:
-    audio.AudioRenderer | null =
+      audio.AudioRenderer | null =
       this.renderer
 
     this.renderer =
@@ -1204,7 +1381,8 @@ export class WalkiePlayback {
       false
 
     if (
-      renderer !== null
+      renderer !==
+        null
     ) {
 
       try {
@@ -1222,6 +1400,50 @@ export class WalkiePlayback {
       } catch {
         // 忽略
       }
+    }
+
+    /*
+     * ========================================================
+     * 释放 AudioSession
+     *
+     * AudioSession 生命周期结束。
+     * ========================================================
+     */
+
+    if (
+      this.audioSessionManager !==
+        null &&
+        this.audioSessionActive
+    ) {
+
+      try {
+
+        await this.audioSessionManager
+          .deactivateAudioSession()
+
+        console.info(
+          'WALKIE PLAYBACK: ' +
+            'AudioSession 已释放'
+        )
+
+      } catch (
+        error
+      ) {
+
+        const businessError:
+          BusinessError =
+          error as BusinessError
+
+        console.error(
+          'WALKIE PLAYBACK: ' +
+            'AudioSession 释放失败 ' +
+            `code=${businessError.code} ` +
+            `message=${businessError.message}`
+        )
+      }
+
+      this.audioSessionActive =
+        false
     }
 
     this.opus.destroyDecoder()

@@ -48,6 +48,7 @@ import {
  * 8. 提示音
  * 9. Android → HarmonyOS 音频接收
  * 10. W23A + Legacy Opus 双协议兼容
+ * 11. DeviceID 由外部持久化保存
  *
  * ============================================================
  */
@@ -157,6 +158,18 @@ export class WalkieClient {
   // Device ID
   // ============================================================
 
+  /*
+   * 注意：
+   *
+   * DeviceID 现在允许由 Index.ets
+   * 从 Preferences 恢复后注入。
+   *
+   * 如果外部还没有注入，
+   * 暂时生成一个本地 ID。
+   *
+   * Index.ets 会在连接前把持久化 ID 设置回来。
+   */
+
   private deviceId: string =
     ''
 
@@ -175,6 +188,26 @@ export class WalkieClient {
 
   private reconnecting: boolean =
     false
+
+  // ============================================================
+  // 后台恢复
+  // ============================================================
+
+  private backgroundRecoveryTimer:
+  number | null =
+    null
+
+  private backgroundRecoveryBusy:
+    boolean =
+    false
+
+  private lastForegroundTime:
+    number =
+    0
+
+  private readonly BACKGROUND_RECOVERY_INTERVAL:
+    number =
+    5000
 
   // ============================================================
   // 登录重试
@@ -352,6 +385,59 @@ export class WalkieClient {
   }
 
   // ============================================================
+  // 设置持久化 DeviceID
+  // ============================================================
+
+  public setDeviceId(
+    deviceId:
+      string
+  ):
+    void {
+
+    const clean:
+      string =
+      deviceId.trim()
+
+    if (
+      clean.length === 0
+    ) {
+
+      return
+    }
+
+    /*
+     * 已经连接以后不能切换身份。
+     */
+
+    if (
+      this.connected ||
+        this.connecting ||
+        this.reconnecting
+    ) {
+
+      return
+    }
+
+    this.deviceId =
+      clean
+
+    console.info(
+      'WALKIE CLIENT: DeviceID=' +
+        this.deviceId
+    )
+  }
+
+  // ============================================================
+  // 获取 DeviceID
+  // ============================================================
+
+  public getDeviceId():
+    string {
+
+    return this.deviceId
+  }
+
+  // ============================================================
   // 状态监听
   // ============================================================
 
@@ -418,16 +504,6 @@ export class WalkieClient {
       message:
       this.state.message
     }
-  }
-
-  // ============================================================
-  // Device ID
-  // ============================================================
-
-  public getDeviceId():
-    string {
-
-    return this.deviceId
   }
 
   // ============================================================
@@ -520,21 +596,13 @@ export class WalkieClient {
 
     try {
 
-      /*
-       * 每次主动连接都重新打开 UDP。
-       */
-
       await this.udp.open(
         WalkieClient.SERVER_IP,
         WalkieClient.SERVER_PORT
       )
 
       /*
-       * 与 Android 保持一致：
-       *
-       * 先 HELLO
-       * 再 CONNECTED
-       * 再 LOGIN
+       * HELLO
        */
 
       await this.udp.send(
@@ -544,7 +612,9 @@ export class WalkieClient {
       )
 
       this.startLoginRetry()
+
       this.startKeepAlive()
+
       this.startNetworkPing()
 
       this.state.message =
@@ -553,7 +623,7 @@ export class WalkieClient {
       this.emitState()
 
     } catch (
-      error
+    error
     ) {
 
       const businessError:
@@ -579,6 +649,8 @@ export class WalkieClient {
         '连接服务器失败'
 
       this.stopTimers()
+
+      this.stopBackgroundRecovery()
 
       try {
 
@@ -683,7 +755,7 @@ export class WalkieClient {
           }
 
           this.loginRetryCount +=
-            1
+          1
 
           void this.sendLoginRetry()
 
@@ -721,7 +793,8 @@ export class WalkieClient {
     void {
 
     if (
-      this.loginRetryTimer !== null
+      this.loginRetryTimer !==
+        null
     ) {
 
       clearInterval(
@@ -750,6 +823,8 @@ export class WalkieClient {
     await this.playback.stop()
 
     this.stopTimers()
+
+    this.stopBackgroundRecovery()
 
     if (
       this.udp.getBound()
@@ -805,6 +880,178 @@ export class WalkieClient {
       '已断开服务器'
 
     this.emitState()
+  }
+
+  // ============================================================
+  // 应用回到前台
+  // ============================================================
+
+  public async onForeground():
+    Promise<void> {
+
+    if (
+      this.manualDisconnect
+    ) {
+
+      return
+    }
+
+    this.lastForegroundTime =
+      Date.now()
+
+    if (
+      this.connected &&
+        this.socketReady()
+    ) {
+
+      void this.requestUserList()
+
+      void this.requestChannelList()
+
+      void this.requestChannelMembers()
+
+      return
+    }
+
+    if (
+      this.backgroundRecoveryBusy
+    ) {
+
+      return
+    }
+
+    this.backgroundRecoveryBusy =
+      true
+
+    try {
+
+      this.state.message =
+        '正在恢复服务器连接…'
+
+      this.state.network.quality =
+        '重连中'
+
+      this.emitState()
+
+      const success:
+        boolean =
+        await this.reconnect()
+
+      if (
+        success
+      ) {
+
+        void this.requestUserList()
+
+        void this.requestChannelList()
+
+        void this.requestChannelMembers()
+
+        this.state.message =
+          '连接已恢复'
+
+        this.state.network.quality =
+          '良好'
+
+      } else {
+
+        this.state.message =
+          '暂未恢复连接'
+
+        this.state.network.quality =
+          '连接中'
+      }
+
+      this.emitState()
+
+    } catch (
+    error
+    ) {
+
+      console.error(
+        'WALKIE FOREGROUND: ' +
+          '恢复连接异常=' +
+          JSON.stringify(
+            error
+          )
+      )
+
+      this.state.message =
+        '恢复连接失败'
+
+      this.state.network.quality =
+        '连接异常'
+
+      this.emitState()
+
+    } finally {
+
+      this.backgroundRecoveryBusy =
+        false
+    }
+  }
+
+  // ============================================================
+  // 后台恢复检查
+  // ============================================================
+
+  public startBackgroundRecovery():
+    void {
+
+    this.stopBackgroundRecovery()
+
+    this.backgroundRecoveryTimer =
+      setInterval(
+        (): void => {
+
+          if (
+            this.manualDisconnect
+          ) {
+
+            return
+          }
+
+          if (
+            this.connected &&
+              this.socketReady()
+          ) {
+
+            return
+          }
+
+          if (
+            this.backgroundRecoveryBusy
+          ) {
+
+            return
+          }
+
+          void this.onForeground()
+
+        },
+        this.BACKGROUND_RECOVERY_INTERVAL
+      )
+  }
+
+  // ============================================================
+  // 停止后台恢复检查
+  // ============================================================
+
+  public stopBackgroundRecovery():
+    void {
+
+    if (
+      this.backgroundRecoveryTimer !==
+        null
+    ) {
+
+      clearInterval(
+        this.backgroundRecoveryTimer
+      )
+
+      this.backgroundRecoveryTimer =
+        null
+    }
   }
 
   // ============================================================
@@ -867,6 +1114,35 @@ export class WalkieClient {
 
     try {
 
+      /*
+       * ========================================================
+       * 旧连接先关闭
+       * ========================================================
+       */
+
+      if (
+        this.udp.getBound()
+      ) {
+
+        try {
+
+          /*
+           * 先通知 VPS。
+           */
+
+          await this.udp.send(
+            'WALKIE_GOODBYE'
+          )
+
+        } catch {
+          // 旧连接可能已经无法发送
+        }
+      }
+
+      /*
+       * 再关闭旧 Socket。
+       */
+
       try {
 
         await this.udp.close()
@@ -875,19 +1151,27 @@ export class WalkieClient {
         // 忽略
       }
 
+      /*
+       * ========================================================
+       * 创建新的 UDP Socket
+       * ========================================================
+       */
+
       await this.udp.open(
         WalkieClient.SERVER_IP,
         WalkieClient.SERVER_PORT
       )
 
       /*
-       * 重连也严格按照：
+       * ========================================================
+       * Android 对齐：
        *
        * HELLO
        * ↓
        * CONNECTED
        * ↓
        * LOGIN
+       * ========================================================
        */
 
       await this.udp.send(
@@ -897,18 +1181,24 @@ export class WalkieClient {
       )
 
       this.startLoginRetry()
+
       this.startKeepAlive()
+
       this.startNetworkPing()
 
       /*
-       * 最多等待 1200ms。
+       * 等待服务器确认。
+       *
+       * WALKIE_CONNECTED 到达后，
+       * handleUdpMessage() 会把 connected 设置为 true。
        */
 
       for (
         let index:
           number =
           0;
-        index < 12;
+        index <
+          15;
         index++
       ) {
 
@@ -934,6 +1224,10 @@ export class WalkieClient {
         )
       }
 
+      /*
+       * 1200～1500ms 内没有确认。
+       */
+
       this.state.network.quality =
         '连接中'
 
@@ -945,7 +1239,7 @@ export class WalkieClient {
       return false
 
     } catch (
-      error
+    error
     ) {
 
       const businessError:
@@ -1086,7 +1380,8 @@ export class WalkieClient {
                 (
                   success:
                     boolean
-                ): void => {
+                ):
+                  void => {
 
                   this.state.talkStatus =
                     'NONE'
@@ -1207,7 +1502,8 @@ export class WalkieClient {
           channel
 
       if (
-        this.savedChannelPassword.length > 0
+        this.savedChannelPassword.length >
+          0
       ) {
 
         message =
@@ -1376,7 +1672,7 @@ export class WalkieClient {
       string,
     password:
       string =
-      ''
+    ''
   ):
     Promise<void> {
 
@@ -1445,7 +1741,7 @@ export class WalkieClient {
       boolean,
     password:
       string =
-      ''
+    ''
   ):
     Promise<void> {
 
@@ -1579,6 +1875,7 @@ export class WalkieClient {
     this.stopTalkRequestTimer()
 
     void this.audio.stop()
+
     void this.playback.stop()
 
     this.state.talkStatus =
@@ -1603,41 +1900,14 @@ export class WalkieClient {
   ):
     void {
 
-    /*
-     * ==========================================================
-     * 关键：
-     *
-     * HarmonyOS 的 UDP：
-     *
-     * 控制消息可能是 String，
-     * 也可能是 ArrayBuffer。
-     *
-     * 音频也可能是 ArrayBuffer。
-     *
-     * 所以不能单纯按照 JS 类型区分。
-     * ==========================================================
-     */
-
     let text:
       string =
       ''
-
-    /*
-     * ==========================================================
-     * ArrayBuffer
-     * ==========================================================
-     */
 
     if (
       typeof message.data !==
         'string'
     ) {
-
-      /*
-       * --------------------------------------------------------
-       * 第一优先级：W23A
-       * --------------------------------------------------------
-       */
 
       const isW23A:
         boolean =
@@ -1662,23 +1932,6 @@ export class WalkieClient {
         return
       }
 
-      /*
-       * --------------------------------------------------------
-       * 第二优先级：
-       *
-       * 尝试把 ArrayBuffer 解码成 WALKIE 文本。
-       *
-       * 例如：
-       *
-       * WALKIE_CONNECTED
-       * WALKIE_KEEPALIVE
-       * WALKIE_USER_OK
-       * WALKIE_USER_LIST
-       * WALKIE_CHANNEL_LIST
-       * WALKIE_NET_PONG
-       * --------------------------------------------------------
-       */
-
       text =
         this.decodeText(
           message.data
@@ -1695,29 +1948,7 @@ export class WalkieClient {
           text
         )
 
-        /*
-         * 注意：
-         *
-         * 这里不能 return。
-         *
-         * 必须继续执行下面的
-         * WALKIE_* 控制协议。
-         *
-         * 所以代码继续往下走。
-         */
-
       } else {
-
-        /*
-         * ------------------------------------------------------
-         * 第三优先级：
-         *
-         * 既不是 W23A，
-         * 又不是 WALKIE 控制文本。
-         *
-         * 才当成 Legacy 裸 Opus。
-         * ------------------------------------------------------
-         */
 
         console.info(
           'WALKIE RX AUDIO LEGACY: ' +
@@ -1734,23 +1965,11 @@ export class WalkieClient {
 
     } else {
 
-      /*
-       * ========================================================
-       * String
-       * ========================================================
-       */
-
       text =
         this.decodeText(
           message.data
         )
     }
-
-    /*
-     * ==========================================================
-     * 空消息
-     * ==========================================================
-     */
 
     if (
       text.length === 0
@@ -1773,14 +1992,6 @@ export class WalkieClient {
         'WALKIE_CONNECTED'
     ) {
 
-      /*
-       * ========================================================
-       * VPS 已确认 HELLO。
-       *
-       * 正式标记连接成功。
-       * ========================================================
-       */
-
       this.connected =
         true
 
@@ -1798,25 +2009,19 @@ export class WalkieClient {
       this.emitState()
 
       /*
-       * ========================================================
-       * 立即正式 LOGIN
-       * ========================================================
+       * CONNECTED 后正式 LOGIN。
        */
 
       void this.sendLogin()
 
       /*
-       * ========================================================
-       * 恢复频道
-       * ========================================================
+       * 恢复频道。
        */
 
       void this.restoreSavedChannel()
 
       /*
-       * ========================================================
-       * 同步服务器数据
-       * ========================================================
+       * 同步服务器数据。
        */
 
       void this.requestUserList()
@@ -2252,11 +2457,6 @@ export class WalkieClient {
       }
     }
 
-    /*
-     * 登录完成以后，
-     * 再刷新一次在线列表。
-     */
-
     void this.requestUserList()
 
     void this.requestChannelMembers()
@@ -2317,16 +2517,6 @@ export class WalkieClient {
           name
       }
     }
-
-    /*
-     * USER_STATUS：
-     *
-     * [0] userId
-     * [1] nickname
-     * [2] status
-     * [3] timestamp
-     * [4] channel
-     */
 
     if (
       parts.length > 4
@@ -2498,7 +2688,8 @@ export class WalkieClient {
       )
 
     if (
-      payload.trim().length === 0
+      payload.trim().length ===
+        0
     ) {
 
       return
@@ -2867,7 +3058,7 @@ export class WalkieClient {
     }
 
     const sentTime:
-      number | undefined =
+    number | undefined =
       this.pendingPingTime.get(
         sequence
       )
@@ -2953,7 +3144,8 @@ export class WalkieClient {
     void {
 
     if (
-      this.keepAliveTimer !== null
+      this.keepAliveTimer !==
+        null
     ) {
 
       clearInterval(
@@ -3061,7 +3253,7 @@ export class WalkieClient {
       this.pingSequence
 
     this.pingSequence +=
-      1
+    1
 
     const timestamp:
       number =
@@ -3229,7 +3421,8 @@ export class WalkieClient {
       value.trim()
 
     if (
-      clean.length === 0
+      clean.length ===
+        0
     ) {
 
       return result
@@ -3281,7 +3474,8 @@ export class WalkieClient {
           .trim()
 
       if (
-        userId.length === 0
+        userId.length ===
+          0
       ) {
 
         continue
@@ -3360,7 +3554,7 @@ export class WalkieClient {
 
   private decodeText(
     data:
-      string | ArrayBuffer
+    string | ArrayBuffer
   ):
     string {
 
@@ -3381,7 +3575,8 @@ export class WalkieClient {
         )
 
       if (
-        bytes.length === 0
+        bytes.length ===
+          0
       ) {
 
         return ''
@@ -3529,7 +3724,7 @@ export class WalkieClient {
     void {
 
     const callback:
-      WalkieStateCallback | null =
+    WalkieStateCallback | null =
       this.stateCallback
 
     if (
