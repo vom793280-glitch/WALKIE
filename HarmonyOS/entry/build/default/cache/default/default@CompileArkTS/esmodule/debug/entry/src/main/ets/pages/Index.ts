@@ -6,6 +6,7 @@ interface Index_Params {
     walkieTone?: WalkieTone;
     connected?: boolean;
     nickname?: string;
+    nicknamePreferences?: preferences.Preferences | null;
     myUserId?: string;
     currentChannel?: string;
     currentOnlineCount?: number;
@@ -35,6 +36,7 @@ interface Index_Params {
 import { WalkieClient } from "@normalized:N&&&entry/src/main/ets/WalkieClient&";
 import type { WalkieClientState, WalkieChannel, WalkieUser } from "@normalized:N&&&entry/src/main/ets/WalkieClient&";
 import { WalkieTone } from "@normalized:N&&&entry/src/main/ets/WalkieTone&";
+import preferences from "@ohos:data.preferences";
 class Index extends ViewPU {
     constructor(parent, params, __localStorage, elmtId = -1, paramsLambda = undefined, extraInfo) {
         super(parent, __localStorage, elmtId, extraInfo);
@@ -45,6 +47,7 @@ class Index extends ViewPU {
         this.walkieTone = new WalkieTone();
         this.__connected = new ObservedPropertySimplePU(false, this, "connected");
         this.__nickname = new ObservedPropertySimplePU('', this, "nickname");
+        this.nicknamePreferences = null;
         this.__myUserId = new ObservedPropertySimplePU('', this, "myUserId");
         this.__currentChannel = new ObservedPropertySimplePU('public', this, "currentChannel");
         this.__currentOnlineCount = new ObservedPropertySimplePU(0, this, "currentOnlineCount");
@@ -136,6 +139,9 @@ class Index extends ViewPU {
         }
         if (params.nickname !== undefined) {
             this.nickname = params.nickname;
+        }
+        if (params.nicknamePreferences !== undefined) {
+            this.nicknamePreferences = params.nicknamePreferences;
         }
         if (params.myUserId !== undefined) {
             this.myUserId = params.myUserId;
@@ -297,6 +303,7 @@ class Index extends ViewPU {
     set nickname(newValue: string) {
         this.__nickname.set(newValue);
     }
+    private nicknamePreferences: preferences.Preferences | null;
     private __myUserId: ObservedPropertySimplePU<string>;
     get myUserId() {
         return this.__myUserId.get();
@@ -506,17 +513,48 @@ class Index extends ViewPU {
     // 生命周期
     // ============================================================
     aboutToAppear(): void {
-        const hostContext = this.getUIContext()
-            .getHostContext();
         /*
-         * 注册 WalkieClient 状态回调。
+         * ============================================================
+         * 先注册 WalkieClient 回调。
          *
-         * WalkieClient 收到 VPS 数据后，
-         * 会统一从这里更新界面。
+         * WalkieClient.setStateCallback()
+         * 会立即发送一次当前状态。
+         *
+         * 所以必须先注册，再读取本地昵称，
+         * 防止 WalkieClient 的空昵称覆盖本地保存的昵称。
+         * ============================================================
          */
         this.walkieClient.setStateCallback((state: WalkieClientState): void => {
             this.applyClientState(state);
         });
+        /*
+         * ============================================================
+         * 读取本地保存的昵称
+         * ============================================================
+         */
+        const hostContext = this.getUIContext()
+            .getHostContext();
+        if (hostContext !== undefined) {
+            try {
+                this.nicknamePreferences =
+                    preferences.getPreferencesSync(hostContext, {
+                        name: 'walkie_profile'
+                    });
+                const savedNickname: string = this.nicknamePreferences.getSync('nickname', '') as string;
+                if (savedNickname.length > 0) {
+                    this.nickname =
+                        savedNickname;
+                    this.nicknameInput =
+                        savedNickname;
+                    console.info('WALKIE: 已恢复保存的昵称=' +
+                        savedNickname);
+                }
+            }
+            catch (error) {
+                console.error('WALKIE: 读取昵称失败=' +
+                    JSON.stringify(error));
+            }
+        }
     }
     aboutToDisappear(): void {
         /*
@@ -1141,7 +1179,7 @@ class Index extends ViewPU {
             }
             else if (this.onlineUsers.length === 0) {
                 this.ifElseBranchUpdateFunction(1, () => {
-                    this.emptyMiniCard.bind(this)('正在同步在线人员…');
+                    this.emptyMiniCard.bind(this)('当前暂无在线人员');
                 });
             }
             else {
@@ -1491,7 +1529,7 @@ class Index extends ViewPU {
             }
             else if (this.onlineUsers.length === 0) {
                 this.ifElseBranchUpdateFunction(1, () => {
-                    this.emptyCard.bind(this)('正在同步在线人员…');
+                    this.emptyCard.bind(this)('当前暂无在线人员');
                 });
             }
             else {
@@ -2359,7 +2397,25 @@ class Index extends ViewPU {
         }
         const name: string = this.nickname.trim();
         /*
-         * 没有昵称时也允许连接。
+         * ============================================================
+         * 连接前先把 UI 当前显示的昵称同步到 WalkieClient。
+         *
+         * 这样即使 APP 是重新打开的，
+         * 本地恢复出来的昵称也会进入 WalkieClient.state.nickname。
+         *
+         * 后面的 WALKIE_LOGIN 就会携带正确昵称。
+         * ============================================================
+         */
+        if (name.length > 0) {
+            console.info('WALKIE CONNECT: 准备同步昵称=' +
+                name);
+            await this.walkieClient
+                .setNickname(name);
+            console.info('WALKIE CONNECT: 昵称同步完成=' +
+                name);
+        }
+        /*
+         * 没有昵称时仍然允许连接。
          *
          * VPS 会按 deviceId 创建默认用户名。
          */
@@ -2385,6 +2441,24 @@ class Index extends ViewPU {
             value;
         this.showNicknameDialog =
             false;
+        /*
+         * 保存到手机本地。
+         */
+        if (this.nicknamePreferences !== null) {
+            try {
+                this.nicknamePreferences.putSync('nickname', value);
+                this.nicknamePreferences.flushSync();
+                console.info('WALKIE: 昵称已保存=' +
+                    value);
+            }
+            catch (error) {
+                console.error('WALKIE: 保存昵称失败=' +
+                    JSON.stringify(error));
+            }
+        }
+        /*
+         * 同步服务器。
+         */
         await this.walkieClient
             .setNickname(value);
     }
@@ -2510,18 +2584,24 @@ class Index extends ViewPU {
          */
         this.connected =
             state.connected;
-        this.nickname =
-            state.nickname;
+        if (state.nickname.length > 0 &&
+            state.nickname.indexOf('USER-') !== 0) {
+            this.nickname =
+                state.nickname;
+        }
         this.myUserId =
             state.userId;
         this.currentChannel =
             state.currentChannel;
         this.onlineUsers =
             state.onlineUsers;
-        this.channels =
-            state.channels;
+        /*
+         * 在线人数也只统计其他用户。
+         */
         this.currentOnlineCount =
             state.onlineUsers.length;
+        this.channels =
+            state.channels;
         this.currentPrivate =
             state.currentChannelPrivate;
         this.networkLatency =
@@ -2553,14 +2633,22 @@ class Index extends ViewPU {
                 '离线';
         }
         /*
-         * 频道人数从服务器频道数据同步。
+         * ============================================================
+         * 频道人数
+         *
+         * Android / HarmonyOS 在线人员页面只显示
+         * 当前频道的“其他用户”。
+         *
+         * 所以这里不能再使用服务器返回的
+         * channel.onlineCount，否则会把自己重新算进去。
+         * ============================================================
          */
         for (let index = 0; index < this.channels.length; index++) {
             const channel: WalkieChannel = this.channels[index];
             if (channel.name ===
                 this.currentChannel) {
                 this.currentOnlineCount =
-                    channel.onlineCount;
+                    this.onlineUsers.length;
                 break;
             }
         }

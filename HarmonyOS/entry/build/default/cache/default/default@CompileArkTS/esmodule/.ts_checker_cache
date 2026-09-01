@@ -160,7 +160,9 @@
         "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieAudio.ets",
         "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.multimedia.audio.d.ts",
         "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieTone.ets",
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkiePlayback.ets",
         "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.util.d.ts",
+        "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.data.preferences.d.ts",
         "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\graphics3d\\SceneResources.d.ts",
         "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\build-tools\\ets-loader\\declarations\\embedded_component.d.ts",
         "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\build-tools\\ets-loader\\declarations\\image.d.ts",
@@ -480,7 +482,8 @@
         "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\application\\Context.d.ts",
         "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.app.ability.common.d.ts",
         "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\app\\context.d.ts",
-        "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.data.rdb.d.ts"
+        "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.data.rdb.d.ts",
+        "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.data.preferences.d.ts"
       ],
       "error": false
     },
@@ -1635,11 +1638,13 @@
       "error": false
     },
     "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieClient.ets": {
-      "mtimeMs": 1788231328120.6313,
+      "mtimeMs": 1788243530546.6223,
       "children": [
         "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieUdp.ets",
         "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieAudio.ets",
         "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieTone.ets",
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkiePlayback.ets",
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieAudioPacket.ets",
         "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.util.d.ts",
         "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.base.d.ts"
       ],
@@ -1666,12 +1671,24 @@
         28007
       ]
     },
+    "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.data.preferences.d.ts": {
+      "mtimeMs": 1787845012000,
+      "children": [
+        "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.base.d.ts",
+        "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\application\\BaseContext.d.ts"
+      ],
+      "parent": [
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\pages\\Index.ets"
+      ],
+      "error": false
+    },
     "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\pages\\Index.ets": {
-      "mtimeMs": 1788228427696.7842,
+      "mtimeMs": 1788239093262.1812,
       "children": [
         "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieClient.ets",
         "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieTone.ets",
-        "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.app.ability.common.d.ts"
+        "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.app.ability.common.d.ts",
+        "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.data.preferences.d.ts"
       ],
       "parent": [],
       "error": true,
@@ -1680,7 +1697,7 @@
       ]
     },
     "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieUdp.ets": {
-      "mtimeMs": 1788149141496.0916,
+      "mtimeMs": 1788242207050.557,
       "children": [
         "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.net.socket.d.ts"
       ],
@@ -1709,6 +1726,32 @@
       "errorCodes": [
         28007
       ]
+    },
+    "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkiePlayback.ets": {
+      "mtimeMs": 1788244913589.6113,
+      "children": [
+        "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.multimedia.audio.d.ts",
+        "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.base.d.ts",
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieOpus.ets",
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieAudioPacket.ets"
+      ],
+      "parent": [
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieClient.ets"
+      ],
+      "error": true,
+      "errorCodes": [
+        28007
+      ]
+    },
+    "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieAudioPacket.ets": {
+      "mtimeMs": 1788170110518.6719,
+      "children": [],
+      "parent": [
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieClient.ets",
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieAudio.ets",
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkiePlayback.ets"
+      ],
+      "error": false
     },
     "G:\\DevEco Studio\\sdk\\default\\openharmony\\ets\\api\\@ohos.util.d.ts": {
       "mtimeMs": 1787845012000,
@@ -1788,7 +1831,8 @@
       ],
       "parent": [
         "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieAudio.ets",
-        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieTone.ets"
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieTone.ets",
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkiePlayback.ets"
       ],
       "error": false
     },
@@ -1798,15 +1842,8 @@
         "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\cpp\\types\\libwalkieopus\\Index.d.ts"
       ],
       "parent": [
-        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieAudio.ets"
-      ],
-      "error": false
-    },
-    "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieAudioPacket.ets": {
-      "mtimeMs": 1788170110518.6719,
-      "children": [],
-      "parent": [
-        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieAudio.ets"
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkieAudio.ets",
+        "D:\\Walkie\\HarmonyOS\\entry\\src\\main\\ets\\WalkiePlayback.ets"
       ],
       "error": false
     },

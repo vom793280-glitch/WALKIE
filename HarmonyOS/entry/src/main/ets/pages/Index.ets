@@ -9,6 +9,8 @@ import { WalkieTone } from '../WalkieTone'
 
 import { common } from '@kit.AbilityKit'
 
+import { preferences } from '@kit.ArkData'
+
 /*
  * ============================================================
  * WALKIE HarmonyOS
@@ -53,6 +55,10 @@ struct Index {
   @State connected: boolean = false
 
   @State nickname: string = ''
+
+  private nicknamePreferences:
+  preferences.Preferences | null =
+    null
 
   @State myUserId: string = ''
 
@@ -157,27 +163,87 @@ struct Index {
 
   aboutToAppear(): void {
 
-    const hostContext =
-      this.getUIContext()
-        .getHostContext()
-
-
-
     /*
-     * 注册 WalkieClient 状态回调。
+     * ============================================================
+     * 先注册 WalkieClient 回调。
      *
-     * WalkieClient 收到 VPS 数据后，
-     * 会统一从这里更新界面。
+     * WalkieClient.setStateCallback()
+     * 会立即发送一次当前状态。
+     *
+     * 所以必须先注册，再读取本地昵称，
+     * 防止 WalkieClient 的空昵称覆盖本地保存的昵称。
+     * ============================================================
      */
 
     this.walkieClient.setStateCallback(
-      (state: WalkieClientState): void => {
+      (
+        state: WalkieClientState
+      ): void => {
 
         this.applyClientState(
           state
         )
       }
     )
+
+    /*
+     * ============================================================
+     * 读取本地保存的昵称
+     * ============================================================
+     */
+
+    const hostContext =
+      this.getUIContext()
+        .getHostContext()
+
+    if (
+      hostContext !== undefined
+    ) {
+
+      try {
+
+        this.nicknamePreferences =
+          preferences.getPreferencesSync(
+            hostContext,
+            {
+              name:
+              'walkie_profile'
+            }
+          )
+
+        const savedNickname:
+          string =
+          this.nicknamePreferences.getSync(
+            'nickname',
+            ''
+          ) as string
+
+        if (
+          savedNickname.length > 0
+        ) {
+
+          this.nickname =
+            savedNickname
+
+          this.nicknameInput =
+            savedNickname
+
+          console.info(
+            'WALKIE: 已恢复保存的昵称=' +
+              savedNickname
+          )
+        }
+
+      } catch (
+      error
+      ) {
+
+        console.error(
+          'WALKIE: 读取昵称失败=' +
+            JSON.stringify(error)
+        )
+      }
+    }
   }
 
   aboutToDisappear(): void {
@@ -220,28 +286,28 @@ struct Index {
 
         if (
           this.currentPage ===
-          'home'
+            'home'
         ) {
 
           this.homePage()
 
         } else if (
           this.currentPage ===
-          'users'
+            'users'
         ) {
 
           this.usersPage()
 
         } else if (
           this.currentPage ===
-          'channels'
+            'channels'
         ) {
 
           this.channelsPage()
 
         } else if (
           this.currentPage ===
-          'settings'
+            'settings'
         ) {
 
           this.settingsPage()
@@ -780,7 +846,7 @@ struct Index {
       ) {
 
         this.emptyMiniCard(
-          '正在同步在线人员…'
+          '当前暂无在线人员'
         )
 
       } else {
@@ -1005,7 +1071,7 @@ struct Index {
 
           if (
             event.type ===
-            TouchType.Down
+              TouchType.Down
           ) {
 
             this.pressing =
@@ -1017,9 +1083,9 @@ struct Index {
 
           if (
             event.type ===
-            TouchType.Up ||
-            event.type ===
-            TouchType.Cancel
+              TouchType.Up ||
+              event.type ===
+                TouchType.Cancel
           ) {
 
             this.pressing =
@@ -1056,7 +1122,7 @@ struct Index {
 
     if (
       this.talkStatus ===
-      'ALLOWED'
+        'ALLOWED'
     ) {
 
       return '正在讲话 · 松开结束'
@@ -1064,7 +1130,7 @@ struct Index {
 
     if (
       this.talkStatus ===
-      'REQUESTING'
+        'REQUESTING'
     ) {
 
       return '正在抢麦…请保持按住'
@@ -1072,7 +1138,7 @@ struct Index {
 
     if (
       this.talkStatus ===
-      'BUSY'
+        'BUSY'
     ) {
 
       return '频道正在通话'
@@ -1103,7 +1169,7 @@ struct Index {
 
     if (
       this.talkStatus ===
-      'ALLOWED'
+        'ALLOWED'
     ) {
 
       return '松开结束讲话'
@@ -1111,7 +1177,7 @@ struct Index {
 
     if (
       this.talkStatus ===
-      'REQUESTING'
+        'REQUESTING'
     ) {
 
       return '抢麦中 · 不要松开'
@@ -1119,7 +1185,7 @@ struct Index {
 
     if (
       this.talkStatus ===
-      'BUSY'
+        'BUSY'
     ) {
 
       return '忙线'
@@ -1143,7 +1209,7 @@ struct Index {
 
     if (
       this.talkStatus ===
-      'ALLOWED'
+        'ALLOWED'
     ) {
 
       return '#D32F2F'
@@ -1151,7 +1217,7 @@ struct Index {
 
     if (
       this.talkStatus ===
-      'REQUESTING'
+        'REQUESTING'
     ) {
 
       return '#F57C00'
@@ -1159,7 +1225,7 @@ struct Index {
 
     if (
       this.talkStatus ===
-      'BUSY'
+        'BUSY'
     ) {
 
       return '#616161'
@@ -1237,7 +1303,7 @@ struct Index {
           ) {
 
             this.emptyCard(
-              '正在同步在线人员…'
+              '当前暂无在线人员'
             )
 
           } else {
@@ -1431,8 +1497,8 @@ struct Index {
         })
         .enabled(
           this.connected &&
-          this.currentChannel !==
-          'public'
+            this.currentChannel !==
+              'public'
         )
         .fontColor('#D92F2F')
         .backgroundColor('#FFF0F0')
@@ -1514,7 +1580,7 @@ struct Index {
 
       if (
         channel.name ===
-        this.currentChannel
+          this.currentChannel
       ) {
 
         Text('当前')
@@ -1526,7 +1592,7 @@ struct Index {
 
         Button(
           channel.isPrivate ||
-          channel.requirePassword
+            channel.requirePassword
             ? '加入'
             : '切换'
         )
@@ -1795,7 +1861,7 @@ struct Index {
                     0,
                     20
                   )
-          })
+            })
 
         Row() {
 
@@ -1966,12 +2032,12 @@ struct Index {
               this.createChannelName
                 .trim()
                 .length > 0 &&
-              (
-                !this.createChannelPrivate ||
-                this.createChannelPassword
-                  .trim()
-                  .length > 0
-              )
+                (
+                  !this.createChannelPrivate ||
+                    this.createChannelPassword
+                      .trim()
+                      .length > 0
+                )
             )
             .onClick(() => {
 
@@ -2197,7 +2263,39 @@ struct Index {
       this.nickname.trim()
 
     /*
-     * 没有昵称时也允许连接。
+     * ============================================================
+     * 连接前先把 UI 当前显示的昵称同步到 WalkieClient。
+     *
+     * 这样即使 APP 是重新打开的，
+     * 本地恢复出来的昵称也会进入 WalkieClient.state.nickname。
+     *
+     * 后面的 WALKIE_LOGIN 就会携带正确昵称。
+     * ============================================================
+     */
+
+    if (
+      name.length > 0
+    ) {
+
+      console.info(
+        'WALKIE CONNECT: 准备同步昵称=' +
+          name
+      )
+
+      await this.walkieClient
+        .setNickname(
+          name
+        )
+
+      console.info(
+        'WALKIE CONNECT: 昵称同步完成=' +
+          name
+      )
+
+    }
+
+    /*
+     * 没有昵称时仍然允许连接。
      *
      * VPS 会按 deviceId 创建默认用户名。
      */
@@ -2224,7 +2322,8 @@ struct Index {
   private async saveNickname():
     Promise<void> {
 
-    const value: string =
+    const value:
+      string =
       this.nicknameInput
         .trim()
         .substring(
@@ -2244,6 +2343,43 @@ struct Index {
 
     this.showNicknameDialog =
       false
+
+    /*
+     * 保存到手机本地。
+     */
+
+    if (
+      this.nicknamePreferences !== null
+    ) {
+
+      try {
+
+        this.nicknamePreferences.putSync(
+          'nickname',
+          value
+        )
+
+        this.nicknamePreferences.flushSync()
+
+        console.info(
+          'WALKIE: 昵称已保存=' +
+            value
+        )
+
+      } catch (
+      error
+      ) {
+
+        console.error(
+          'WALKIE: 保存昵称失败=' +
+            JSON.stringify(error)
+        )
+      }
+    }
+
+    /*
+     * 同步服务器。
+     */
 
     await this.walkieClient
       .setNickname(
@@ -2271,9 +2407,9 @@ struct Index {
 
     if (
       this.createChannelPrivate &&
-      this.createChannelPassword
-        .trim()
-        .length === 0
+        this.createChannelPassword
+          .trim()
+          .length === 0
     ) {
 
       return
@@ -2326,7 +2462,7 @@ struct Index {
 
     if (
       channel.name ===
-      this.currentChannel
+        this.currentChannel
     ) {
 
       return
@@ -2334,7 +2470,7 @@ struct Index {
 
     if (
       channel.isPrivate ||
-      channel.requirePassword
+        channel.requirePassword
     ) {
 
       this.passwordChannel =
@@ -2407,7 +2543,7 @@ struct Index {
 
     if (
       this.currentChannel ===
-      'public'
+        'public'
     ) {
 
       this.showDeleteDialog =
@@ -2447,10 +2583,10 @@ struct Index {
 
     return (
       `${this.networkType} · ` +
-      `${this.networkQuality} · ` +
-      `延迟 ${latencyText} · ` +
-      `丢包 ${lossText} · ` +
-      `抖动 ${jitterText}`
+        `${this.networkQuality} · ` +
+        `延迟 ${latencyText} · ` +
+        `丢包 ${lossText} · ` +
+        `抖动 ${jitterText}`
     )
   }
 
@@ -2469,8 +2605,14 @@ struct Index {
     this.connected =
       state.connected
 
-    this.nickname =
-      state.nickname
+    if (
+      state.nickname.length > 0 &&
+        state.nickname.indexOf('USER-') !== 0
+    ) {
+
+      this.nickname =
+        state.nickname
+    }
 
     this.myUserId =
       state.userId
@@ -2481,11 +2623,15 @@ struct Index {
     this.onlineUsers =
       state.onlineUsers
 
-    this.channels =
-      state.channels
+    /*
+     * 在线人数也只统计其他用户。
+     */
 
     this.currentOnlineCount =
       state.onlineUsers.length
+
+    this.channels =
+      state.channels
 
     this.currentPrivate =
       state.currentChannelPrivate
@@ -2534,7 +2680,15 @@ struct Index {
     }
 
     /*
-     * 频道人数从服务器频道数据同步。
+     * ============================================================
+     * 频道人数
+     *
+     * Android / HarmonyOS 在线人员页面只显示
+     * 当前频道的“其他用户”。
+     *
+     * 所以这里不能再使用服务器返回的
+     * channel.onlineCount，否则会把自己重新算进去。
+     * ============================================================
      */
 
     for (
@@ -2549,11 +2703,11 @@ struct Index {
 
       if (
         channel.name ===
-        this.currentChannel
+          this.currentChannel
       ) {
 
         this.currentOnlineCount =
-          channel.onlineCount
+          this.onlineUsers.length
 
         break
       }

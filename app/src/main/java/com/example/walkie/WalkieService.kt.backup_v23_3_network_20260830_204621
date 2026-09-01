@@ -53,7 +53,7 @@ class WalkieService : Service() {
 
     companion object {
 
-        private const val WALKIE_VERSION = "V23.3"
+        private const val WALKIE_VERSION = "V23.1"
 
         const val ACTION_START =
             "com.example.walkie.ACTION_START"
@@ -6077,7 +6077,6 @@ private fun initializeOpus() {
     private fun resetNetworkStats() {
 
         synchronized(networkStatsLock) {
-
             pingPending.clear()
             pingResults.clear()
             pingSequence = 0L
@@ -6085,154 +6084,29 @@ private fun initializeOpus() {
 
         networkLatencyMs = -1L
         networkJitterMs = -1L
-
-        /*
-         * 没有任何探测样本时：
-         *
-         * 不能显示 100% 丢包。
-         *
-         * 100% 代表“已经统计到全部失败”。
-         *
-         * 当前没有样本应该是：
-         * 检测中
-         */
-        networkLossPercent = 0f
-
+        networkLossPercent = 100f
         networkBitrateKbps = 0f
         networkDownloadBitrateKbps = 0f
-
-        networkQuality =
-            if (isConnected) {
-                "检测中"
-            } else {
-                "离线"
-            }
-
+        networkQuality = if (isConnected) "检测中" else "离线"
         txAudioWindowBytes = 0L
-        txAudioWindowStart =
-            System.currentTimeMillis()
-
+        txAudioWindowStart = System.currentTimeMillis()
         rxAudioWindowBytes = 0L
-        rxAudioWindowStart =
-            txAudioWindowStart
-
-        adaptivePlaybackRecoveryPackets =
-            PLAYBACK_RECOVERY_BUFFER_PACKETS
-
+        rxAudioWindowStart = txAudioWindowStart
+        adaptivePlaybackRecoveryPackets = PLAYBACK_RECOVERY_BUFFER_PACKETS
         broadcastNetworkStatus(true)
     }
 
     private fun sendNetworkPing(now: Long) {
 
-        val seq =
-            synchronized(networkStatsLock) {
+        val seq = synchronized(networkStatsLock) {
+            pingSequence = (pingSequence + 1L) and 0x7FFF_FFFFL
+            pingPending[pingSequence] = now
+            pingSequence
+        }
 
-                pingSequence =
-                    (
-                        pingSequence + 1L
-                    ) and
-                    0x7FFF_FFFFL
-
-                pingPending[
-                    pingSequence
-                ] = now
-
-                pingSequence
-            }
-
-        val message =
+        sendMessageAsync(
             "$MSG_NET_PING:$seq:$now"
-
-        /*
-         * V23.3：
-         *
-         * 网络探测不能再通过 coroutine
-         * 异步排队发送。
-         *
-         * 当前 receive loop 本身就是 UDP
-         * 连接核心线程。
-         *
-         * 直接发送可以保证：
-         *
-         * 发送时间
-         * =
-         * 真正 socket.send() 时间
-         *
-         * 这样 RTT 才可靠。
-         */
-
-        val socket =
-            udpSocket
-
-        val address =
-            serverAddress
-
-        if (
-            socket == null ||
-            socket.isClosed ||
-            address == null
-        ) {
-
-            synchronized(networkStatsLock) {
-                pingPending.remove(seq)
-            }
-
-            println(
-                "WALKIE $WALKIE_VERSION: " +
-                        "NET PING 发送失败：Socket不可用 seq=$seq"
-            )
-
-            addPingResult(false)
-
-            updateNetworkQuality()
-            broadcastNetworkStatus(false)
-
-            return
-        }
-
-        try {
-
-            val data =
-                message.toByteArray(
-                    Charsets.UTF_8
-                )
-
-            val packet =
-                DatagramPacket(
-                    data,
-                    data.size,
-                    address,
-                    SERVER_PORT
-                )
-
-            socket.send(
-                packet
-            )
-
-            println(
-                "WALKIE $WALKIE_VERSION: " +
-                        "NET PING 发送 seq=$seq"
-            )
-
-        } catch (
-            e: Throwable
-        ) {
-
-            synchronized(networkStatsLock) {
-                pingPending.remove(seq)
-            }
-
-            println(
-                "WALKIE $WALKIE_VERSION: " +
-                        "NET PING 发送异常 " +
-                        "seq=$seq error=${e.message}"
-            )
-
-            addPingResult(false)
-
-            updateNetworkQuality()
-            broadcastNetworkStatus(false)
-        }
+        )
     }
 
     private fun handleNetworkPong(text: String) {
@@ -6247,95 +6121,43 @@ private fun initializeOpus() {
             payload.split(":")
 
         val sequence =
-            parts
-                .getOrNull(0)
-                ?.toLongOrNull()
+            parts.getOrNull(0)?.toLongOrNull()
                 ?: return
 
-        val sentAt =
-            synchronized(networkStatsLock) {
-
-                pingPending.remove(
-                    sequence
-                )
-
-            } ?: return
+        val sentAt = synchronized(networkStatsLock) {
+            pingPending.remove(sequence)
+        } ?: parts.getOrNull(1)?.toLongOrNull() ?: return
 
         val now =
             System.currentTimeMillis()
 
         val rtt =
-            (
-                now - sentAt
-            ).coerceIn(
-                0L,
-                60000L
-            )
+            (now - sentAt).coerceIn(0L, 60000L)
 
-        val previous =
-            networkLatencyMs
+        val previous = networkLatencyMs
 
         networkLatencyMs =
-            if (
-                previous < 0L
-            ) {
-
+            if (previous < 0L) {
                 rtt
-
             } else {
-
-                (
-                    (previous * 0.70) +
-                            (rtt * 0.30)
-                    )
-                    .toLong()
+                ((previous * 0.70) + (rtt * 0.30)).toLong()
             }
 
-        if (
-            previous >= 0L
-        ) {
-
-            val diff =
-                abs(
-                    rtt - previous
-                ).toDouble()
-
+        if (previous >= 0L) {
+            val diff = abs(rtt - previous).toDouble()
             networkJitterMs =
-                if (
-                    networkJitterMs < 0L
-                ) {
-
+                if (networkJitterMs < 0L) {
                     diff.toLong()
-
                 } else {
-
-                    (
-                        (networkJitterMs * 0.75) +
-                                (diff * 0.25)
-                        )
-                        .toLong()
+                    ((networkJitterMs * 0.75) + (diff * 0.25)).toLong()
                 }
-
         } else {
-
-            networkJitterMs =
-                0L
+            networkJitterMs = 0L
         }
 
         addPingResult(true)
-
         updateNetworkQuality()
-
         adaptPlaybackBuffer()
-
-        println(
-            "WALKIE $WALKIE_VERSION: " +
-                    "NET PONG seq=$sequence " +
-                    "rtt=${rtt}ms " +
-                    "loss=${networkLossPercent}% " +
-                    "jitter=${networkJitterMs}ms"
-        )
-
         broadcastNetworkStatus(false)
     }
 
@@ -6367,92 +6189,33 @@ private fun initializeOpus() {
     private fun addPingResult(success: Boolean) {
 
         synchronized(networkStatsLock) {
-
-            pingResults.addLast(
-                success
-            )
-
-            while (
-                pingResults.size >
-                NETWORK_PING_WINDOW
-            ) {
-
+            pingResults.addLast(success)
+            while (pingResults.size > NETWORK_PING_WINDOW) {
                 pingResults.removeFirst()
             }
 
-            val total =
-                pingResults.size
-
-            if (
-                total <= 0
-            ) {
-
-                networkLossPercent =
-                    0f
-
-            } else {
-
-                val lost =
-                    pingResults.count {
-                        !it
-                    }
-
-                networkLossPercent =
-                    lost *
-                            100f /
-                            total.toFloat()
-            }
+            val total = pingResults.size
+            val lost = pingResults.count { !it }
+            networkLossPercent =
+                if (total == 0) 100f
+                else lost * 100f / total.toFloat()
         }
     }
 
     private fun updateNetworkQuality() {
 
-        val latency =
-            networkLatencyMs
+        val latency = networkLatencyMs
+        val loss = networkLossPercent
+        val jitter = networkJitterMs.coerceAtLeast(0L)
 
-        val loss =
-            networkLossPercent
-
-        val jitter =
-            networkJitterMs.coerceAtLeast(
-                0L
-            )
-
-        val sampleCount =
-            synchronized(
-                networkStatsLock
-            ) {
-                pingResults.size
-            }
-
-        networkQuality =
-            when {
-
-                !isConnected ->
-                    "离线"
-
-                sampleCount < 3 ||
-                        latency < 0L ->
-                    "检测中"
-
-                loss >= 20f ||
-                        latency >= 300L ||
-                        jitter >= 100L ->
-                    "较差"
-
-                loss >= 8f ||
-                        latency >= 180L ||
-                        jitter >= 50L ->
-                    "一般"
-
-                loss >= 3f ||
-                        latency >= 100L ||
-                        jitter >= 25L ->
-                    "良好"
-
-                else ->
-                    "优秀"
-            }
+        networkQuality = when {
+            !isConnected -> "离线"
+            latency < 0L -> "检测中"
+            loss >= 20f || latency >= 300L || jitter >= 100L -> "较差"
+            loss >= 8f || latency >= 180L || jitter >= 50L -> "一般"
+            loss >= 3f || latency >= 100L || jitter >= 25L -> "良好"
+            else -> "优秀"
+        }
     }
 
     private fun adaptPlaybackBuffer() {
@@ -8773,7 +8536,6 @@ private fun ensureAudioPlayer() {
         super.onDestroy()
     }
 }
-
 
 
 

@@ -5,16 +5,66 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="258f602e-111e-47f0-ab89-26e00a757cdc" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/entry/src/main/cpp/types/libwalkieopus/Index.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/entry/src/main/cpp/types/libwalkieopus/oh-package.json5" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/entry/src/main/cpp/walkie_opus_napi.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieAudio.ets" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieAudioPacket.ets" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieClient.ets" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieOpus.ets" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieTone.ets" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/entry/src/main/resources/rawfile/walkie_talk_ok.wav" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkiePlayback.ets" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/codeStyles/Project.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/codeStyles/Project.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../.idea/deploymentTargetSelector.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/deploymentTargetSelector.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/cache/file-cache.json" beforeDir="false" afterPath="$PROJECT_DIR$/.hvigor/cache/file-cache.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/cache/task-cache.json" beforeDir="false" afterPath="$PROJECT_DIR$/.hvigor/cache/task-cache.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/outputs/build-logs/build.log" beforeDir="false" afterPath="$PROJECT_DIR$/.hvigor/outputs/build-logs/build.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/outputs/build-logs/build.log.1" beforeDir="false" afterPath="$PROJECT_DIR$/.hvigor/outputs/build-logs/build.log.1" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/outputs/build-logs/build.log.2" beforeDir="false" afterPath="$PROJECT_DIR$/.hvigor/outputs/build-logs/build.log.2" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/outputs/build-logs/build.log.3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/outputs/build-logs/build.log.4" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/outputs/build-logs/build.log.5" beforeDir="false" afterPath="$PROJECT_DIR$/.hvigor/outputs/build-logs/build.log.5" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/outputs/build-logs/build.log.6" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/outputs/logs/details/details.json" beforeDir="false" afterPath="$PROJECT_DIR$/.hvigor/outputs/logs/details/details.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/outputs/records/performance-recorder.json" beforeDir="false" afterPath="$PROJECT_DIR$/.hvigor/outputs/records/performance-recorder.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/outputs/sync/fileCache.json" beforeDir="false" afterPath="$PROJECT_DIR$/.hvigor/outputs/sync/fileCache.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/report/report-202609011035034990.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/report/report-202609011035271840.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/report/report-202609011036564620.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/report/report-202609011036597570.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/report/report-202609011037054400.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/report/report-202609011037350740.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/report/report-202609011055298240.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/report/report-202609011055326180.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/report/report-202609011055370890.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.hvigor/report/report-202609011056012260.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/.cxx/default/default/debug/arm64-v8a/.cmake/api/v1/reply/index-2026-09-01T02-55-41-0170.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/.cxx/default/default/debug/arm64-v8a/.ninja_deps" beforeDir="false" afterPath="$PROJECT_DIR$/entry/.cxx/default/default/debug/arm64-v8a/.ninja_deps" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/.cxx/default/default/debug/arm64-v8a/.ninja_log" beforeDir="false" afterPath="$PROJECT_DIR$/entry/.cxx/default/default/debug/arm64-v8a/.ninja_log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeConfigureLog.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeConfigureLog.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/.cxx/default/default/debug/arm64-v8a/configure_fingerprint.json" beforeDir="false" afterPath="$PROJECT_DIR$/entry/.cxx/default/default/debug/arm64-v8a/configure_fingerprint.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/.ts_checker_cache" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/.ts_checker_cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/.tsbuildinfo" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/.tsbuildinfo" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/.tsbuildinfo.linter" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/.tsbuildinfo.linter" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/modules/Index.ets-a6426e26ffab9a4beb0ca861dbf7f6c60e0010f4de42c45610cb774dfd2fa5e6.msgpack" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/modules/Index.ets-a6426e26ffab9a4beb0ca861dbf7f6c60e0010f4de42c45610cb774dfd2fa5e6.msgpack" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/modules/WalkieAudioPacket.ets-756b99487ef87b416b89d22b7095ae918926c98917d9c9c07bd3772e98f16c63.msgpack" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/modules/WalkieAudioPacket.ets-756b99487ef87b416b89d22b7095ae918926c98917d9c9c07bd3772e98f16c63.msgpack" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/modules/WalkieClient.ets-bbe85ca52528f1213ed933845e2b656aae981fc5bb35221c86dd71c7eb9df9ca.msgpack" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/modules/WalkieClient.ets-bbe85ca52528f1213ed933845e2b656aae981fc5bb35221c86dd71c7eb9df9ca.msgpack" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/modules/WalkieUdp.ets-d9687584e6179b2f4b2434e9d91e4c87633769f9ebb6de4ffefc82f5fbad26a1.msgpack" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/modules/WalkieUdp.ets-d9687584e6179b2f4b2434e9d91e4c87633769f9ebb6de4ffefc82f5fbad26a1.msgpack" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/plugins/plugins.msgpack" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/plugins/plugins.msgpack" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/WalkieClient.protoBin" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/WalkieClient.protoBin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/WalkieClient.ts" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/WalkieClient.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/WalkieUdp.protoBin" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/WalkieUdp.protoBin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/WalkieUdp.ts" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/WalkieUdp.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/pages/Index.protoBin" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/pages/Index.protoBin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/pages/Index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/pages/Index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/filesInfo.txt" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/filesInfo.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/modules.cache" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/modules.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/sourceMaps.json" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/sourceMaps.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/loader/default/loader.json" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/intermediates/loader/default/loader.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/loader_out/default/ets/modules.abc" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/intermediates/loader_out/default/ets/modules.abc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/loader_out/default/ets/sourceMaps.map" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/intermediates/loader_out/default/ets/sourceMaps.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/patch/default/base_native_libs.json" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/intermediates/patch/default/base_native_libs.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/patch/default/binxo_native_libs.json" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/intermediates/patch/default/binxo_native_libs.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/source_map/default/sourceMaps.map" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/intermediates/source_map/default/sourceMaps.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/outputs/default/entry-default-signed.hap" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/outputs/default/entry-default-signed.hap" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/outputs/default/entry-default-unsigned.hap" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/outputs/default/entry-default-unsigned.hap" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/outputs/default/mapping/sourceMaps.map" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/outputs/default/mapping/sourceMaps.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/src/main/ets/WalkieClient.ets" beforeDir="false" afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieClient.ets" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/src/main/ets/WalkieUdp.ets" beforeDir="false" afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieUdp.ets" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/src/main/ets/pages/Index.ets" beforeDir="false" afterPath="$PROJECT_DIR$/entry/src/main/ets/pages/Index.ets" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../app/src/main/java/com/example/walkie/WalkieService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/../app/src/main/java/com/example/walkie/WalkieService.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -31,7 +81,7 @@
         <option name="filterName" value="选中应用的全部日志" />
         <option name="logPanelType" value="ONLINE" />
         <option name="processName" value="com.walkie.brothers" />
-        <option name="searchFilterContent" value="WALKIE TONE" />
+        <option name="searchFilterContent" value="WALKIE UDP RX BINARY" />
       </hilogPanelState>
     </panelStates>
   </component>
@@ -46,9 +96,9 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "192.168.3.23:40195": "5371944581788231367406",
+    "192.168.3.23:40195": "5371944581788244973033",
     "Application.entry.executor": "Run",
-    "MODULE_HAP_TIME": "{\"192.168.3.23:40195entry\":\"2026-09-01T02:56:04.323177100Z\"}",
+    "MODULE_HAP_TIME": "{\"192.168.3.23:40195entry\":\"2026-09-01T06:42:51.139201200Z\"}",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
