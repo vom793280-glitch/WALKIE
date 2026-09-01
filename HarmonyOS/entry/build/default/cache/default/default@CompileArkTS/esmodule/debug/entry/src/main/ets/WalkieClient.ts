@@ -74,6 +74,8 @@ export class WalkieClient {
     // ============================================================
     private static readonly NETWORK_PING_INTERVAL: number = 2000;
     private static readonly NETWORK_PING_WINDOW: number = 20;
+    private static readonly NETWORK_PING_TIMEOUT: number = 1800;
+    private static readonly AUTO_RECONNECT_DELAY: number = 300;
     // ============================================================
     // 登录
     // ============================================================
@@ -140,6 +142,11 @@ export class WalkieClient {
     // ============================================================
     private keepAliveTimer: number | null = null;
     private networkPingTimer: number | null = null;
+    // ============================================================
+    // 自动重连
+    // ============================================================
+    private autoReconnectTimer: number | null = null;
+    private autoReconnectBusy: boolean = false;
     // ============================================================
     // Ping
     // ============================================================
@@ -997,6 +1004,14 @@ export class WalkieClient {
         this.state.message =
             message;
         this.emitState();
+        /*
+        * UDP 层已经明确出错。
+        *
+        * 不等待 5 秒后台检查。
+        *
+        * 直接进入自动恢复。
+        */
+        this.scheduleAutoReconnect();
     }
     // ============================================================
     // UDP 消息
@@ -1581,6 +1596,7 @@ export class WalkieClient {
             this.state.message =
                 '心跳发送失败';
             this.emitState();
+            this.scheduleAutoReconnect();
         }
     }
     // ============================================================
@@ -1610,12 +1626,72 @@ export class WalkieClient {
             !this.udp.getBound()) {
             return;
         }
+        /*
+         * ========================================================
+         * 第一部分：
+         *
+         * 检查最早等待中的 Ping。
+         *
+         * Android：
+         *
+         * PING_TIMEOUT ≈ 1800ms
+         *
+         * 如果超过这个时间还没有 PONG，
+         * 就认为 UDP 网络已经失效。
+         * ========================================================
+         */
+        const now: number = Date.now();
+        if (this.pendingPingSequence.length >
+            0) {
+            const oldestSequence: number = this.pendingPingSequence[0];
+            const oldestTime: number | undefined = this.pendingPingTime.get(oldestSequence);
+            if (oldestTime !==
+                undefined &&
+                now -
+                    oldestTime >=
+                    WalkieClient.NETWORK_PING_TIMEOUT) {
+                /*
+                 * 清掉所有旧 Ping。
+                 */
+                this.pendingPingSequence =
+                    [];
+                this.pendingPingTime.clear();
+                /*
+                 * 标记连接失效。
+                 */
+                this.connected =
+                    false;
+                this.state.connected =
+                    false;
+                this.state.talkStatus =
+                    'NONE';
+                this.state.network.quality =
+                    '网络超时';
+                this.state.message =
+                    '服务器无响应，正在自动重连…';
+                this.emitState();
+                console.warn('WALKIE CLIENT: ' +
+                    'Network Ping 超时，触发自动重连');
+                this.scheduleAutoReconnect();
+                return;
+            }
+        }
+        /*
+         * ========================================================
+         * 第二部分：
+         *
+         * 发送新的 Ping。
+         * ========================================================
+         */
         const sequence: number = this.pingSequence;
         this.pingSequence +=
             1;
-        const timestamp: number = Date.now();
+        const timestamp: number = now;
         this.pendingPingSequence.push(sequence);
         this.pendingPingTime.set(sequence, timestamp);
+        /*
+         * 保持固定窗口。
+         */
         while (this.pendingPingSequence.length >
             WalkieClient.NETWORK_PING_WINDOW) {
             const first: number = this.pendingPingSequence[0];
@@ -1629,8 +1705,14 @@ export class WalkieClient {
                 timestamp);
         }
         catch {
+            /*
+             * 删除当前 Ping。
+             */
             this.pendingPingTime.delete(sequence);
             this.removePendingSequence(sequence);
+            /*
+             * 网络已经失效。
+             */
             this.connected =
                 false;
             this.state.connected =
@@ -1640,9 +1722,94 @@ export class WalkieClient {
             this.state.network.quality =
                 '网络异常';
             this.state.message =
-                '网络连接已失效';
+                '网络连接已失效，正在自动重连…';
             this.emitState();
+            console.warn('WALKIE CLIENT: ' +
+                'Network Ping 发送失败，触发自动重连');
+            this.scheduleAutoReconnect();
         }
+    }
+    // ============================================================
+    // 统一触发自动重连
+    // ============================================================
+    private scheduleAutoReconnect(): void {
+        if (this.manualDisconnect) {
+            return;
+        }
+        if (this.connected &&
+            this.socketReady()) {
+            return;
+        }
+        if (this.autoReconnectBusy) {
+            return;
+        }
+        if (this.reconnecting) {
+            return;
+        }
+        if (this.autoReconnectTimer !==
+            null) {
+            return;
+        }
+        this.autoReconnectTimer =
+            setTimeout((): void => {
+                this.autoReconnectTimer =
+                    null;
+                if (this.manualDisconnect) {
+                    return;
+                }
+                if (this.connected &&
+                    this.socketReady()) {
+                    return;
+                }
+                if (this.autoReconnectBusy) {
+                    return;
+                }
+                this.autoReconnectBusy =
+                    true;
+                this.state.message =
+                    '网络断开，正在自动重连…';
+                this.state.network.quality =
+                    '重连中';
+                this.emitState();
+                void this.reconnect()
+                    .then((success: boolean): void => {
+                    if (success) {
+                        this.state.message =
+                            '网络已自动恢复';
+                        this.state.network.quality =
+                            '良好';
+                        void this.requestUserList();
+                        void this.requestChannelList();
+                        void this.requestChannelMembers();
+                    }
+                    else {
+                        this.state.message =
+                            '网络恢复中…';
+                        this.state.network.quality =
+                            '连接中';
+                    }
+                    this.emitState();
+                })
+                    .catch((): void => {
+                    this.state.message =
+                        '自动重连失败，继续恢复…';
+                    this.state.network.quality =
+                        '连接中';
+                    this.emitState();
+                })
+                    .finally((): void => {
+                    this.autoReconnectBusy =
+                        false;
+                    /*
+                     * reconnect() 没有成功：
+                     *
+                     * 不立即无限递归。
+                     *
+                     * 由后台恢复定时器继续检查，
+                     * 同时 Ping 恢复以后也会再次触发。
+                     */
+                });
+            }, WalkieClient.AUTO_RECONNECT_DELAY);
     }
     // ============================================================
     // 停止全部定时器
@@ -1651,6 +1818,14 @@ export class WalkieClient {
         this.stopLoginRetry();
         this.stopKeepAlive();
         this.stopNetworkPing();
+        if (this.autoReconnectTimer !==
+            null) {
+            clearTimeout(this.autoReconnectTimer);
+            this.autoReconnectTimer =
+                null;
+        }
+        this.autoReconnectBusy =
+            false;
     }
     // ============================================================
     // 抢麦 Timer

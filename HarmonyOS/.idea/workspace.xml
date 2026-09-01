@@ -5,7 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="258f602e-111e-47f0-ab89-26e00a757cdc" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.deveco/cxx/.cache/clangd/wecode-cpp.db-wal" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.deveco/cxx/.cache/clangd/wecode-cpp.db-wal" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/.ts_checker_cache" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/.tsbuildinfo" beforeDir="false" />
@@ -25,7 +24,6 @@
       <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/modules/WalkieUdp.ets-d9687584e6179b2f4b2434e9d91e4c87633769f9ebb6de4ffefc82f5fbad26a1.msgpack" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/other/pkgName2SourceRoots.msgpack" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/compiler.cache/plugins/plugins.msgpack" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/dep_info.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/build/default/generated/r/default/ResourceTable.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/build/default/generated/r/default/ResourceTable.protoBin" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/WalkieAudio.protoBin" beforeDir="false" />
@@ -58,21 +56,22 @@
       <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/loader/default/loader.json" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/intermediates/loader/default/loader.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/loader_out/default/ets/modules.abc" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/loader_out/default/ets/sourceMaps.map" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/merge_profile/default/module.json" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/intermediates/merge_profile/default/module.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/package/default/module.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/patch/default/base_native_libs.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/patch/default/binxo_native_libs.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/process_profile/default/module.json" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/intermediates/process_profile/default/module.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/res/default/ark_module.json" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/intermediates/res/default/ark_module.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/res/default/module.json" beforeDir="false" afterPath="$PROJECT_DIR$/entry/build/default/intermediates/res/default/module.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/source_map/default/sourceMaps.map" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/stripped_native_libs/default/arm64-v8a/libc++_shared.so" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/intermediates/stripped_native_libs/default/arm64-v8a/libwalkieopus.so" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/outputs/default/entry-default-signed.hap" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/outputs/default/entry-default-unsigned.hap" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/build/default/outputs/default/mapping/sourceMaps.map" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/entry/src/main/cpp/walkie_opus_napi.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/entry/src/main/cpp/walkie_opus_napi.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/src/main/ets/WalkieClient.ets" beforeDir="false" afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieClient.ets" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/entry/src/main/ets/WalkiePlayback.ets" beforeDir="false" afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkiePlayback.ets" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/entry/src/main/ets/WalkieUdp.ets" beforeDir="false" afterPath="$PROJECT_DIR$/entry/src/main/ets/WalkieUdp.ets" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/entry/src/main/ets/entryability/EntryAbility.ets" beforeDir="false" afterPath="$PROJECT_DIR$/entry/src/main/ets/entryability/EntryAbility.ets" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/entry/src/main/ets/pages/Index.ets" beforeDir="false" afterPath="$PROJECT_DIR$/entry/src/main/ets/pages/Index.ets" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entry/src/main/module.json5" beforeDir="false" afterPath="$PROJECT_DIR$/entry/src/main/module.json5" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -88,7 +87,7 @@
         <option name="filterName" value="选中应用的全部日志" />
         <option name="logPanelType" value="ONLINE" />
         <option name="processName" value="com.walkie.brothers" />
-        <option name="searchFilterContent" value="WALKIE PLAYBACK" />
+        <option name="searchFilterContent" value="WALKIE_BG" />
       </hilogPanelState>
     </panelStates>
   </component>
@@ -103,9 +102,10 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "192.168.3.23:40195": "5371944581788255769738",
+    "192.168.3.23:40195": "5371944581788258686173",
+    "5BJ0225513009091": "5371944581788260303607",
     "Application.entry.executor": "Run",
-    "MODULE_HAP_TIME": "{\"192.168.3.23:40195entry\":\"2026-09-01T09:42:47.706486600Z\"}",
+    "MODULE_HAP_TIME": "{\"192.168.3.23:40195entry\":\"2026-09-01T10:31:24.161356900Z\",\"5BJ0225513009091entry\":\"2026-09-01T10:58:22.345664700Z\"}",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",

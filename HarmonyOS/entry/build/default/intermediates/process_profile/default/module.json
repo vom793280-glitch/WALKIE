@@ -60,6 +60,11 @@
 				"startWindowIcon": "$media:startIcon",
 				"startWindowBackground": "$color:start_window_background",
 				"exported": true,
+				"backgroundModes": [
+					"audioPlayback",
+					"audioRecording",
+					"dataTransfer"
+				],
 				"skills": [
 					{
 						"entities": [

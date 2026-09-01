@@ -33928,3 +33928,1173 @@ events:
       
       
 ...
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineSystem.cmake:228 (message)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      The target system is: OHOS - 1 - aarch64
+      The host system is: Windows - 10.0.19045 - AMD64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: G:/DevEco Studio/sdk/default/openharmony/native/llvm/bin/clang.exe 
+      Build flags: -fdata-sections;-ffunction-sections;-funwind-tables;-fstack-protector-strong;-no-canonical-prefixes;-fno-addrsig;-Wa,--noexecstack;-Wformat;-Werror=format-security;-D__MUSL__
+      Id flags: -c;--target=aarch64-linux-ohos 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CMakeCCompilerId.o"
+      
+      The C compiler identification is Clang, found in:
+        D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/3.28.2/CompilerIdC/CMakeCCompilerId.o
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: G:/DevEco Studio/sdk/default/openharmony/native/llvm/bin/clang++.exe 
+      Build flags: -fdata-sections;-ffunction-sections;-funwind-tables;-fstack-protector-strong;-no-canonical-prefixes;-fno-addrsig;-Wa,--noexecstack;-Wformat;-Werror=format-security;-D__MUSL__
+      Id flags: -c;--target=aarch64-linux-ohos 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CMakeCXXCompilerId.o"
+      
+      The CXX compiler identification is Clang, found in:
+        D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/3.28.2/CompilerIdCXX/CMakeCXXCompilerId.o
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-1h0ast"
+      binary: "D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-1h0ast"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN: "G:/DevEco Studio/sdk/default/openharmony/native/llvm"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-ohos"
+      CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN: "G:/DevEco Studio/sdk/default/openharmony/native/llvm"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-ohos"
+      CMAKE_C_FLAGS: "-fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat  -D__MUSL__"
+      CMAKE_EXE_LINKER_FLAGS: "--rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections"
+      CMAKE_POSITION_INDEPENDENT_CODE: "TRUE"
+      CMAKE_SYSROOT: "G:/DevEco Studio/sdk/default/openharmony/native/sysroot"
+      HMOS_SDK_NATIVE: "G:\\DevEco Studio\\sdk\\default\\hms\\native"
+      OHOS_ARCH: "arm64-v8a"
+      OHOS_SDK_NATIVE: "G:/DevEco Studio/sdk/default/openharmony/native"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-1h0ast'
+        
+        Run Build Command(s): "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/bin/ninja.exe" -v cmTC_8949f
+        [1/2] G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\clang.exe --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot"   -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat  -D__MUSL__  -fPIE   -v -MD -MT CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o -MF CMakeFiles\\cmTC_8949f.dir\\CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o -c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCCompilerABI.c"
+        OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)
+        Target: aarch64-unknown-linux-ohos
+        Thread model: posix
+        InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin
+        clang: warning: argument unused during compilation: '--gcc-toolchain=G:/DevEco Studio/sdk/default/openharmony/native/llvm' [-Wunused-command-line-argument]
+         (in-process)
+         "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/clang.exe" -cc1 -triple aarch64-unknown-linux-ohos -emit-obj -mrelax-all --mrelax-relocations -mnoexecstack -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=1 -target-cpu generic -target-feature +neon -target-feature +v8a -target-feature +fix-cortex-a53-835769 -target-abi aapcs -fallow-half-arguments-and-returns -mllvm -treat-scalable-fixed-error-as-warning -debugger-tuning=gdb -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-1h0ast -resource-dir G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4 -dependency-file "CMakeFiles\\\\cmTC_8949f.dir\\\\CMakeCCompilerABI.c.o.d" -MT CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o -sys-header-deps -D __MUSL__ -isysroot "G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include" -Wformat -fdebug-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-1h0ast -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o -x c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCCompilerABI.c"
+        clang -cc1 version 15.0.4 based upon LLVM 15.0.4 default target x86_64-w64-windows-gnu
+        ignoring nonexistent directory "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include
+         G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos
+         G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include
+        End of search list.
+        [2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\clang.exe --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat  -D__MUSL__ --rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections -v CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o -o cmTC_8949f   && cd ."
+        OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)
+        Target: aarch64-unknown-linux-ohos
+        Thread model: posix
+        InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin
+         "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld" "--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -pie -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=4096 --hash-style=gnu --hash-style=both --enable-new-dtags --eh-frame-hdr -m aarch64linux -dynamic-linker /lib/ld-musl-aarch64.so.1 -o cmTC_8949f "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o" "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o" G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/" -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/ "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/" --build-id=sha1 --warn-shared-textrel --fatal-warnings -lunwind --no-undefined -z noexecstack --gc-sections CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a -lc G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o"
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:127 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include]
+          add: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+          add: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        end of search list found
+        collapse include dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/include]
+        collapse include dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+        collapse include dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        implicit include dirs: [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/include;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:159 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld\\.lld\\.exe|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: 'D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-1h0ast']
+        ignore line: []
+        ignore line: [Run Build Command(s): "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/bin/ninja.exe" -v cmTC_8949f]
+        ignore line: [[1/2] G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\clang.exe --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot"   -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa --noexecstack -Wformat  -D__MUSL__  -fPIE   -v -MD -MT CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o -MF CMakeFiles\\cmTC_8949f.dir\\CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o -c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCCompilerABI.c"]
+        ignore line: [OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)]
+        ignore line: [Target: aarch64-unknown-linux-ohos]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin]
+        ignore line: [clang: warning: argument unused during compilation: '--gcc-toolchain=G:/DevEco Studio/sdk/default/openharmony/native/llvm' [-Wunused-command-line-argument]]
+        ignore line: [ (in-process)]
+        ignore line: [ "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/clang.exe" -cc1 -triple aarch64-unknown-linux-ohos -emit-obj -mrelax-all --mrelax-relocations -mnoexecstack -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=1 -target-cpu generic -target-feature +neon -target-feature +v8a -target-feature +fix-cortex-a53-835769 -target-abi aapcs -fallow-half-arguments-and-returns -mllvm -treat-scalable-fixed-error-as-warning -debugger-tuning=gdb -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-1h0ast -resource-dir G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4 -dependency-file "CMakeFiles\\\\cmTC_8949f.dir\\\\CMakeCCompilerABI.c.o.d" -MT CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o -sys-header-deps -D __MUSL__ -isysroot "G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include" -Wformat -fdebug-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-1h0ast -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o -x c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCCompilerABI.c"]
+        ignore line: [clang -cc1 version 15.0.4 based upon LLVM 15.0.4 default target x86_64-w64-windows-gnu]
+        ignore line: [ignoring nonexistent directory "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include]
+        ignore line: [ G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+        ignore line: [ G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\clang.exe --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat  -D__MUSL__ --rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections -v CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o -o cmTC_8949f   && cd ."]
+        ignore line: [OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)]
+        ignore line: [Target: aarch64-unknown-linux-ohos]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin]
+        link line: [ "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld" "--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -pie -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=4096 --hash-style=gnu --hash-style=both --enable-new-dtags --eh-frame-hdr -m aarch64linux -dynamic-linker /lib/ld-musl-aarch64.so.1 -o cmTC_8949f "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o" "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o" G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/" -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/ "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/" --build-id=sha1 --warn-shared-textrel --fatal-warnings -lunwind --no-undefined -z noexecstack --gc-sections CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a -lc G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o"]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld] ==> ignore
+          arg [--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-EL] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-zmax-page-size=4096] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--hash-style=both] ==> ignore
+          arg [--enable-new-dtags] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [aarch64linux] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib/ld-musl-aarch64.so.1] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_8949f] ==> ignore
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o]
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o] ==> obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o]
+          arg [-LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos] ==> dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos]
+          arg [-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/] ==> dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/]
+          arg [-LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/] ==> dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/]
+          arg [-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/] ==> dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/]
+          arg [--build-id=sha1] ==> ignore
+          arg [--warn-shared-textrel] ==> ignore
+          arg [--fatal-warnings] ==> ignore
+          arg [-lunwind] ==> lib [unwind]
+          arg [--no-undefined] ==> ignore
+          arg [-znoexecstack] ==> ignore
+          arg [--gc-sections] ==> ignore
+          arg [CMakeFiles/cmTC_8949f.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a] ==> lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-lc] ==> lib [c]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a] ==> lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o] ==> obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o]
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o]
+        remove lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+        remove lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+        collapse obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o]
+        collapse obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o]
+        collapse library dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos]
+        collapse library dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib]
+        collapse library dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/aarch64-linux-ohos]
+        collapse library dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos]
+        implicit libs: [unwind;-l:libunwind.a;c;-l:libunwind.a]
+        implicit objs: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o]
+        implicit dirs: [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-ukjxwi"
+      binary: "D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-ukjxwi"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN: "G:/DevEco Studio/sdk/default/openharmony/native/llvm"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-ohos"
+      CMAKE_CXX_FLAGS: "-fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat   -D__MUSL__"
+      CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN: "G:/DevEco Studio/sdk/default/openharmony/native/llvm"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-ohos"
+      CMAKE_EXE_LINKER_FLAGS: "--rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections"
+      CMAKE_POSITION_INDEPENDENT_CODE: "TRUE"
+      CMAKE_SYSROOT: "G:/DevEco Studio/sdk/default/openharmony/native/sysroot"
+      HMOS_SDK_NATIVE: "G:\\DevEco Studio\\sdk\\default\\hms\\native"
+      OHOS_ARCH: "arm64-v8a"
+      OHOS_SDK_NATIVE: "G:/DevEco Studio/sdk/default/openharmony/native"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-ukjxwi'
+        
+        Run Build Command(s): "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/bin/ninja.exe" -v cmTC_1ee82
+        [1/2] G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\CLANG_~1.EXE --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot"   -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat   -D__MUSL__  -fPIE   -v -MD -MT CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles\\cmTC_1ee82.dir\\CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o -c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"
+        OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)
+        Target: aarch64-unknown-linux-ohos
+        Thread model: posix
+        InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin
+        clang++: warning: argument unused during compilation: '--gcc-toolchain=G:/DevEco Studio/sdk/default/openharmony/native/llvm' [-Wunused-command-line-argument]
+         (in-process)
+         "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/clang++.exe" -cc1 -triple aarch64-unknown-linux-ohos -emit-obj -mrelax-all --mrelax-relocations -mnoexecstack -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=1 -target-cpu generic -target-feature +neon -target-feature +v8a -target-feature +fix-cortex-a53-835769 -target-abi aapcs -fallow-half-arguments-and-returns -mllvm -treat-scalable-fixed-error-as-warning -debugger-tuning=gdb -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-ukjxwi -resource-dir G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4 -dependency-file "CMakeFiles\\\\cmTC_1ee82.dir\\\\CMakeCXXCompilerABI.cpp.o.d" -MT CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -D __MUSL__ -isysroot "G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1 -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include" -Wformat -fdeprecated-macro -fdebug-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-ukjxwi -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -fcxx-exceptions -fexceptions -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o -x c++ "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"
+        clang -cc1 version 15.0.4 based upon LLVM 15.0.4 default target x86_64-w64-windows-gnu
+        ignoring nonexistent directory "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1
+         G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include
+         G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos
+         G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include
+        End of search list.
+        [2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\CLANG_~1.EXE --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat   -D__MUSL__ --rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections -v CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_1ee82   && cd ."
+        OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)
+        Target: aarch64-unknown-linux-ohos
+        Thread model: posix
+        InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin
+         "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld" "--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -pie -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=4096 --hash-style=gnu --hash-style=both --enable-new-dtags --eh-frame-hdr -m aarch64linux -dynamic-linker /lib/ld-musl-aarch64.so.1 -o cmTC_1ee82 "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o" "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o" G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/" -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/ "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/" --build-id=sha1 --warn-shared-textrel --fatal-warnings -lunwind --no-undefined -z noexecstack --gc-sections CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o -lc++ -lc++abi -lunwind -lm G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a -lc G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o"
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:127 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1]
+          add: [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include]
+          add: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+          add: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        end of search list found
+        collapse include dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/include/libcxx-ohos/include/c++/v1]
+        collapse include dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/include]
+        collapse include dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+        collapse include dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        implicit include dirs: [G:/DevEco Studio/sdk/default/openharmony/native/llvm/include/libcxx-ohos/include/c++/v1;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/include;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:159 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld\\.lld\\.exe|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: 'D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-ukjxwi']
+        ignore line: []
+        ignore line: [Run Build Command(s): "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/bin/ninja.exe" -v cmTC_1ee82]
+        ignore line: [[1/2] G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\CLANG_~1.EXE --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot"   -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa --noexecstack -Wformat   -D__MUSL__  -fPIE   -v -MD -MT CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles\\cmTC_1ee82.dir\\CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o -c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"]
+        ignore line: [OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)]
+        ignore line: [Target: aarch64-unknown-linux-ohos]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin]
+        ignore line: [clang++: warning: argument unused during compilation: '--gcc-toolchain=G:/DevEco Studio/sdk/default/openharmony/native/llvm' [-Wunused-command-line-argument]]
+        ignore line: [ (in-process)]
+        ignore line: [ "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/clang++.exe" -cc1 -triple aarch64-unknown-linux-ohos -emit-obj -mrelax-all --mrelax-relocations -mnoexecstack -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=1 -target-cpu generic -target-feature +neon -target-feature +v8a -target-feature +fix-cortex-a53-835769 -target-abi aapcs -fallow-half-arguments-and-returns -mllvm -treat-scalable-fixed-error-as-warning -debugger-tuning=gdb -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-ukjxwi -resource-dir G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4 -dependency-file "CMakeFiles\\\\cmTC_1ee82.dir\\\\CMakeCXXCompilerABI.cpp.o.d" -MT CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -D __MUSL__ -isysroot "G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1 -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include" -Wformat -fdeprecated-macro -fdebug-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-ukjxwi -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -fcxx-exceptions -fexceptions -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o -x c++ "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"]
+        ignore line: [clang -cc1 version 15.0.4 based upon LLVM 15.0.4 default target x86_64-w64-windows-gnu]
+        ignore line: [ignoring nonexistent directory "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1]
+        ignore line: [ G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include]
+        ignore line: [ G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+        ignore line: [ G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\CLANG_~1.EXE --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat   -D__MUSL__ --rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections -v CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_1ee82   && cd ."]
+        ignore line: [OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)]
+        ignore line: [Target: aarch64-unknown-linux-ohos]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin]
+        link line: [ "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld" "--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -pie -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=4096 --hash-style=gnu --hash-style=both --enable-new-dtags --eh-frame-hdr -m aarch64linux -dynamic-linker /lib/ld-musl-aarch64.so.1 -o cmTC_1ee82 "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o" "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o" G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/" -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/ "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/" --build-id=sha1 --warn-shared-textrel --fatal-warnings -lunwind --no-undefined -z noexecstack --gc-sections CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o -lc++ -lc++abi -lunwind -lm G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a -lc G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o"]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld] ==> ignore
+          arg [--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-EL] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-zmax-page-size=4096] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--hash-style=both] ==> ignore
+          arg [--enable-new-dtags] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [aarch64linux] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib/ld-musl-aarch64.so.1] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_1ee82] ==> ignore
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o]
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o] ==> obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o]
+          arg [-LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos] ==> dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos]
+          arg [-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/] ==> dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/]
+          arg [-LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/] ==> dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/]
+          arg [-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/] ==> dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/]
+          arg [--build-id=sha1] ==> ignore
+          arg [--warn-shared-textrel] ==> ignore
+          arg [--fatal-warnings] ==> ignore
+          arg [-lunwind] ==> lib [unwind]
+          arg [--no-undefined] ==> ignore
+          arg [-znoexecstack] ==> ignore
+          arg [--gc-sections] ==> ignore
+          arg [CMakeFiles/cmTC_1ee82.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lc++] ==> lib [c++]
+          arg [-lc++abi] ==> lib [c++abi]
+          arg [-lunwind] ==> lib [unwind]
+          arg [-lm] ==> lib [m]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a] ==> lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-lc] ==> lib [c]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a] ==> lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o] ==> obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o]
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o]
+        remove lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+        remove lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+        collapse obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o]
+        collapse obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o]
+        collapse library dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos]
+        collapse library dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib]
+        collapse library dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/aarch64-linux-ohos]
+        collapse library dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos]
+        implicit libs: [unwind;c++;c++abi;unwind;m;-l:libunwind.a;c;-l:libunwind.a]
+        implicit objs: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o]
+        implicit dirs: [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos]
+        implicit fwks: []
+      
+      
+...
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineSystem.cmake:228 (message)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      The target system is: OHOS - 1 - aarch64
+      The host system is: Windows - 10.0.19045 - AMD64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: G:/DevEco Studio/sdk/default/openharmony/native/llvm/bin/clang.exe 
+      Build flags: -fdata-sections;-ffunction-sections;-funwind-tables;-fstack-protector-strong;-no-canonical-prefixes;-fno-addrsig;-Wa,--noexecstack;-Wformat;-Werror=format-security;-D__MUSL__
+      Id flags: -c;--target=aarch64-linux-ohos 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CMakeCCompilerId.o"
+      
+      The C compiler identification is Clang, found in:
+        D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/3.28.2/CompilerIdC/CMakeCCompilerId.o
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: G:/DevEco Studio/sdk/default/openharmony/native/llvm/bin/clang++.exe 
+      Build flags: -fdata-sections;-ffunction-sections;-funwind-tables;-fstack-protector-strong;-no-canonical-prefixes;-fno-addrsig;-Wa,--noexecstack;-Wformat;-Werror=format-security;-D__MUSL__
+      Id flags: -c;--target=aarch64-linux-ohos 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CMakeCXXCompilerId.o"
+      
+      The CXX compiler identification is Clang, found in:
+        D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/3.28.2/CompilerIdCXX/CMakeCXXCompilerId.o
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-2gunui"
+      binary: "D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-2gunui"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN: "G:/DevEco Studio/sdk/default/openharmony/native/llvm"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-ohos"
+      CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN: "G:/DevEco Studio/sdk/default/openharmony/native/llvm"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-ohos"
+      CMAKE_C_FLAGS: "-fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat  -D__MUSL__"
+      CMAKE_EXE_LINKER_FLAGS: "--rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections"
+      CMAKE_POSITION_INDEPENDENT_CODE: "TRUE"
+      CMAKE_SYSROOT: "G:/DevEco Studio/sdk/default/openharmony/native/sysroot"
+      HMOS_SDK_NATIVE: "G:\\DevEco Studio\\sdk\\default\\hms\\native"
+      OHOS_ARCH: "arm64-v8a"
+      OHOS_SDK_NATIVE: "G:/DevEco Studio/sdk/default/openharmony/native"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-2gunui'
+        
+        Run Build Command(s): "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/bin/ninja.exe" -v cmTC_48f65
+        [1/2] G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\clang.exe --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot"   -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat  -D__MUSL__  -fPIE   -v -MD -MT CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o -MF CMakeFiles\\cmTC_48f65.dir\\CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o -c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCCompilerABI.c"
+        OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)
+        Target: aarch64-unknown-linux-ohos
+        Thread model: posix
+        InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin
+        clang: warning: argument unused during compilation: '--gcc-toolchain=G:/DevEco Studio/sdk/default/openharmony/native/llvm' [-Wunused-command-line-argument]
+         (in-process)
+         "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/clang.exe" -cc1 -triple aarch64-unknown-linux-ohos -emit-obj -mrelax-all --mrelax-relocations -mnoexecstack -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=1 -target-cpu generic -target-feature +neon -target-feature +v8a -target-feature +fix-cortex-a53-835769 -target-abi aapcs -fallow-half-arguments-and-returns -mllvm -treat-scalable-fixed-error-as-warning -debugger-tuning=gdb -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-2gunui -resource-dir G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4 -dependency-file "CMakeFiles\\\\cmTC_48f65.dir\\\\CMakeCCompilerABI.c.o.d" -MT CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o -sys-header-deps -D __MUSL__ -isysroot "G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include" -Wformat -fdebug-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-2gunui -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o -x c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCCompilerABI.c"
+        clang -cc1 version 15.0.4 based upon LLVM 15.0.4 default target x86_64-w64-windows-gnu
+        ignoring nonexistent directory "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include
+         G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos
+         G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include
+        End of search list.
+        [2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\clang.exe --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat  -D__MUSL__ --rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections -v CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o -o cmTC_48f65   && cd ."
+        OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)
+        Target: aarch64-unknown-linux-ohos
+        Thread model: posix
+        InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin
+         "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld" "--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -pie -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=4096 --hash-style=gnu --hash-style=both --enable-new-dtags --eh-frame-hdr -m aarch64linux -dynamic-linker /lib/ld-musl-aarch64.so.1 -o cmTC_48f65 "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o" "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o" G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/" -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/ "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/" --build-id=sha1 --warn-shared-textrel --fatal-warnings -lunwind --no-undefined -z noexecstack --gc-sections CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a -lc G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o"
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:127 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include]
+          add: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+          add: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        end of search list found
+        collapse include dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/include]
+        collapse include dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+        collapse include dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        implicit include dirs: [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/include;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:159 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld\\.lld\\.exe|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: 'D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-2gunui']
+        ignore line: []
+        ignore line: [Run Build Command(s): "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/bin/ninja.exe" -v cmTC_48f65]
+        ignore line: [[1/2] G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\clang.exe --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot"   -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa --noexecstack -Wformat  -D__MUSL__  -fPIE   -v -MD -MT CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o -MF CMakeFiles\\cmTC_48f65.dir\\CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o -c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCCompilerABI.c"]
+        ignore line: [OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)]
+        ignore line: [Target: aarch64-unknown-linux-ohos]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin]
+        ignore line: [clang: warning: argument unused during compilation: '--gcc-toolchain=G:/DevEco Studio/sdk/default/openharmony/native/llvm' [-Wunused-command-line-argument]]
+        ignore line: [ (in-process)]
+        ignore line: [ "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/clang.exe" -cc1 -triple aarch64-unknown-linux-ohos -emit-obj -mrelax-all --mrelax-relocations -mnoexecstack -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=1 -target-cpu generic -target-feature +neon -target-feature +v8a -target-feature +fix-cortex-a53-835769 -target-abi aapcs -fallow-half-arguments-and-returns -mllvm -treat-scalable-fixed-error-as-warning -debugger-tuning=gdb -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-2gunui -resource-dir G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4 -dependency-file "CMakeFiles\\\\cmTC_48f65.dir\\\\CMakeCCompilerABI.c.o.d" -MT CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o -sys-header-deps -D __MUSL__ -isysroot "G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include" -Wformat -fdebug-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-2gunui -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o -x c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCCompilerABI.c"]
+        ignore line: [clang -cc1 version 15.0.4 based upon LLVM 15.0.4 default target x86_64-w64-windows-gnu]
+        ignore line: [ignoring nonexistent directory "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include]
+        ignore line: [ G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+        ignore line: [ G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\clang.exe --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat  -D__MUSL__ --rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections -v CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o -o cmTC_48f65   && cd ."]
+        ignore line: [OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)]
+        ignore line: [Target: aarch64-unknown-linux-ohos]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin]
+        link line: [ "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld" "--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -pie -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=4096 --hash-style=gnu --hash-style=both --enable-new-dtags --eh-frame-hdr -m aarch64linux -dynamic-linker /lib/ld-musl-aarch64.so.1 -o cmTC_48f65 "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o" "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o" G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/" -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/ "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/" --build-id=sha1 --warn-shared-textrel --fatal-warnings -lunwind --no-undefined -z noexecstack --gc-sections CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a -lc G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o"]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld] ==> ignore
+          arg [--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-EL] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-zmax-page-size=4096] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--hash-style=both] ==> ignore
+          arg [--enable-new-dtags] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [aarch64linux] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib/ld-musl-aarch64.so.1] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_48f65] ==> ignore
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o]
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o] ==> obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o]
+          arg [-LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos] ==> dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos]
+          arg [-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/] ==> dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/]
+          arg [-LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/] ==> dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/]
+          arg [-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/] ==> dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/]
+          arg [--build-id=sha1] ==> ignore
+          arg [--warn-shared-textrel] ==> ignore
+          arg [--fatal-warnings] ==> ignore
+          arg [-lunwind] ==> lib [unwind]
+          arg [--no-undefined] ==> ignore
+          arg [-znoexecstack] ==> ignore
+          arg [--gc-sections] ==> ignore
+          arg [CMakeFiles/cmTC_48f65.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a] ==> lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-lc] ==> lib [c]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a] ==> lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o] ==> obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o]
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o]
+        remove lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+        remove lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+        collapse obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o]
+        collapse obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o]
+        collapse library dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos]
+        collapse library dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib]
+        collapse library dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/aarch64-linux-ohos]
+        collapse library dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos]
+        implicit libs: [unwind;-l:libunwind.a;c;-l:libunwind.a]
+        implicit objs: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o]
+        implicit dirs: [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-60jbta"
+      binary: "D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-60jbta"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN: "G:/DevEco Studio/sdk/default/openharmony/native/llvm"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-ohos"
+      CMAKE_CXX_FLAGS: "-fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat   -D__MUSL__"
+      CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN: "G:/DevEco Studio/sdk/default/openharmony/native/llvm"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-ohos"
+      CMAKE_EXE_LINKER_FLAGS: "--rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections"
+      CMAKE_POSITION_INDEPENDENT_CODE: "TRUE"
+      CMAKE_SYSROOT: "G:/DevEco Studio/sdk/default/openharmony/native/sysroot"
+      HMOS_SDK_NATIVE: "G:\\DevEco Studio\\sdk\\default\\hms\\native"
+      OHOS_ARCH: "arm64-v8a"
+      OHOS_SDK_NATIVE: "G:/DevEco Studio/sdk/default/openharmony/native"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-60jbta'
+        
+        Run Build Command(s): "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/bin/ninja.exe" -v cmTC_2221c
+        [1/2] G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\CLANG_~1.EXE --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot"   -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat   -D__MUSL__  -fPIE   -v -MD -MT CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles\\cmTC_2221c.dir\\CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o -c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"
+        OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)
+        Target: aarch64-unknown-linux-ohos
+        Thread model: posix
+        InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin
+        clang++: warning: argument unused during compilation: '--gcc-toolchain=G:/DevEco Studio/sdk/default/openharmony/native/llvm' [-Wunused-command-line-argument]
+         (in-process)
+         "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/clang++.exe" -cc1 -triple aarch64-unknown-linux-ohos -emit-obj -mrelax-all --mrelax-relocations -mnoexecstack -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=1 -target-cpu generic -target-feature +neon -target-feature +v8a -target-feature +fix-cortex-a53-835769 -target-abi aapcs -fallow-half-arguments-and-returns -mllvm -treat-scalable-fixed-error-as-warning -debugger-tuning=gdb -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-60jbta -resource-dir G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4 -dependency-file "CMakeFiles\\\\cmTC_2221c.dir\\\\CMakeCXXCompilerABI.cpp.o.d" -MT CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -D __MUSL__ -isysroot "G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1 -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include" -Wformat -fdeprecated-macro -fdebug-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-60jbta -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -fcxx-exceptions -fexceptions -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o -x c++ "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"
+        clang -cc1 version 15.0.4 based upon LLVM 15.0.4 default target x86_64-w64-windows-gnu
+        ignoring nonexistent directory "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1
+         G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include
+         G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos
+         G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include
+        End of search list.
+        [2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\CLANG_~1.EXE --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat   -D__MUSL__ --rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections -v CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_2221c   && cd ."
+        OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)
+        Target: aarch64-unknown-linux-ohos
+        Thread model: posix
+        InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin
+         "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld" "--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -pie -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=4096 --hash-style=gnu --hash-style=both --enable-new-dtags --eh-frame-hdr -m aarch64linux -dynamic-linker /lib/ld-musl-aarch64.so.1 -o cmTC_2221c "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o" "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o" G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/" -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/ "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/" --build-id=sha1 --warn-shared-textrel --fatal-warnings -lunwind --no-undefined -z noexecstack --gc-sections CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o -lc++ -lc++abi -lunwind -lm G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a -lc G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o"
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:127 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1]
+          add: [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include]
+          add: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+          add: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        end of search list found
+        collapse include dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/include/libcxx-ohos/include/c++/v1]
+        collapse include dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/include]
+        collapse include dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+        collapse include dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        implicit include dirs: [G:/DevEco Studio/sdk/default/openharmony/native/llvm/include/libcxx-ohos/include/c++/v1;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/include;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:159 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld\\.lld\\.exe|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: 'D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-60jbta']
+        ignore line: []
+        ignore line: [Run Build Command(s): "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/bin/ninja.exe" -v cmTC_2221c]
+        ignore line: [[1/2] G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\CLANG_~1.EXE --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot"   -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa --noexecstack -Wformat   -D__MUSL__  -fPIE   -v -MD -MT CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles\\cmTC_2221c.dir\\CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o -c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"]
+        ignore line: [OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)]
+        ignore line: [Target: aarch64-unknown-linux-ohos]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin]
+        ignore line: [clang++: warning: argument unused during compilation: '--gcc-toolchain=G:/DevEco Studio/sdk/default/openharmony/native/llvm' [-Wunused-command-line-argument]]
+        ignore line: [ (in-process)]
+        ignore line: [ "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/clang++.exe" -cc1 -triple aarch64-unknown-linux-ohos -emit-obj -mrelax-all --mrelax-relocations -mnoexecstack -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=1 -target-cpu generic -target-feature +neon -target-feature +v8a -target-feature +fix-cortex-a53-835769 -target-abi aapcs -fallow-half-arguments-and-returns -mllvm -treat-scalable-fixed-error-as-warning -debugger-tuning=gdb -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-60jbta -resource-dir G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4 -dependency-file "CMakeFiles\\\\cmTC_2221c.dir\\\\CMakeCXXCompilerABI.cpp.o.d" -MT CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -D __MUSL__ -isysroot "G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1 -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include" -Wformat -fdeprecated-macro -fdebug-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-60jbta -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -fcxx-exceptions -fexceptions -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o -x c++ "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"]
+        ignore line: [clang -cc1 version 15.0.4 based upon LLVM 15.0.4 default target x86_64-w64-windows-gnu]
+        ignore line: [ignoring nonexistent directory "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1]
+        ignore line: [ G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include]
+        ignore line: [ G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+        ignore line: [ G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\CLANG_~1.EXE --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat   -D__MUSL__ --rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections -v CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_2221c   && cd ."]
+        ignore line: [OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)]
+        ignore line: [Target: aarch64-unknown-linux-ohos]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin]
+        link line: [ "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld" "--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -pie -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=4096 --hash-style=gnu --hash-style=both --enable-new-dtags --eh-frame-hdr -m aarch64linux -dynamic-linker /lib/ld-musl-aarch64.so.1 -o cmTC_2221c "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o" "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o" G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/" -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/ "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/" --build-id=sha1 --warn-shared-textrel --fatal-warnings -lunwind --no-undefined -z noexecstack --gc-sections CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o -lc++ -lc++abi -lunwind -lm G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a -lc G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o"]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld] ==> ignore
+          arg [--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-EL] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-zmax-page-size=4096] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--hash-style=both] ==> ignore
+          arg [--enable-new-dtags] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [aarch64linux] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib/ld-musl-aarch64.so.1] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_2221c] ==> ignore
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o]
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o] ==> obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o]
+          arg [-LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos] ==> dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos]
+          arg [-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/] ==> dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/]
+          arg [-LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/] ==> dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/]
+          arg [-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/] ==> dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/]
+          arg [--build-id=sha1] ==> ignore
+          arg [--warn-shared-textrel] ==> ignore
+          arg [--fatal-warnings] ==> ignore
+          arg [-lunwind] ==> lib [unwind]
+          arg [--no-undefined] ==> ignore
+          arg [-znoexecstack] ==> ignore
+          arg [--gc-sections] ==> ignore
+          arg [CMakeFiles/cmTC_2221c.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lc++] ==> lib [c++]
+          arg [-lc++abi] ==> lib [c++abi]
+          arg [-lunwind] ==> lib [unwind]
+          arg [-lm] ==> lib [m]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a] ==> lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-lc] ==> lib [c]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a] ==> lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o] ==> obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o]
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o]
+        remove lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+        remove lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+        collapse obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o]
+        collapse obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o]
+        collapse library dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos]
+        collapse library dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib]
+        collapse library dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/aarch64-linux-ohos]
+        collapse library dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos]
+        implicit libs: [unwind;c++;c++abi;unwind;m;-l:libunwind.a;c;-l:libunwind.a]
+        implicit objs: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o]
+        implicit dirs: [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos]
+        implicit fwks: []
+      
+      
+...
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineSystem.cmake:228 (message)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      The target system is: OHOS - 1 - aarch64
+      The host system is: Windows - 10.0.19045 - AMD64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: G:/DevEco Studio/sdk/default/openharmony/native/llvm/bin/clang.exe 
+      Build flags: -fdata-sections;-ffunction-sections;-funwind-tables;-fstack-protector-strong;-no-canonical-prefixes;-fno-addrsig;-Wa,--noexecstack;-Wformat;-Werror=format-security;-D__MUSL__
+      Id flags: -c;--target=aarch64-linux-ohos 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CMakeCCompilerId.o"
+      
+      The C compiler identification is Clang, found in:
+        D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/3.28.2/CompilerIdC/CMakeCCompilerId.o
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: G:/DevEco Studio/sdk/default/openharmony/native/llvm/bin/clang++.exe 
+      Build flags: -fdata-sections;-ffunction-sections;-funwind-tables;-fstack-protector-strong;-no-canonical-prefixes;-fno-addrsig;-Wa,--noexecstack;-Wformat;-Werror=format-security;-D__MUSL__
+      Id flags: -c;--target=aarch64-linux-ohos 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CMakeCXXCompilerId.o"
+      
+      The CXX compiler identification is Clang, found in:
+        D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/3.28.2/CompilerIdCXX/CMakeCXXCompilerId.o
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-63avb0"
+      binary: "D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-63avb0"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN: "G:/DevEco Studio/sdk/default/openharmony/native/llvm"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-ohos"
+      CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN: "G:/DevEco Studio/sdk/default/openharmony/native/llvm"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-ohos"
+      CMAKE_C_FLAGS: "-fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat  -D__MUSL__"
+      CMAKE_EXE_LINKER_FLAGS: "--rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections"
+      CMAKE_POSITION_INDEPENDENT_CODE: "TRUE"
+      CMAKE_SYSROOT: "G:/DevEco Studio/sdk/default/openharmony/native/sysroot"
+      HMOS_SDK_NATIVE: "G:\\DevEco Studio\\sdk\\default\\hms\\native"
+      OHOS_ARCH: "arm64-v8a"
+      OHOS_SDK_NATIVE: "G:/DevEco Studio/sdk/default/openharmony/native"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-63avb0'
+        
+        Run Build Command(s): "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/bin/ninja.exe" -v cmTC_49672
+        [1/2] G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\clang.exe --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot"   -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat  -D__MUSL__  -fPIE   -v -MD -MT CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o -MF CMakeFiles\\cmTC_49672.dir\\CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o -c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCCompilerABI.c"
+        OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)
+        Target: aarch64-unknown-linux-ohos
+        Thread model: posix
+        InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin
+        clang: warning: argument unused during compilation: '--gcc-toolchain=G:/DevEco Studio/sdk/default/openharmony/native/llvm' [-Wunused-command-line-argument]
+         (in-process)
+         "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/clang.exe" -cc1 -triple aarch64-unknown-linux-ohos -emit-obj -mrelax-all --mrelax-relocations -mnoexecstack -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=1 -target-cpu generic -target-feature +neon -target-feature +v8a -target-feature +fix-cortex-a53-835769 -target-abi aapcs -fallow-half-arguments-and-returns -mllvm -treat-scalable-fixed-error-as-warning -debugger-tuning=gdb -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-63avb0 -resource-dir G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4 -dependency-file "CMakeFiles\\\\cmTC_49672.dir\\\\CMakeCCompilerABI.c.o.d" -MT CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o -sys-header-deps -D __MUSL__ -isysroot "G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include" -Wformat -fdebug-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-63avb0 -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o -x c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCCompilerABI.c"
+        clang -cc1 version 15.0.4 based upon LLVM 15.0.4 default target x86_64-w64-windows-gnu
+        ignoring nonexistent directory "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include
+         G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos
+         G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include
+        End of search list.
+        [2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\clang.exe --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat  -D__MUSL__ --rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections -v CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o -o cmTC_49672   && cd ."
+        OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)
+        Target: aarch64-unknown-linux-ohos
+        Thread model: posix
+        InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin
+         "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld" "--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -pie -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=4096 --hash-style=gnu --hash-style=both --enable-new-dtags --eh-frame-hdr -m aarch64linux -dynamic-linker /lib/ld-musl-aarch64.so.1 -o cmTC_49672 "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o" "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o" G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/" -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/ "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/" --build-id=sha1 --warn-shared-textrel --fatal-warnings -lunwind --no-undefined -z noexecstack --gc-sections CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a -lc G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o"
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:127 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include]
+          add: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+          add: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        end of search list found
+        collapse include dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/include]
+        collapse include dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+        collapse include dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        implicit include dirs: [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/include;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:159 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld\\.lld\\.exe|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: 'D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-63avb0']
+        ignore line: []
+        ignore line: [Run Build Command(s): "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/bin/ninja.exe" -v cmTC_49672]
+        ignore line: [[1/2] G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\clang.exe --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot"   -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa --noexecstack -Wformat  -D__MUSL__  -fPIE   -v -MD -MT CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o -MF CMakeFiles\\cmTC_49672.dir\\CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o -c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCCompilerABI.c"]
+        ignore line: [OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)]
+        ignore line: [Target: aarch64-unknown-linux-ohos]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin]
+        ignore line: [clang: warning: argument unused during compilation: '--gcc-toolchain=G:/DevEco Studio/sdk/default/openharmony/native/llvm' [-Wunused-command-line-argument]]
+        ignore line: [ (in-process)]
+        ignore line: [ "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/clang.exe" -cc1 -triple aarch64-unknown-linux-ohos -emit-obj -mrelax-all --mrelax-relocations -mnoexecstack -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=1 -target-cpu generic -target-feature +neon -target-feature +v8a -target-feature +fix-cortex-a53-835769 -target-abi aapcs -fallow-half-arguments-and-returns -mllvm -treat-scalable-fixed-error-as-warning -debugger-tuning=gdb -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-63avb0 -resource-dir G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4 -dependency-file "CMakeFiles\\\\cmTC_49672.dir\\\\CMakeCCompilerABI.c.o.d" -MT CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o -sys-header-deps -D __MUSL__ -isysroot "G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include" -Wformat -fdebug-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-63avb0 -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o -x c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCCompilerABI.c"]
+        ignore line: [clang -cc1 version 15.0.4 based upon LLVM 15.0.4 default target x86_64-w64-windows-gnu]
+        ignore line: [ignoring nonexistent directory "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include]
+        ignore line: [ G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+        ignore line: [ G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\clang.exe --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat  -D__MUSL__ --rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections -v CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o -o cmTC_49672   && cd ."]
+        ignore line: [OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)]
+        ignore line: [Target: aarch64-unknown-linux-ohos]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin]
+        link line: [ "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld" "--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -pie -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=4096 --hash-style=gnu --hash-style=both --enable-new-dtags --eh-frame-hdr -m aarch64linux -dynamic-linker /lib/ld-musl-aarch64.so.1 -o cmTC_49672 "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o" "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o" G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/" -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/ "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/" --build-id=sha1 --warn-shared-textrel --fatal-warnings -lunwind --no-undefined -z noexecstack --gc-sections CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a -lc G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o"]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld] ==> ignore
+          arg [--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-EL] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-zmax-page-size=4096] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--hash-style=both] ==> ignore
+          arg [--enable-new-dtags] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [aarch64linux] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib/ld-musl-aarch64.so.1] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_49672] ==> ignore
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o]
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o] ==> obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o]
+          arg [-LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos] ==> dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos]
+          arg [-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/] ==> dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/]
+          arg [-LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/] ==> dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/]
+          arg [-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/] ==> dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/]
+          arg [--build-id=sha1] ==> ignore
+          arg [--warn-shared-textrel] ==> ignore
+          arg [--fatal-warnings] ==> ignore
+          arg [-lunwind] ==> lib [unwind]
+          arg [--no-undefined] ==> ignore
+          arg [-znoexecstack] ==> ignore
+          arg [--gc-sections] ==> ignore
+          arg [CMakeFiles/cmTC_49672.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a] ==> lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-lc] ==> lib [c]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a] ==> lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o] ==> obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o]
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o]
+        remove lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+        remove lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+        collapse obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o]
+        collapse obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o]
+        collapse library dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos]
+        collapse library dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib]
+        collapse library dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/aarch64-linux-ohos]
+        collapse library dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos]
+        implicit libs: [unwind;-l:libunwind.a;c;-l:libunwind.a]
+        implicit objs: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o]
+        implicit dirs: [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-eb3sor"
+      binary: "D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-eb3sor"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN: "G:/DevEco Studio/sdk/default/openharmony/native/llvm"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-linux-ohos"
+      CMAKE_CXX_FLAGS: "-fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat   -D__MUSL__"
+      CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN: "G:/DevEco Studio/sdk/default/openharmony/native/llvm"
+      CMAKE_C_COMPILER_TARGET: "aarch64-linux-ohos"
+      CMAKE_EXE_LINKER_FLAGS: "--rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections"
+      CMAKE_POSITION_INDEPENDENT_CODE: "TRUE"
+      CMAKE_SYSROOT: "G:/DevEco Studio/sdk/default/openharmony/native/sysroot"
+      HMOS_SDK_NATIVE: "G:\\DevEco Studio\\sdk\\default\\hms\\native"
+      OHOS_ARCH: "arm64-v8a"
+      OHOS_SDK_NATIVE: "G:/DevEco Studio/sdk/default/openharmony/native"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-eb3sor'
+        
+        Run Build Command(s): "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/bin/ninja.exe" -v cmTC_38f0b
+        [1/2] G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\CLANG_~1.EXE --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot"   -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat   -D__MUSL__  -fPIE   -v -MD -MT CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles\\cmTC_38f0b.dir\\CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o -c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"
+        OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)
+        Target: aarch64-unknown-linux-ohos
+        Thread model: posix
+        InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin
+        clang++: warning: argument unused during compilation: '--gcc-toolchain=G:/DevEco Studio/sdk/default/openharmony/native/llvm' [-Wunused-command-line-argument]
+         (in-process)
+         "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/clang++.exe" -cc1 -triple aarch64-unknown-linux-ohos -emit-obj -mrelax-all --mrelax-relocations -mnoexecstack -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=1 -target-cpu generic -target-feature +neon -target-feature +v8a -target-feature +fix-cortex-a53-835769 -target-abi aapcs -fallow-half-arguments-and-returns -mllvm -treat-scalable-fixed-error-as-warning -debugger-tuning=gdb -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-eb3sor -resource-dir G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4 -dependency-file "CMakeFiles\\\\cmTC_38f0b.dir\\\\CMakeCXXCompilerABI.cpp.o.d" -MT CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -D __MUSL__ -isysroot "G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1 -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include" -Wformat -fdeprecated-macro -fdebug-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-eb3sor -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -fcxx-exceptions -fexceptions -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o -x c++ "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"
+        clang -cc1 version 15.0.4 based upon LLVM 15.0.4 default target x86_64-w64-windows-gnu
+        ignoring nonexistent directory "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1
+         G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include
+         G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos
+         G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include
+        End of search list.
+        [2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\CLANG_~1.EXE --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat   -D__MUSL__ --rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections -v CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_38f0b   && cd ."
+        OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)
+        Target: aarch64-unknown-linux-ohos
+        Thread model: posix
+        InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin
+         "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld" "--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -pie -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=4096 --hash-style=gnu --hash-style=both --enable-new-dtags --eh-frame-hdr -m aarch64linux -dynamic-linker /lib/ld-musl-aarch64.so.1 -o cmTC_38f0b "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o" "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o" G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/" -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/ "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/" --build-id=sha1 --warn-shared-textrel --fatal-warnings -lunwind --no-undefined -z noexecstack --gc-sections CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o -lc++ -lc++abi -lunwind -lm G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a -lc G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o"
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:127 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1]
+          add: [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include]
+          add: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+          add: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        end of search list found
+        collapse include dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/include/libcxx-ohos/include/c++/v1]
+        collapse include dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/include]
+        collapse include dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+        collapse include dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        implicit include dirs: [G:/DevEco Studio/sdk/default/openharmony/native/llvm/include/libcxx-ohos/include/c++/v1;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/include;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:159 (message)"
+      - "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld\\.lld\\.exe|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: 'D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-eb3sor']
+        ignore line: []
+        ignore line: [Run Build Command(s): "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/bin/ninja.exe" -v cmTC_38f0b]
+        ignore line: [[1/2] G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\CLANG_~1.EXE --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot"   -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa --noexecstack -Wformat   -D__MUSL__  -fPIE   -v -MD -MT CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles\\cmTC_38f0b.dir\\CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o -c "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"]
+        ignore line: [OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)]
+        ignore line: [Target: aarch64-unknown-linux-ohos]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin]
+        ignore line: [clang++: warning: argument unused during compilation: '--gcc-toolchain=G:/DevEco Studio/sdk/default/openharmony/native/llvm' [-Wunused-command-line-argument]]
+        ignore line: [ (in-process)]
+        ignore line: [ "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/clang++.exe" -cc1 -triple aarch64-unknown-linux-ohos -emit-obj -mrelax-all --mrelax-relocations -mnoexecstack -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=1 -target-cpu generic -target-feature +neon -target-feature +v8a -target-feature +fix-cortex-a53-835769 -target-abi aapcs -fallow-half-arguments-and-returns -mllvm -treat-scalable-fixed-error-as-warning -debugger-tuning=gdb -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-eb3sor -resource-dir G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4 -dependency-file "CMakeFiles\\\\cmTC_38f0b.dir\\\\CMakeCXXCompilerABI.cpp.o.d" -MT CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -D __MUSL__ -isysroot "G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1 -internal-isystem G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include" -internal-externc-isystem "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include" -Wformat -fdeprecated-macro -fdebug-compilation-dir=D:/Walkie/HarmonyOS/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/CMakeScratch/TryCompile-eb3sor -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -fcxx-exceptions -fexceptions -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o -x c++ "G:/DevEco Studio/sdk/default/openharmony/native/build-tools/cmake/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"]
+        ignore line: [clang -cc1 version 15.0.4 based upon LLVM 15.0.4 default target x86_64-w64-windows-gnu]
+        ignore line: [ignoring nonexistent directory "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../include/libcxx-ohos/include/c++/v1]
+        ignore line: [ G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/include]
+        ignore line: [ G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/aarch64-linux-ohos]
+        ignore line: [ G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && G:\\DEVECO~1\\sdk\\default\\OPENHA~1\\native\\llvm\\bin\\CLANG_~1.EXE --target=aarch64-linux-ohos --gcc-toolchain="G:/DevEco Studio/sdk/default/openharmony/native/llvm" --sysroot="G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat   -D__MUSL__ --rtlib=compiler-rt -fuse-ld=lld -Wl,--build-id=sha1 -Wl,--warn-shared-textrel -Wl,--fatal-warnings -lunwind -Wl,--no-undefined -Qunused-arguments -Wl,-z,noexecstack -Wl,--gc-sections -v CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_38f0b   && cd ."]
+        ignore line: [OHOS (dev) clang version 15.0.4 (llvm-project 329916b990b43824d4b7e67de911fee7a966b1c8)]
+        ignore line: [Target: aarch64-unknown-linux-ohos]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin]
+        link line: [ "G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld" "--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot" -pie -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=4096 --hash-style=gnu --hash-style=both --enable-new-dtags --eh-frame-hdr -m aarch64linux -dynamic-linker /lib/ld-musl-aarch64.so.1 -o cmTC_38f0b "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o" "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o" G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/" -LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/ "-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/" --build-id=sha1 --warn-shared-textrel --fatal-warnings -lunwind --no-undefined -z noexecstack --gc-sections CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o -lc++ -lc++abi -lunwind -lm G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a -lc G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a -l:libunwind.a G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o "G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o"]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/ld.lld] ==> ignore
+          arg [--sysroot=G:/DevEco Studio/sdk/default/openharmony/native/sysroot] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-EL] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-zmax-page-size=4096] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--hash-style=both] ==> ignore
+          arg [--enable-new-dtags] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [aarch64linux] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib/ld-musl-aarch64.so.1] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_38f0b] ==> ignore
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o]
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o] ==> obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o]
+          arg [-LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos] ==> dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos]
+          arg [-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/] ==> dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/]
+          arg [-LG:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/] ==> dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/]
+          arg [-LG:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/] ==> dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/]
+          arg [--build-id=sha1] ==> ignore
+          arg [--warn-shared-textrel] ==> ignore
+          arg [--fatal-warnings] ==> ignore
+          arg [-lunwind] ==> lib [unwind]
+          arg [--no-undefined] ==> ignore
+          arg [-znoexecstack] ==> ignore
+          arg [--gc-sections] ==> ignore
+          arg [CMakeFiles/cmTC_38f0b.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lc++] ==> lib [c++]
+          arg [-lc++abi] ==> lib [c++abi]
+          arg [-lunwind] ==> lib [unwind]
+          arg [-lm] ==> lib [m]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a] ==> lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-lc] ==> lib [c]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a] ==> lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o] ==> obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o]
+          arg [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o] ==> obj [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o]
+        remove lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+        remove lib [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/libclang_rt.builtins.a]
+        collapse obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o]
+        collapse obj [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o]
+        collapse library dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos]
+        collapse library dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib]
+        collapse library dir [G:/DEVECO~1/sdk/default/OPENHA~1/native/llvm/bin/../lib/aarch64-linux-ohos/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/aarch64-linux-ohos]
+        collapse library dir [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/] ==> [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos]
+        implicit libs: [unwind;c++;c++abi;unwind;m;-l:libunwind.a;c;-l:libunwind.a]
+        implicit objs: [G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/Scrt1.o;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crti.o;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtbegin.o;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos/clang_rt.crtend.o;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos/crtn.o]
+        implicit dirs: [G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/clang/15.0.4/lib/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib;G:/DevEco Studio/sdk/default/openharmony/native/llvm/lib/aarch64-linux-ohos;G:/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/lib/aarch64-linux-ohos]
+        implicit fwks: []
+      
+      
+...
