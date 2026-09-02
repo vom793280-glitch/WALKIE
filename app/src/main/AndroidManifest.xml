@@ -1,29 +1,24 @@
-<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- 网络 -->
     <uses-permission android:name="android.permission.INTERNET" />
-
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-    <!-- 麦克风 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- 前台服务 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
-    <!-- Android 14+：麦克风前台服务 -->
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
-    <!-- Android 14+：后台持续音频播放 -->
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
-    <!-- Android 13+：通知 -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- 安卓全局悬浮窗 -->
+    <uses-permission
+        android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:allowBackup="true"
@@ -40,31 +35,25 @@
             android:theme="@style/Theme.Walkie">
 
             <intent-filter>
-
-                <action
-                    android:name="android.intent.action.MAIN" />
+                <action android:name="android.intent.action.MAIN" />
 
                 <category
                     android:name="android.intent.category.LAUNCHER" />
-
             </intent-filter>
 
         </activity>
 
-        <!--
-            WALKIE 持续语音通信服务
-
-            microphone：
-            用于按住说话时持续录音。
-
-            mediaPlayback：
-            用于后台/锁屏持续接收并播放对讲声音。
-        -->
         <service
             android:name=".WalkieService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone|mediaPlayback" />
+
+        <!-- WALKIE 全局悬浮 PTT -->
+        <service
+            android:name=".WalkieFloatingPttService"
+            android:enabled="true"
+            android:exported="false" />
 
     </application>
 

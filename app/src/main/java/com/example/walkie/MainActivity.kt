@@ -748,6 +748,16 @@ class MainActivity : ComponentActivity() {
         requestPermissionsIfNeeded()
 
         /*
+ * ========================================================
+ * V24.9.0 全局悬浮 PTT
+ *
+ * 如果没有悬浮窗权限，
+ * 会自动打开系统授权页面。
+ * ========================================================
+ */
+        startFloatingPtt()
+
+        /*
          * 注册广播。
          */
         val filter =
@@ -1060,19 +1070,137 @@ class MainActivity : ComponentActivity() {
         super.onResume()
 
         /*
-         * 这里只检测网络类型，不重置网络质量。
+         * 检查并启动全局悬浮 PTT。
+         *
+         * 只有已经获得“显示在其他应用上层”权限时，
+         * 才会真正显示悬浮按钮。
          */
+        startFloatingPtt()
+
         updateNetworkType()
 
         /*
-         * 不因为刷新频道而清除网络统计。
+         * 不使用 connectionState 判断。
+         *
+         * 因为 Activity 可能刚刚重新创建，
+         * 此时 connectionState 还是 false，
+         * 但后台 WalkieService 可能仍然在线。
+         *
+         * 这里直接请求 Service 同步频道信息。
          */
         requestChannelList()
 
+        /*
+         * 如果 Service 当前在线，
+         * 它会返回：
+         *
+         * CHANNEL_LIST
+         * CHANNEL_STATUS
+         * USER_LIST
+         * NETWORK_STATUS
+         *
+         * Activity 再根据这些广播恢复界面。
+         */
         println(
             "WALKIE $WALKIE_VERSION: " +
                     "Activity 回到前台，主动请求 Service 同步状态"
         )
+    }
+
+    /*
+     * ============================================================
+     * 全局悬浮 PTT
+     * ============================================================
+     */
+
+    private fun startFloatingPtt() {
+
+        /*
+         * Android 要求：
+         *
+         * SYSTEM_ALERT_WINDOW
+         * +
+         * 用户在系统设置里手动授权
+         *
+         * 才能显示全局悬浮窗。
+         */
+        if (
+            !android.provider.Settings.canDrawOverlays(
+                this
+            )
+        ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "没有悬浮窗权限，打开系统授权页面"
+            )
+
+            try {
+
+                val intent =
+                    Intent(
+                        android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION
+                    ).apply {
+
+                        data =
+                            android.net.Uri.parse(
+                                "package:$packageName"
+                            )
+                    }
+
+                startActivity(
+                    intent
+                )
+
+            } catch (
+                error: Exception
+            ) {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "打开悬浮窗权限页面失败=" +
+                            error.message
+                )
+            }
+
+            return
+        }
+
+        /*
+         * 已经有悬浮窗权限，
+         * 启动悬浮 PTT 服务。
+         */
+        try {
+
+            val intent =
+                Intent(
+                    this,
+                    WalkieFloatingPttService::class.java
+                ).apply {
+
+                    action =
+                        WalkieFloatingPttService.ACTION_SHOW
+                }
+
+            startService(
+                intent
+            )
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "悬浮 PTT 已启动"
+            )
+
+        } catch (
+            error: Exception
+        ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "启动悬浮 PTT 失败=" +
+                        error.message
+            )
+        }
     }
 
     /*

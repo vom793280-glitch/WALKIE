@@ -25,17 +25,16 @@ import {
  * ============================================================
  * WALKIE HarmonyOS
  *
- * V24.5
+ * V24.9.0
  *
  * EntryAbility
  *
- * 目标：
+ * 本版本：
  *
- * 1. 正常启动 WALKIE
- * 2. 启动长期后台任务
- * 3. 请求通知显示权限
- * 4. 锁屏后继续运行
- * 5. 后台任务通知点击后回到 WALKIE
+ * 1. 保留 V24.8.6 后台长时任务
+ * 2. 保留锁屏后台运行
+ * 3. 保留通知权限
+ * 4. 新增全局悬浮 PTT
  *
  * ============================================================
  */
@@ -43,60 +42,68 @@ import {
 export default class EntryAbility
   extends UIAbility {
 
+  // ==========================================================
+  // V24.9.0
+  // 全局悬浮 PTT 窗口
+  // ==========================================================
 
-  /*
-   * ==========================================================
-   * Ability 创建
-   * ==========================================================
-   */
+  private floatingPttWindow:
+    window.Window | null =
+    null
+
+
+  // ==========================================================
+  // Ability 创建
+  // ==========================================================
+
   onCreate(
     want: Want,
-    launchParam: AbilityConstant.LaunchParam
+    launchParam:
+      AbilityConstant.LaunchParam
   ): void {
 
     console.info(
-      'WALKIE V24.5: EntryAbility.onCreate'
+      'WALKIE V24.9.0: EntryAbility.onCreate'
     )
-
 
     /*
      * ========================================================
      * 启动后台长时任务
      *
-     * 不等待。
-     *
-     * 后台任务独立运行。
+     * 原 V24.8.6 逻辑保持不变。
      * ========================================================
      */
+
     void WalkieBackgroundTask.start(
       this.context
     )
   }
 
 
-  /*
-   * ==========================================================
-   * 创建窗口
-   * ==========================================================
-   */
+  // ==========================================================
+  // WindowStage 创建
+  // ==========================================================
+
   onWindowStageCreate(
-    windowStage: window.WindowStage
+    windowStage:
+      window.WindowStage
   ): void {
 
     console.info(
-      'WALKIE V24.5: WindowStage 创建'
+      'WALKIE V24.9.0: WindowStage 创建'
     )
-
 
     /*
      * ========================================================
-     * 加载 WALKIE 主页面
+     * 加载主页面
      * ========================================================
      */
+
     windowStage.loadContent(
       'pages/Index',
       (
-        err: BusinessError
+        err:
+          BusinessError
       ): void => {
 
         if (
@@ -104,7 +111,8 @@ export default class EntryAbility
         ) {
 
           console.error(
-            'WALKIE V24.5: 主页面加载失败 ' +
+            'WALKIE V24.9.0: ' +
+              '主页面加载失败 ' +
               `code=${err.code} ` +
               `message=${err.message}`
           )
@@ -112,44 +120,340 @@ export default class EntryAbility
           return
         }
 
-
         console.info(
-          'WALKIE V24.5: 主页面加载成功'
+          'WALKIE V24.9.0: ' +
+            '主页面加载成功'
         )
-
 
         /*
          * ====================================================
          * 请求通知权限
-         *
-         * 官方要求：
-         * loadContent 成功以后才能请求。
-         *
-         * 这一步非常重要：
-         *
-         * 如果应用通知开关关闭，
-         * 系统连续任务通知可能不会正常出现在
-         * 通知栏。
          * ====================================================
          */
+
         void EntryAbility
           .requestNotificationPermission(
             this.context
           )
+
+        /*
+         * ====================================================
+         * 创建全局悬浮 PTT
+         *
+         * 主页面加载成功以后再创建。
+         * ====================================================
+         */
+
+        this.createFloatingPttWindow()
       }
     )
   }
 
 
-  /*
-   * ==========================================================
-   * 请求通知权限
-   * ==========================================================
-   */
+  // ==========================================================
+  // V24.9.0
+  // 创建全局悬浮 PTT
+  // ==========================================================
+
+  private createFloatingPttWindow():
+    void {
+
+    /*
+     * 已经创建就不重复创建。
+     */
+
+    if (
+      this.floatingPttWindow !==
+        null
+    ) {
+
+      return
+    }
+
+    try {
+
+      /*
+       * ======================================================
+       * 系统悬浮窗配置
+       *
+       * 注意：
+       *
+       * 这里直接使用 this.context
+       * 不使用 common.BaseContext。
+       *
+       * 这是为了兼容你当前
+       * HarmonyOS 7.0 / API 26
+       * 工程的 ArkTS 类型检查。
+       * ======================================================
+       */
+
+      const config:
+        window.Configuration = {
+
+        name:
+          'WALKIE_FLOAT_PTT',
+
+        windowType:
+          window.WindowType.TYPE_FLOAT,
+
+        ctx:
+          this.context
+      }
+
+      /*
+       * ======================================================
+       * 创建窗口
+       * ======================================================
+       */
+
+      window.createWindow(
+        config,
+        (
+          error:
+            BusinessError,
+          floatWindow:
+            window.Window
+        ): void => {
+
+          if (
+            error.code
+          ) {
+
+            console.error(
+              'WALKIE FLOAT PTT: ' +
+                '创建悬浮窗失败 ' +
+                `code=${error.code} ` +
+                `message=${error.message}`
+            )
+
+            return
+          }
+
+          /*
+           * 保存窗口对象。
+           */
+
+          this.floatingPttWindow =
+            floatWindow
+
+          console.info(
+            'WALKIE FLOAT PTT: ' +
+              '★悬浮窗创建成功★'
+          )
+
+          /*
+           * ==================================================
+           * 配置悬浮窗
+           * ==================================================
+           */
+
+          this.setupFloatingPttWindow(
+            floatWindow
+          )
+        }
+      )
+
+    } catch (
+      error
+    ) {
+
+      const businessError:
+        BusinessError =
+        error as BusinessError
+
+      console.error(
+        'WALKIE FLOAT PTT: ' +
+          'createWindow异常 ' +
+          `code=${businessError.code} ` +
+          `message=${businessError.message}`
+      )
+    }
+  }
+
+
+  // ==========================================================
+  // V24.9.0
+  // 配置悬浮 PTT 窗口
+  // ==========================================================
+
+  private setupFloatingPttWindow(
+    floatWindow:
+      window.Window
+  ):
+    void {
+
+    /*
+     * ========================================================
+     * 窗口大小
+     *
+     * 与悬浮 PTT 页面保持 84 × 84。
+     * ========================================================
+     */
+
+    try {
+
+      floatWindow.resize(
+        84,
+        84
+      )
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        'WALKIE FLOAT PTT: ' +
+          'resize失败 ' +
+          JSON.stringify(
+            error
+          )
+      )
+    }
+
+    /*
+     * ========================================================
+     * 初始位置
+     *
+     * 先放在右侧中下区域。
+     * 用户之后可以拖动。
+     * ========================================================
+     */
+
+    try {
+
+      floatWindow.moveWindowTo(
+        900,
+        1100
+      )
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        'WALKIE FLOAT PTT: ' +
+          '初始位置设置失败 ' +
+          JSON.stringify(
+            error
+          )
+      )
+    }
+
+    /*
+     * ========================================================
+     * 加载悬浮页面
+     * ========================================================
+     */
+
+    try {
+
+      floatWindow.setUIContent(
+        'pages/WalkieFloatingPtt',
+        (
+          error:
+            BusinessError
+        ): void => {
+
+          if (
+            error.code
+          ) {
+
+            console.error(
+              'WALKIE FLOAT PTT: ' +
+                '悬浮页面加载失败 ' +
+                `code=${error.code} ` +
+                `message=${error.message}`
+            )
+
+            return
+          }
+
+          console.info(
+            'WALKIE FLOAT PTT: ' +
+              '悬浮页面加载成功'
+          )
+
+          /*
+           * ==================================================
+           * 设置透明背景
+           * ==================================================
+           */
+
+          try {
+
+            floatWindow
+              .setWindowBackgroundColor(
+                '#00000000'
+              )
+
+          } catch (
+            error
+          ) {
+
+            console.warn(
+              'WALKIE FLOAT PTT: ' +
+                '透明背景设置失败 ' +
+                JSON.stringify(
+                  error
+                )
+            )
+          }
+
+          /*
+           * ==================================================
+           * 显示悬浮窗
+           * ==================================================
+           */
+
+          try {
+
+            floatWindow.showWindow()
+
+            console.info(
+              'WALKIE FLOAT PTT: ' +
+                '★★★★ 悬浮 PTT 已显示 ★★★★'
+            )
+
+          } catch (
+            error
+          ) {
+
+            console.error(
+              'WALKIE FLOAT PTT: ' +
+                '显示悬浮窗失败 ' +
+                JSON.stringify(
+                  error
+                )
+            )
+          }
+        }
+      )
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        'WALKIE FLOAT PTT: ' +
+          'setUIContent异常 ' +
+          JSON.stringify(
+            error
+          )
+      )
+    }
+  }
+
+
+  // ==========================================================
+  // 请求通知权限
+  // ==========================================================
+
   private static async requestNotificationPermission(
-    context: import('@kit.AbilityKit')
-      .common.UIAbilityContext
-  ): Promise<void> {
+    context:
+      import('@kit.AbilityKit')
+        .common.UIAbilityContext
+  ):
+    Promise<void> {
 
     try {
 
@@ -163,26 +467,26 @@ export default class EntryAbility
       ) {
 
         console.info(
-          'WALKIE V24.5: 通知已经开启'
+          'WALKIE V24.9.0: ' +
+            '通知已经开启'
         )
 
         return
       }
 
-
       console.info(
-        'WALKIE V24.5: 请求开启通知权限'
+        'WALKIE V24.9.0: ' +
+          '请求开启通知权限'
       )
-
 
       await notificationManager
         .requestEnableNotification(
           context
         )
 
-
       console.info(
-        'WALKIE V24.5: 通知权限请求完成'
+        'WALKIE V24.9.0: ' +
+          '通知权限请求完成'
       )
 
     } catch (
@@ -193,9 +497,8 @@ export default class EntryAbility
         BusinessError =
         error as BusinessError
 
-
       console.error(
-        'WALKIE V24.5: ' +
+        'WALKIE V24.9.0: ' +
           '请求通知权限失败 ' +
           `code=${businessError.code} ` +
           `message=${businessError.message}`
@@ -204,83 +507,147 @@ export default class EntryAbility
   }
 
 
-  /*
-   * ==========================================================
-   * WindowStage 销毁
-   * ==========================================================
-   */
-  onWindowStageDestroy(): void {
+  // ==========================================================
+  // WindowStage 销毁
+  // ==========================================================
+
+  onWindowStageDestroy():
+    void {
 
     console.info(
-      'WALKIE V24.5: WindowStage 销毁'
+      'WALKIE V24.9.0: ' +
+        'WindowStage 销毁'
     )
   }
 
 
-  /*
-   * ==========================================================
-   * 进入前台
-   * ==========================================================
-   */
-  onForeground(): void {
+  // ==========================================================
+  // 进入前台
+  // ==========================================================
+
+  onForeground():
+    void {
 
     console.info(
-      'WALKIE V24.5: ★应用进入前台★'
+      'WALKIE V24.9.0: ' +
+        '★应用进入前台★'
     )
 
-
     /*
-     * 如果之前的后台任务仍然存在，
-     * WalkieBackgroundTask 会直接返回。
-     *
-     * 如果已经被系统回收，
-     * 这里会重新申请。
+     * ========================================================
+     * 原 V24.8.6 后台恢复机制保持不变。
+     * ========================================================
      */
+
     void WalkieBackgroundTask.start(
       this.context
     )
+
+    /*
+     * ========================================================
+     * 如果悬浮 PTT 不存在，则重新创建。
+     * ========================================================
+     */
+
+    if (
+      this.floatingPttWindow ===
+        null
+    ) {
+
+      this.createFloatingPttWindow()
+    }
   }
 
 
-  /*
-   * ==========================================================
-   * 进入后台
-   * ==========================================================
-   */
-  onBackground(): void {
+  // ==========================================================
+  // 进入后台
+  // ==========================================================
+
+  onBackground():
+    void {
 
     console.info(
-      'WALKIE V24.5: ★应用进入后台★'
+      'WALKIE V24.9.0: ' +
+        '★应用进入后台★'
     )
 
-
     /*
-     * 绝对不能在这里停止后台长时任务。
-     *
-     * WALKIE 要继续：
+     * ========================================================
+     * 这里绝对不能关闭：
      *
      * UDP
      * KeepAlive
      * 音频接收
      * 音频播放
+     * 悬浮 PTT
+     *
+     * 原 V24.8.6 后台逻辑保持。
+     * ========================================================
      */
+
+    if (
+      this.floatingPttWindow ===
+        null
+    ) {
+
+      this.createFloatingPttWindow()
+    }
   }
 
 
-  /*
-   * ==========================================================
-   * Ability 销毁
-   * ==========================================================
-   */
-  onDestroy(): void {
+  // ==========================================================
+  // Ability 销毁
+  // ==========================================================
+
+  onDestroy():
+    void {
 
     console.info(
-      'WALKIE V24.5: EntryAbility.onDestroy'
+      'WALKIE V24.9.0: ' +
+        'EntryAbility.onDestroy'
     )
 
-
     /*
-     * 不主动停止后台任务。
+     * ========================================================
+     * 正常销毁 Ability 时关闭悬浮窗。
+     * ========================================================
      */
+
+    const floatWindow:
+      window.Window | null =
+      this.floatingPttWindow
+
+    this.floatingPttWindow =
+      null
+
+    if (
+      floatWindow ===
+        null
+    ) {
+
+      return
+    }
+
+    try {
+
+      floatWindow.destroyWindow()
+
+      console.info(
+        'WALKIE FLOAT PTT: ' +
+          '悬浮窗已销毁'
+      )
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        'WALKIE FLOAT PTT: ' +
+          '销毁悬浮窗失败 ' +
+          JSON.stringify(
+            error
+          )
+      )
+    }
   }
 }

@@ -11,26 +11,42 @@ import { common } from '@kit.AbilityKit'
 
 import { preferences } from '@kit.ArkData'
 
+import {
+  emitter
+} from '@kit.BasicServicesKit'
+
+import {
+  WALKIE_FLOAT_PTT_DOWN_ID,
+  WALKIE_FLOAT_PTT_UP_ID,
+  WALKIE_FLOAT_PTT_CONNECTED_ID,
+  WALKIE_FLOAT_PTT_DISCONNECTED_ID,
+  WALKIE_FLOAT_PTT_IDLE_ID,
+  WALKIE_FLOAT_PTT_REQUESTING_ID,
+  WALKIE_FLOAT_PTT_TALKING_ID,
+  WALKIE_FLOAT_PTT_BUSY_ID
+} from './WalkieFloatingPtt'
+
 /*
  * ============================================================
  * WALKIE HarmonyOS
  *
- * UI：
- *   对齐 Android WALKIE
+ * V24.9.0
  *
- * 通信：
+ * 本版本新增：
+ *   全局悬浮 PTT
+ *
+ * 悬浮 PTT：
+ *   按住 -> startTalking()
+ *   松开 -> stopTalking()
+ *
+ * 重要：
+ *   悬浮按钮与首页共用同一个 WalkieClient
+ *
+ * 不新增：
+ *   UDP 连接
+ *   音频连接
  *   WalkieClient
  *
- * 当前版本：
- *   V23.3
- *
- * 当前阶段：
- *   UI + 真实 UDP 连接
- *
- * 暂未接：
- *   麦克风录音
- *   Opus 编码
- *   音频播放
  * ============================================================
  */
 
@@ -47,6 +63,14 @@ struct Index {
 
   private walkieTone: WalkieTone =
     new WalkieTone()
+
+  // ============================================================
+  // 悬浮 PTT 事件注册状态
+  // ============================================================
+
+  private floatingPttEventsRegistered:
+    boolean =
+    false
 
   // ============================================================
   // 首页状态
@@ -182,13 +206,7 @@ struct Index {
 
     /*
      * ============================================================
-     * 先注册 WalkieClient 回调。
-     *
-     * WalkieClient.setStateCallback()
-     * 会立即发送一次当前状态。
-     *
-     * 所以必须先注册，再读取本地昵称，
-     * 防止 WalkieClient 的空昵称覆盖本地保存的昵称。
+     * 先注册 WalkieClient 回调
      * ============================================================
      */
 
@@ -205,7 +223,19 @@ struct Index {
 
     /*
      * ============================================================
-     * 读取本地保存的昵称
+     * 注册悬浮 PTT 事件
+     *
+     * 只注册一次。
+     *
+     * 这里不创建新的 WalkieClient。
+     * ============================================================
+     */
+
+    this.registerFloatingPttEvents()
+
+    /*
+     * ============================================================
+     * 读取本地保存的 DeviceID / 昵称
      * ============================================================
      */
 
@@ -214,14 +244,10 @@ struct Index {
         .getHostContext()
 
     /*
- * ============================================================
- * 恢复持久化 DeviceID
- *
- * Android 的 DeviceID 是长期保存的。
- *
- * HarmonyOS 这里也保持同样行为。
- * ============================================================
- */
+     * ============================================================
+     * 恢复持久化 DeviceID
+     * ============================================================
+     */
 
     if (
       hostContext !== undefined
@@ -249,11 +275,6 @@ struct Index {
           savedDeviceId.length > 0
         ) {
 
-          /*
-           * 已有 DeviceID：
-           * 使用永久保存的身份。
-           */
-
           this.walkieClient
             .setDeviceId(
               savedDeviceId
@@ -265,11 +286,6 @@ struct Index {
           )
 
         } else {
-
-          /*
-           * 第一次运行：
-           * 保存当前生成的 DeviceID。
-           */
 
           const newDeviceId:
             string =
@@ -400,7 +416,6 @@ struct Index {
         },
         1000
       )
-
   }
 
   aboutToDisappear(): void {
@@ -420,6 +435,117 @@ struct Index {
 
     console.info(
       'WALKIE UI: 页面离开，保持 UDP 与后台恢复机制'
+    )
+  }
+
+  // ============================================================
+  // 悬浮 PTT 事件
+  // ============================================================
+
+  private registerFloatingPttEvents(): void {
+
+    if (
+      this.floatingPttEventsRegistered
+    ) {
+
+      return
+    }
+
+    this.floatingPttEventsRegistered =
+      true
+
+    /*
+     * ------------------------------------------------------------
+     * 悬浮按钮按下
+     * ------------------------------------------------------------
+     */
+
+    const downEvent:
+      emitter.InnerEvent = {
+        eventId:
+          WALKIE_FLOAT_PTT_DOWN_ID
+      }
+
+    emitter.on(
+      downEvent,
+      () => {
+
+        if (
+          !this.connected
+        ) {
+
+          return
+        }
+
+        if (
+          this.talkStatus ===
+            'BUSY'
+        ) {
+
+          return
+        }
+
+        if (
+          this.talkStatus ===
+            'REQUESTING'
+        ) {
+
+          return
+        }
+
+        if (
+          this.talkStatus ===
+            'ALLOWED'
+        ) {
+
+          return
+        }
+
+        this.pressing =
+          true
+
+        console.info(
+          'WALKIE FLOAT PTT: 开始申请抢麦'
+        )
+
+        void this.walkieClient
+          .startTalking()
+      }
+    )
+
+    /*
+     * ------------------------------------------------------------
+     * 悬浮按钮松开
+     * ------------------------------------------------------------
+     */
+
+    const upEvent:
+      emitter.InnerEvent = {
+        eventId:
+          WALKIE_FLOAT_PTT_UP_ID
+      }
+
+    emitter.on(
+      upEvent,
+      () => {
+
+        if (
+          !this.pressing
+        ) {
+
+          return
+        }
+
+        this.pressing =
+          false
+
+        console.info(
+          'WALKIE FLOAT PTT: 停止讲话'
+        )
+
+        void this.walkieClient
+          .stopTalking()
+      }
     )
   }
 
@@ -526,10 +652,6 @@ struct Index {
 
     Column() {
 
-      // --------------------------------------------------------
-      // 顶部
-      // --------------------------------------------------------
-
       Row() {
 
         Column() {
@@ -539,7 +661,7 @@ struct Index {
             .fontWeight(FontWeight.Bold)
             .fontColor('#181B1F')
 
-          Text('V23.3')
+          Text('V24.9.0')
             .fontSize(13)
             .fontColor('#777E87')
             .margin({
@@ -561,10 +683,6 @@ struct Index {
         top: 18,
         bottom: 10
       })
-
-      // --------------------------------------------------------
-      // 主体
-      // --------------------------------------------------------
 
       Scroll() {
 
@@ -594,10 +712,6 @@ struct Index {
         })
       }
       .layoutWeight(1)
-
-      // --------------------------------------------------------
-      // PTT
-      // --------------------------------------------------------
 
       this.pttBar()
     }
@@ -1878,7 +1992,7 @@ struct Index {
 
           this.infoCard(
             '版本',
-            'V23.3'
+            'V24.9.0'
           )
         }
         .width('100%')
@@ -2430,17 +2544,6 @@ struct Index {
     const name: string =
       this.nickname.trim()
 
-    /*
-     * ============================================================
-     * 连接前先把 UI 当前显示的昵称同步到 WalkieClient。
-     *
-     * 这样即使 APP 是重新打开的，
-     * 本地恢复出来的昵称也会进入 WalkieClient.state.nickname。
-     *
-     * 后面的 WALKIE_LOGIN 就会携带正确昵称。
-     * ============================================================
-     */
-
     if (
       name.length > 0
     ) {
@@ -2459,14 +2562,7 @@ struct Index {
         'WALKIE CONNECT: 昵称同步完成=' +
           name
       )
-
     }
-
-    /*
-     * 没有昵称时仍然允许连接。
-     *
-     * VPS 会按 deviceId 创建默认用户名。
-     */
 
     await this.walkieClient.connect(
       name
@@ -2512,10 +2608,6 @@ struct Index {
     this.showNicknameDialog =
       false
 
-    /*
-     * 保存到手机本地。
-     */
-
     if (
       this.nicknamePreferences !== null
     ) {
@@ -2544,10 +2636,6 @@ struct Index {
         )
       }
     }
-
-    /*
-     * 同步服务器。
-     */
 
     await this.walkieClient
       .setNickname(
@@ -2766,10 +2854,6 @@ struct Index {
     state: WalkieClientState
   ): void {
 
-    /*
-     * UI 状态全部以 WalkieClient 为准。
-     */
-
     this.connected =
       state.connected
 
@@ -2787,22 +2871,6 @@ struct Index {
 
     this.currentChannel =
       state.currentChannel
-
-    /*
-     * ============================================================
-     * 在线人员过滤
-     *
-     * 服务器 USER_LIST 在重连过程中可能先到，
-     * 此时 state.userId 还没有被 USER_OK 更新。
-     *
-     * 因此：
-     *
-     * 1. UserID 与自己相同 → 排除
-     * 2. 昵称与当前自己的昵称相同 → 排除
-     *
-     * 两层判断，避免重连后把自己再次显示出来。
-     * ============================================================
-     */
 
     this.onlineUsers =
       state.onlineUsers
@@ -2840,10 +2908,9 @@ struct Index {
     }
 
     /*
-     * 网络类型目前 UDP 层没有直接返回。
-     * 先根据连接状态显示。
-     *
-     * 后面接 HarmonyOS 网络能力 API。
+     * ============================================================
+     * 网络类型
+     * ============================================================
      */
 
     if (
@@ -2861,13 +2928,7 @@ struct Index {
 
     /*
      * ============================================================
-     * 频道人数
-     *
-     * Android / HarmonyOS 在线人员页面只显示
-     * 当前频道的“其他用户”。
-     *
-     * 所以这里不能再使用服务器返回的
-     * channel.onlineCount，否则会把自己重新算进去。
+     * 当前频道人数
      * ============================================================
      */
 
@@ -2892,5 +2953,124 @@ struct Index {
         break
       }
     }
+
+    /*
+     * ============================================================
+     * 同步悬浮 PTT 状态
+     *
+     * 不发送对象参数。
+     *
+     * 只发送明确的数字事件，
+     * 避免 ArkTS 的未类型化对象问题。
+     * ============================================================
+     */
+
+    this.updateFloatingPttState()
+  }
+
+  // ============================================================
+  // 更新悬浮 PTT 状态
+  // ============================================================
+
+  private updateFloatingPttState(): void {
+
+    if (
+      this.connected
+    ) {
+
+      const connectedEvent:
+        emitter.InnerEvent = {
+          eventId:
+            WALKIE_FLOAT_PTT_CONNECTED_ID
+        }
+
+      emitter.emit(
+        connectedEvent
+      )
+
+    } else {
+
+      const disconnectedEvent:
+        emitter.InnerEvent = {
+          eventId:
+            WALKIE_FLOAT_PTT_DISCONNECTED_ID
+        }
+
+      emitter.emit(
+        disconnectedEvent
+      )
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * 通话状态
+     * ------------------------------------------------------------
+     */
+
+    if (
+      this.talkStatus ===
+        'REQUESTING'
+    ) {
+
+      const event:
+        emitter.InnerEvent = {
+          eventId:
+            WALKIE_FLOAT_PTT_REQUESTING_ID
+        }
+
+      emitter.emit(
+        event
+      )
+
+      return
+    }
+
+    if (
+      this.talkStatus ===
+        'ALLOWED' ||
+        this.talkStatus ===
+          'TALKING'
+    ) {
+
+      const event:
+        emitter.InnerEvent = {
+          eventId:
+            WALKIE_FLOAT_PTT_TALKING_ID
+        }
+
+      emitter.emit(
+        event
+      )
+
+      return
+    }
+
+    if (
+      this.talkStatus ===
+        'BUSY'
+    ) {
+
+      const event:
+        emitter.InnerEvent = {
+          eventId:
+            WALKIE_FLOAT_PTT_BUSY_ID
+        }
+
+      emitter.emit(
+        event
+      )
+
+      return
+    }
+
+    const idleEvent:
+      emitter.InnerEvent = {
+        eventId:
+          WALKIE_FLOAT_PTT_IDLE_ID
+      }
+
+    emitter.emit(
+      idleEvent
+    )
   }
 }

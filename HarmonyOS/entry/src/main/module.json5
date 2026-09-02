@@ -1,65 +1,65 @@
 {
-"module": {
-"name": "entry",
-"type": "entry",
-"description": "$string:module_desc",
-"mainElement": "EntryAbility",
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "description": "$string:module_desc",
+    "mainElement": "EntryAbility",
 
-"deviceTypes": [
-"phone"
-],
+    "deviceTypes": [
+      "phone"
+    ],
 
-"deliveryWithInstall": true,
-"installationFree": false,
+    "deliveryWithInstall": true,
+    "installationFree": false,
 
-"pages": "$profile:main_pages",
+    "pages": "$profile:main_pages",
 
-"abilities": [
-{
-"name": "EntryAbility",
+    "abilities": [
+      {
+        "name": "EntryAbility",
 
-"srcEntry": "./ets/entryability/EntryAbility.ets",
+        "srcEntry": "./ets/entryability/EntryAbility.ets",
 
-"description": "$string:EntryAbility_desc",
+        "description": "$string:EntryAbility_desc",
 
-"icon": "$media:layered_image",
+        "icon": "$media:layered_image",
 
-"label": "$string:EntryAbility_label",
+        "label": "$string:EntryAbility_label",
 
-"startWindowIcon": "$media:startIcon",
+        "startWindowIcon": "$media:startIcon",
 
-"startWindowBackground": "$color:start_window_background",
+        "startWindowBackground": "$color:start_window_background",
 
-"exported": true,
+        "exported": true,
 
-"backgroundModes": [
-"audioPlayback",
-"audioRecording"
-],
+        "backgroundModes": [
+          "audioPlayback",
+          "audioRecording"
+        ],
 
-"skills": [
-{
-"entities": [
-"entity.system.home"
-],
-"actions": [
-"action.system.home"
-]
-}
-]
-}
-],
+        "skills": [
+          {
+            "entities": [
+              "entity.system.home"
+            ],
+            "actions": [
+              "action.system.home"
+            ]
+          }
+        ]
+      }
+    ],
 
-"requestPermissions": [
-{
-"name": "ohos.permission.INTERNET"
-},
-{
-"name": "ohos.permission.GET_NETWORK_INFO"
-},
-{
-"name": "ohos.permission.KEEP_BACKGROUND_RUNNING"
-}
-]
-}
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET"
+      },
+      {
+        "name": "ohos.permission.GET_NETWORK_INFO"
+      },
+      {
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING"
+      }
+    ]
+  }
 }
