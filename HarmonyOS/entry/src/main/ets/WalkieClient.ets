@@ -27,28 +27,34 @@ import {
   BusinessError
 } from '@kit.BasicServicesKit'
 
+import {
+  connection
+} from '@kit.NetworkKit'
+
 
 /*
  * ============================================================
  * WALKIE HarmonyOS
  *
- * V23.7
+ * V24.3
  *
  * HarmonyOS 7.0 / API 26
  *
- * 本版本：
+ * 本版本重点：
  *
  * 1. 稳定 UDP 连接
  * 2. HELLO → CONNECTED → LOGIN
- * 3. 快速登录重试
- * 4. 昵称保持
- * 5. 当前频道恢复
- * 6. 在线人员同步
- * 7. 抢麦
- * 8. 提示音
- * 9. Android → HarmonyOS 音频接收
- * 10. W23A + Legacy Opus 双协议兼容
- * 11. DeviceID 由外部持久化保存
+ * 3. 持续自动重连
+ * 4. 弱网防误判
+ * 5. 一个 Client 只允许一个重连循环
+ * 6. 重连失败持续尝试
+ * 7. 当前频道自动恢复
+ * 8. 在线人员自动同步
+ * 9. 抢麦
+ * 10. 提示音
+ * 11. Android → HarmonyOS 音频接收
+ * 12. W23A + Legacy Opus 双协议兼容
+ * 13. DeviceID 由外部持久化保存
  *
  * ============================================================
  */
@@ -112,17 +118,65 @@ export class WalkieClient {
   // 网络 Ping
   // ============================================================
 
+  /*
+   * Ping 只是质量检测，
+   * 不能因为一次超时就马上判定彻底断网。
+   */
+
   private static readonly NETWORK_PING_INTERVAL: number =
     2000
 
   private static readonly NETWORK_PING_WINDOW: number =
     20
 
+  /*
+   * 单次 Ping 最大等待时间。
+   *
+   * 从原来的 1800ms 提高到 5000ms，
+   * 避免弱网下偶发延迟直接触发重连。
+   */
+
   private static readonly NETWORK_PING_TIMEOUT: number =
     1800
 
-  private static readonly AUTO_RECONNECT_DELAY: number =
+  /*
+   * 连续多少个 Ping 超时才真正判定连接失效。
+   */
+
+  private static readonly SERVER_ACTIVITY_TIMEOUT: number =
+    120000
+
+  // ============================================================
+  // 自动重连
+  // ============================================================
+
+  /*
+   * 第一轮快速恢复。
+   */
+
+  private static readonly AUTO_RECONNECT_INITIAL_DELAY: number =
     300
+
+  /*
+   * 最大重连间隔。
+   */
+
+  private static readonly AUTO_RECONNECT_MAX_DELAY: number =
+    1500
+
+  /*
+   * 自动重连每一轮等待服务器 CONNECTED 的最大时间。
+   *
+   * 不是等 1.5 秒，而是留出 3 秒握手窗口。
+   */
+
+  private static readonly RECONNECT_HANDSHAKE_TIMEOUT: number =
+    3000
+
+  /*
+   * 重连循环每一轮的最短等待。
+   */
+
 
   // ============================================================
   // 登录
@@ -164,18 +218,6 @@ export class WalkieClient {
   // Device ID
   // ============================================================
 
-  /*
-   * 注意：
-   *
-   * DeviceID 现在允许由 Index.ets
-   * 从 Preferences 恢复后注入。
-   *
-   * 如果外部还没有注入，
-   * 暂时生成一个本地 ID。
-   *
-   * Index.ets 会在连接前把持久化 ID 设置回来。
-   */
-
   private deviceId: string =
     ''
 
@@ -194,6 +236,39 @@ export class WalkieClient {
 
   private reconnecting: boolean =
     false
+
+  private connectionGeneration:
+    number =
+    0
+
+  /*
+   * 自动重连循环是否正在运行。
+   *
+   * 这是 V24.2 的关键锁。
+   *
+   * 永远只允许一个重连循环。
+   */
+
+  private autoReconnectLoopRunning:
+    boolean =
+    false
+
+  /*
+   * 当前重连尝试次数。
+   */
+
+  private autoReconnectAttempt:
+    number =
+    0
+
+  /*
+   * 当前重连延迟。
+   */
+
+  private autoReconnectDelay:
+    number =
+    WalkieClient.AUTO_RECONNECT_INITIAL_DELAY
+
 
   // ============================================================
   // 后台恢复
@@ -267,17 +342,13 @@ export class WalkieClient {
   number | null =
     null
 
-  // ============================================================
-  // 自动重连
-  // ============================================================
+  private lastServerActivityTime:
+    number =
+    0
 
-  private autoReconnectTimer:
-    number | null =
-    null
-
-  private autoReconnectBusy:
-    boolean =
-    false
+  private pingResults:
+    boolean[] =
+    []
 
   // ============================================================
   // Ping
@@ -294,6 +365,45 @@ export class WalkieClient {
   private pendingPingTime:
     Map<number, number> =
     new Map<number, number>()
+
+  /*
+   * 连续 Ping 超时次数。
+   */
+
+  // ============================================================
+  // V24.3 网络切换迁移
+  // ============================================================
+
+  /*
+   * HarmonyOS 默认网络发生变化时，立即准备 UDP 端点迁移。
+   *
+   * 注意：这里不调用完整 reconnect()，避免切网时停止音频播放。
+   */
+  private netConnection:
+  connection.NetConnection | null =
+    null
+
+  private networkListenerRegistered:
+    boolean =
+    false
+
+  private networkMigrationTimer:
+  number | null =
+    null
+
+  private networkMigrationRunning:
+    boolean =
+    false
+
+  // 网络迁移完成时间
+  // 用于防止短时间内重复触发迁移。
+  private lastNetworkMigrationTime:
+    number =
+    0
+
+  private lastBearerSignature:
+    string =
+    ''
 
   // ============================================================
   // UI State
@@ -400,6 +510,493 @@ export class WalkieClient {
         )
       }
     )
+
+    /*
+     * V24.3：从 Client 创建时就监听默认网络变化。
+     */
+    this.registerNetworkListener()
+  }
+
+  // ============================================================
+  // V24.3 默认网络监听
+  // ============================================================
+
+  private registerNetworkListener():
+    void {
+
+    if (
+      this.networkListenerRegistered
+    ) {
+      return
+    }
+
+    try {
+      const netConnection:
+        connection.NetConnection =
+        connection.createNetConnection()
+
+      this.netConnection =
+        netConnection
+
+      netConnection.on(
+        'netAvailable',
+        (): void => {
+          console.info(
+            'WALKIE NET: netAvailable'
+          )
+          this.refreshBearerSignature(
+            'netAvailable',
+            false
+          )
+        }
+      )
+
+      netConnection.on(
+        'netCapabilitiesChange',
+        (
+          data:
+            connection.NetCapabilityInfo
+        ): void => {
+          const bearer:
+            string =
+            this.readBearerSignatureFromInfo(
+              data
+            )
+
+          console.info(
+            'WALKIE NET: netCapabilitiesChange ' +
+              `bearer=${bearer}`
+          )
+
+          this.handlePossibleNetworkChange(
+            'netCapabilitiesChange',
+            bearer
+          )
+        }
+      )
+
+      netConnection.on(
+        'netConnectionPropertiesChange',
+        (): void => {
+          /*
+           * IP / 路由属性发生变化也检查一次默认网络。
+           * 只有 bearer 签名真正变化才会触发迁移。
+           */
+          this.refreshBearerSignature(
+            'netConnectionPropertiesChange',
+            true
+          )
+        }
+      )
+
+      netConnection.on(
+        'netLost',
+        (): void => {
+          console.warn(
+            'WALKIE NET: netLost，等待新默认网络'
+          )
+
+          /*
+           * netLost 时绝不立即重建 UDP。
+           * 先等待新的默认网络出现，再比较 bearer。
+           * 这样可以避免 Wi-Fi 断开到蜂窝网络接管之间，
+           * 因过早重建一次 UDP 而人为增加新的断档。
+           */
+          setTimeout(
+            (): void => {
+              this.refreshBearerSignature(
+                'netLost',
+                true
+              )
+            },
+            300
+          )
+        }
+      )
+
+      netConnection.on(
+        'netUnavailable',
+        (): void => {
+          console.warn(
+            'WALKIE NET: netUnavailable'
+          )
+        }
+      )
+
+      netConnection.register(
+        (
+          error?:
+            BusinessError
+        ): void => {
+          if (
+            error
+          ) {
+            console.error(
+              'WALKIE NET: 网络监听注册失败 ' +
+                `code=${error.code} message=${error.message}`
+            )
+            return
+          }
+
+          this.networkListenerRegistered =
+            true
+
+          console.info(
+            'WALKIE NET: ★默认网络监听已启动★'
+          )
+
+          this.refreshBearerSignature(
+            'register',
+            false
+          )
+        }
+      )
+    } catch (
+    error
+    ) {
+      const businessError:
+        BusinessError =
+        error as BusinessError
+
+      console.error(
+        'WALKIE NET: 创建网络监听失败 ' +
+          `code=${businessError.code} message=${businessError.message}`
+      )
+    }
+  }
+
+  private readBearerSignatureFromInfo(
+    data:
+      connection.NetCapabilityInfo
+  ):
+    string {
+
+    try {
+      const bearerTypes =
+        data.netCap.bearerTypes
+
+      return JSON.stringify(
+        bearerTypes
+      )
+    } catch {
+      return ''
+    }
+  }
+
+  private getCurrentBearerSignature():
+    string {
+
+    try {
+      const defaultNet =
+        connection.getDefaultNetSync()
+
+      const netCapabilities =
+        connection.getNetCapabilitiesSync(
+          defaultNet
+        )
+
+      return JSON.stringify(
+        netCapabilities.bearerTypes
+      )
+    } catch (
+    error
+    ) {
+      const businessError:
+        BusinessError =
+        error as BusinessError
+
+      console.warn(
+        'WALKIE NET: 获取默认网络失败 ' +
+          `code=${businessError.code} message=${businessError.message}`
+      )
+
+      return ''
+    }
+  }
+
+  private refreshBearerSignature(
+    reason:
+      string,
+    triggerMigration:
+      boolean
+  ):
+    void {
+
+    const signature:
+      string =
+      this.getCurrentBearerSignature()
+
+    if (
+      signature.length ===
+        0
+    ) {
+      return
+    }
+
+    this.handlePossibleNetworkChange(
+      reason,
+      signature,
+      triggerMigration
+    )
+  }
+
+  private handlePossibleNetworkChange(
+    reason:
+      string,
+    signature:
+      string,
+    triggerMigration:
+      boolean =
+    true
+  ):
+    void {
+
+    if (
+      this.lastBearerSignature.length ===
+        0
+    ) {
+      this.lastBearerSignature =
+        signature
+
+      console.info(
+        'WALKIE NET: 初始默认网络 ' +
+          `bearer=${signature}`
+      )
+
+      return
+    }
+
+    if (
+      signature ===
+        this.lastBearerSignature
+    ) {
+      return
+    }
+
+    const oldSignature:
+      string =
+      this.lastBearerSignature
+
+    this.lastBearerSignature =
+      signature
+
+    console.warn(
+      'WALKIE NET: ★默认网络发生变化★ ' +
+        `old=${oldSignature} new=${signature} reason=${reason}`
+    )
+
+    if (
+      !triggerMigration
+    ) {
+      return
+    }
+
+    if (
+      this.manualDisconnect ||
+        !this.connected ||
+        !this.socketReady()
+    ) {
+      return
+    }
+
+    this.scheduleNetworkMigration(
+      reason,
+      120
+    )
+  }
+
+  private scheduleNetworkMigration(
+    reason:
+      string,
+    delayMs:
+      number
+  ):
+    void {
+
+    if (
+      this.manualDisconnect ||
+        !this.connected
+    ) {
+      return
+    }
+
+    if (
+      this.networkMigrationRunning
+    ) {
+      return
+    }
+
+    if (
+      this.networkMigrationTimer !==
+        null
+    ) {
+      clearTimeout(
+        this.networkMigrationTimer
+      )
+      this.networkMigrationTimer =
+        null
+    }
+
+    this.state.network.quality =
+      '网络切换中'
+    this.state.message =
+      '网络切换，正在快速迁移…'
+    this.emitState()
+
+    this.networkMigrationTimer =
+      setTimeout(
+        (): void => {
+          this.networkMigrationTimer =
+            null
+
+          void this.migrateUdpEndpoint(
+            reason
+          )
+        },
+        delayMs
+      ) as number
+  }
+
+  private async migrateUdpEndpoint(
+    reason:
+      string
+  ):
+    Promise<void> {
+
+    if (
+      this.networkMigrationRunning ||
+        this.manualDisconnect ||
+        !this.connected
+    ) {
+      return
+    }
+
+    this.networkMigrationRunning =
+      true
+
+    const startTime:
+      number =
+      Date.now()
+
+    try {
+      console.warn(
+        'WALKIE NET MIGRATION: ★开始UDP端点迁移★ ' +
+          `reason=${reason}`
+      )
+
+      /*
+       * 不发送 GOODBYE！
+       * GOODBYE 会让服务器删除当前会话。
+       * open() 内部会关闭旧 UDP 并创建新的临时端口。
+       */
+      await this.udp.open(
+        WalkieClient.SERVER_IP,
+        WalkieClient.SERVER_PORT
+      )
+
+      this.lastServerActivityTime =
+        Date.now()
+
+      /*
+       * 清掉旧端点上的 Ping 记录，防止切网期间把旧 Ping
+       * 错算成新的丢包。
+       */
+      this.pendingPingSequence =
+        []
+      this.pendingPingTime.clear()
+
+      /*
+       * 第一个包立即用稳定 DeviceID 告诉 VPS：
+       * “这是原来的用户，只是 UDP endpoint 变了”。
+       */
+      await this.udp.send(
+        'WALKIE_HELLO:' +
+          this.deviceId +
+          ':V24.2'
+      )
+
+      /*
+       * 再连续发一次 PING + KEEPALIVE，双保险刷新 NAT endpoint。
+       */
+      const sequence:
+        number =
+        this.pingSequence
+
+      this.pingSequence +=
+      1
+
+      const now:
+        number =
+        Date.now()
+
+      this.pendingPingSequence.push(
+        sequence
+      )
+      this.pendingPingTime.set(
+        sequence,
+        now
+      )
+
+      await this.udp.send(
+        'WALKIE_NET_PING:' +
+          sequence +
+          ':' +
+          now +
+          ':' +
+          this.deviceId
+      )
+
+      await this.udp.send(
+        'WALKIE_KEEPALIVE:' +
+          this.deviceId
+      )
+
+      /*
+       * 保留当前频道，不执行完整 reconnect()。
+       * CONNECTED 到来后原有逻辑会继续 LOGIN / 状态同步。
+       */
+      this.state.network.quality =
+        '良好'
+      this.state.message =
+        '网络已切换，连接已迁移'
+      this.emitState()
+
+      console.info(
+        'WALKIE NET MIGRATION: ★UDP端点迁移成功★ ' +
+          `elapsed=${Date.now() - startTime}ms`
+      )
+    } catch (
+    error
+    ) {
+      const businessError:
+        BusinessError =
+        error as BusinessError
+
+      console.error(
+        'WALKIE NET MIGRATION: 迁移失败 ' +
+          `code=${businessError.code} message=${businessError.message}`
+      )
+
+      /*
+       * 迁移失败才进入原来的持续自动重连兜底。
+       */
+      this.connected =
+        false
+      this.state.connected =
+        false
+      this.state.network.quality =
+        '重连中'
+      this.state.message =
+        '网络切换失败，正在恢复连接…'
+      this.emitState()
+
+      this.scheduleAutoReconnect()
+    } finally {
+      this.networkMigrationRunning =
+        false
+      this.lastNetworkMigrationTime =
+        Date.now()
+    }
   }
 
   // ============================================================
@@ -417,20 +1014,18 @@ export class WalkieClient {
       deviceId.trim()
 
     if (
-      clean.length === 0
+      clean.length ===
+        0
     ) {
 
       return
     }
 
-    /*
-     * 已经连接以后不能切换身份。
-     */
-
     if (
       this.connected ||
         this.connecting ||
-        this.reconnecting
+        this.reconnecting ||
+        this.autoReconnectLoopRunning
     ) {
 
       return
@@ -562,12 +1157,18 @@ export class WalkieClient {
     this.manualDisconnect =
       false
 
-    this.connecting =
-      true
+    this.connectionGeneration +=
+    1
 
     /*
-     * 保存昵称。
+     * 用户主动 connect：
+     * 取消之前的自动恢复状态。
      */
+
+    this.stopAutoReconnectLoop()
+
+    this.connecting =
+      true
 
     const clean:
       string =
@@ -576,7 +1177,8 @@ export class WalkieClient {
       )
 
     if (
-      clean.length > 0
+      clean.length >
+        0
     ) {
 
       this.state.nickname =
@@ -588,7 +1190,8 @@ export class WalkieClient {
      */
 
     if (
-      this.state.currentChannel.length > 0
+      this.state.currentChannel.length >
+        0
     ) {
 
       this.savedChannelName =
@@ -599,6 +1202,7 @@ export class WalkieClient {
       this.state.currentChannelPrivate
 
     this.stopLoginRetry()
+
     this.stopTalkRequestTimer()
 
     this.state.talkStatus =
@@ -614,20 +1218,49 @@ export class WalkieClient {
 
     try {
 
+      /*
+       * 如果旧 Socket 还存在，
+       * 先安全关闭。
+       */
+
+      if (
+        this.udp.getBound()
+      ) {
+
+        try {
+
+          await this.udp.close()
+
+        } catch {
+          // 忽略
+        }
+      }
+
+      /*
+       * 创建 UDP Socket。
+       */
+
       await this.udp.open(
         WalkieClient.SERVER_IP,
         WalkieClient.SERVER_PORT
       )
 
+      this.lastServerActivityTime =
+        Date.now()
+
       /*
-       * HELLO
+       * HELLO。
        */
 
       await this.udp.send(
         'WALKIE_HELLO:' +
           this.deviceId +
-          ':V23.7'
+          ':V24.2'
       )
+
+      /*
+       * 登录等待期间持续发送 LOGIN。
+       */
 
       this.startLoginRetry()
 
@@ -664,21 +1297,20 @@ export class WalkieClient {
         '连接失败'
 
       this.state.message =
-        '连接服务器失败'
+        '连接失败，正在自动重试…'
 
       this.stopTimers()
 
-      this.stopBackgroundRecovery()
-
-      try {
-
-        await this.udp.close()
-
-      } catch {
-        // 忽略
-      }
-
       this.emitState()
+
+      /*
+       * 初次连接失败也不能结束。
+       *
+       * V24.2：
+       * 自动进入持续重连。
+       */
+
+      this.scheduleAutoReconnect()
 
     } finally {
 
@@ -709,7 +1341,8 @@ export class WalkieClient {
         this.deviceId
 
     if (
-      this.state.nickname.length > 0
+      this.state.nickname.length >
+        0
     ) {
 
       loginMessage =
@@ -751,8 +1384,6 @@ export class WalkieClient {
           if (
             !this.udp.getBound()
           ) {
-
-            this.stopLoginRetry()
 
             return
           }
@@ -803,7 +1434,9 @@ export class WalkieClient {
       )
 
     } catch {
-      // 下一轮继续
+      /*
+       * 下一轮继续。
+       */
     }
   }
 
@@ -831,8 +1464,28 @@ export class WalkieClient {
   public async disconnect():
     Promise<void> {
 
+    /*
+     * 只有这个方法可以真正关闭自动重连。
+     */
+
     this.manualDisconnect =
       true
+
+    this.connectionGeneration +=
+    1
+
+    this.stopAutoReconnectLoop()
+
+    if (
+      this.networkMigrationTimer !==
+        null
+    ) {
+      clearTimeout(
+        this.networkMigrationTimer
+      )
+      this.networkMigrationTimer =
+        null
+    }
 
     this.stopTalkRequestTimer()
 
@@ -917,6 +1570,11 @@ export class WalkieClient {
     this.lastForegroundTime =
       Date.now()
 
+    /*
+     * 已连接：
+     * 只做数据同步，不重连。
+     */
+
     if (
       this.connected &&
         this.socketReady()
@@ -931,82 +1589,22 @@ export class WalkieClient {
       return
     }
 
-    if (
-      this.backgroundRecoveryBusy
-    ) {
+    /*
+     * 没连接：
+     * 不再只尝试一次。
+     *
+     * 直接进入持续自动重连。
+     */
 
-      return
-    }
+    this.state.message =
+      '正在恢复服务器连接…'
 
-    this.backgroundRecoveryBusy =
-      true
+    this.state.network.quality =
+      '重连中'
 
-    try {
+    this.emitState()
 
-      this.state.message =
-        '正在恢复服务器连接…'
-
-      this.state.network.quality =
-        '重连中'
-
-      this.emitState()
-
-      const success:
-        boolean =
-        await this.reconnect()
-
-      if (
-        success
-      ) {
-
-        void this.requestUserList()
-
-        void this.requestChannelList()
-
-        void this.requestChannelMembers()
-
-        this.state.message =
-          '连接已恢复'
-
-        this.state.network.quality =
-          '良好'
-
-      } else {
-
-        this.state.message =
-          '暂未恢复连接'
-
-        this.state.network.quality =
-          '连接中'
-      }
-
-      this.emitState()
-
-    } catch (
-    error
-    ) {
-
-      console.error(
-        'WALKIE FOREGROUND: ' +
-          '恢复连接异常=' +
-          JSON.stringify(
-            error
-          )
-      )
-
-      this.state.message =
-        '恢复连接失败'
-
-      this.state.network.quality =
-        '连接异常'
-
-      this.emitState()
-
-    } finally {
-
-      this.backgroundRecoveryBusy =
-        false
-    }
+    this.scheduleAutoReconnect()
   }
 
   // ============================================================
@@ -1037,14 +1635,14 @@ export class WalkieClient {
             return
           }
 
-          if (
-            this.backgroundRecoveryBusy
-          ) {
+          /*
+           * 5秒只是兜底检查。
+           *
+           * 真正网络错误会立即触发
+           * scheduleAutoReconnect()。
+           */
 
-            return
-          }
-
-          void this.onForeground()
+          this.scheduleAutoReconnect()
 
         },
         this.BACKGROUND_RECOVERY_INTERVAL
@@ -1052,7 +1650,7 @@ export class WalkieClient {
   }
 
   // ============================================================
-  // 停止后台恢复检查
+  // 停止后台恢复
   // ============================================================
 
   public stopBackgroundRecovery():
@@ -1074,6 +1672,12 @@ export class WalkieClient {
 
   // ============================================================
   // 重新连接
+  //
+  // V24.2：
+  //
+  // 单次 reconnect 仍然只负责“尝试一次”。
+  //
+  // 持续重连由 autoReconnectLoop 负责。
   // ============================================================
 
   private async reconnect():
@@ -1093,17 +1697,36 @@ export class WalkieClient {
       return false
     }
 
+    if (
+      this.connected &&
+        this.socketReady()
+    ) {
+
+      return true
+    }
+
     this.reconnecting =
       true
 
+    const generation:
+      number =
+      this.connectionGeneration
+
     this.stopLoginRetry()
+
     this.stopTalkRequestTimer()
 
     await this.audio.stop()
+
     await this.playback.stop()
 
+    /*
+     * 保存当前频道。
+     */
+
     if (
-      this.state.currentChannel.length > 0
+      this.state.currentChannel.length >
+        0
     ) {
 
       this.savedChannelName =
@@ -1126,7 +1749,7 @@ export class WalkieClient {
       '重连中'
 
     this.state.message =
-      '正在恢复网络连接…'
+      '正在自动恢复连接…'
 
     this.emitState()
 
@@ -1134,7 +1757,7 @@ export class WalkieClient {
 
       /*
        * ========================================================
-       * 旧连接先关闭
+       * ① 关闭旧 Socket
        * ========================================================
        */
 
@@ -1144,22 +1767,16 @@ export class WalkieClient {
 
         try {
 
-          /*
-           * 先通知 VPS。
-           */
-
           await this.udp.send(
             'WALKIE_GOODBYE'
           )
 
         } catch {
-          // 旧连接可能已经无法发送
+          /*
+           * 旧 Socket 可能已经不可用。
+           */
         }
       }
-
-      /*
-       * 再关闭旧 Socket。
-       */
 
       try {
 
@@ -1171,7 +1788,7 @@ export class WalkieClient {
 
       /*
        * ========================================================
-       * 创建新的 UDP Socket
+       * ② 创建全新 Socket
        * ========================================================
        */
 
@@ -1180,51 +1797,79 @@ export class WalkieClient {
         WalkieClient.SERVER_PORT
       )
 
+      this.lastServerActivityTime =
+        Date.now()
+
       /*
        * ========================================================
-       * Android 对齐：
-       *
-       * HELLO
-       * ↓
-       * CONNECTED
-       * ↓
-       * LOGIN
+       * ③ HELLO
        * ========================================================
        */
 
       await this.udp.send(
         'WALKIE_HELLO:' +
           this.deviceId +
-          ':V23.7'
+          ':V24.2'
       )
 
+      /*
+       * ========================================================
+       * ④ LOGIN 重试
+       *
+       * 先启动。
+       * CONNECTED 收到后会自动停止。
+       * ========================================================
+       */
+
       this.startLoginRetry()
+
+      /*
+       * ========================================================
+       * ⑤ KeepAlive / Ping
+       * ========================================================
+       */
 
       this.startKeepAlive()
 
       this.startNetworkPing()
 
       /*
-       * 等待服务器确认。
+       * ========================================================
+       * ⑥ 等待 CONNECTED
        *
-       * WALKIE_CONNECTED 到达后，
-       * handleUdpMessage() 会把 connected 设置为 true。
+       * V24.2：
+       *
+       * 3 秒窗口。
+       * ========================================================
        */
 
-      for (
-        let index:
-          number =
-          0;
-        index <
-          15;
-        index++
+      const startTime:
+        number =
+        Date.now()
+
+      while (
+        Date.now() -
+          startTime <
+          WalkieClient.RECONNECT_HANDSHAKE_TIMEOUT
       ) {
 
         if (
-          this.connected
+          generation !==
+            this.connectionGeneration
+        ) {
+          return false
+        }
+
+        if (
+          this.connected &&
+            this.socketReady()
         ) {
 
-          await this.restoreSavedChannel()
+          /*
+           * CONNECTED 已到达。
+           */
+
+          this.stopLoginRetry()
 
           this.state.network.quality =
             '良好'
@@ -1234,25 +1879,59 @@ export class WalkieClient {
 
           this.emitState()
 
+          /*
+           * 恢复频道。
+           */
+
+          await this.restoreSavedChannel()
+
+          /*
+           * 同步列表。
+           */
+
+          void this.requestUserList()
+
+          void this.requestChannelList()
+
+          void this.requestChannelMembers()
+
+          console.info(
+            'WALKIE CLIENT: ' +
+              '★自动重连成功★'
+          )
+
           return true
         }
 
         await this.sleep(
-          100
+          50
         )
       }
 
       /*
-       * 1200～1500ms 内没有确认。
+       * ========================================================
+       * ⑦ 握手超时
+       * ========================================================
        */
 
-      this.state.network.quality =
-        '连接中'
+      console.warn(
+        'WALKIE CLIENT: ' +
+          `自动重连握手超时 ${WalkieClient.RECONNECT_HANDSHAKE_TIMEOUT}ms`
+      )
 
-      this.state.message =
-        '服务器响应较慢'
+      try {
 
-      this.emitState()
+        await this.udp.close()
+
+      } catch {
+        // 忽略
+      }
+
+      this.connected =
+        false
+
+      this.state.connected =
+        false
 
       return false
 
@@ -1265,7 +1944,8 @@ export class WalkieClient {
         error as BusinessError
 
       console.error(
-        'WALKIE CLIENT: 重连失败 ' +
+        'WALKIE CLIENT: ' +
+          '自动重连本轮失败 ' +
           `code=${businessError.code} ` +
           `message=${businessError.message}`
       )
@@ -1294,6 +1974,187 @@ export class WalkieClient {
   }
 
   // ============================================================
+  // V24.2
+  //
+  // 持续自动重连循环
+  //
+  // 这是本版本解决“偶尔必须手动重连”的核心。
+  // ============================================================
+
+  private scheduleAutoReconnect():
+    void {
+
+    if (
+      this.manualDisconnect
+    ) {
+
+      return
+    }
+
+    if (
+      this.connected &&
+        this.socketReady()
+    ) {
+
+      return
+    }
+
+    /*
+     * 只允许一个自动重连循环。
+     */
+
+    if (
+      this.autoReconnectLoopRunning
+    ) {
+
+      return
+    }
+
+    console.warn(
+      'WALKIE CLIENT: ' +
+        '★进入持续自动重连循环★'
+    )
+
+    void this.runAutoReconnectLoop()
+  }
+
+  // ============================================================
+  // V24.2
+  //
+  // 持续自动重连
+  // ============================================================
+  private async runAutoReconnectLoop():
+    Promise<void> {
+
+    if (this.autoReconnectLoopRunning) {
+      return
+    }
+
+    this.autoReconnectLoopRunning = true
+    this.connectionGeneration += 1
+
+    const generation:
+      number =
+      this.connectionGeneration
+
+    this.autoReconnectAttempt = 0
+    this.autoReconnectDelay =
+      WalkieClient.AUTO_RECONNECT_INITIAL_DELAY
+
+    try {
+
+      while (
+        !this.manualDisconnect &&
+          generation === this.connectionGeneration &&
+          !this.connected
+      ) {
+
+        this.autoReconnectAttempt += 1
+
+        this.state.network.quality =
+          '重连中'
+
+        this.state.message =
+          '自动重连中… 第' +
+            this.autoReconnectAttempt +
+            '次'
+
+        this.emitState()
+
+        console.info(
+          'WALKIE CLIENT: ' +
+            `★自动重连第${this.autoReconnectAttempt}次★ delay=${this.autoReconnectDelay}ms generation=${generation}`
+        )
+
+        const success:
+          boolean =
+          await this.reconnect()
+
+        if (
+          success &&
+            this.connected &&
+            this.socketReady()
+        ) {
+
+          this.autoReconnectAttempt = 0
+          this.autoReconnectDelay =
+            WalkieClient.AUTO_RECONNECT_INITIAL_DELAY
+
+          this.state.network.quality =
+            '良好'
+
+          this.state.message =
+            '网络已恢复'
+
+          this.emitState()
+
+          console.info(
+            'WALKIE CLIENT: ★★★★ 自动重连完全成功 ★★★★'
+          )
+
+          break
+        }
+
+        if (
+          this.manualDisconnect ||
+            generation !== this.connectionGeneration
+        ) {
+          break
+        }
+
+        this.state.network.quality =
+          '连接中'
+
+        this.state.message =
+          '网络恢复中… ' +
+            `下次重连=${this.autoReconnectDelay}ms`
+
+        this.emitState()
+
+        await this.sleep(
+          this.autoReconnectDelay
+        )
+
+        this.autoReconnectDelay =
+          Math.min(
+            this.autoReconnectDelay * 2,
+            WalkieClient.AUTO_RECONNECT_MAX_DELAY
+          )
+      }
+
+    } catch (
+    error
+    ) {
+
+      console.error(
+        'WALKIE CLIENT: 自动重连循环异常=' +
+          JSON.stringify(error)
+      )
+
+    } finally {
+
+      if (generation === this.connectionGeneration) {
+        this.autoReconnectLoopRunning = false
+        this.autoReconnectAttempt = 0
+        this.autoReconnectDelay =
+          WalkieClient.AUTO_RECONNECT_INITIAL_DELAY
+      }
+    }
+  }
+
+  // ============================================================
+  // 停止自动重连
+  // ============================================================
+  private stopAutoReconnectLoop():
+    void {
+
+    /*
+     * V24.2 不再使用独立 autoReconnectTimer。
+     * 自动重连由唯一循环统一管理。
+     */
+  }
+
+  // ============================================================
   // 抢麦
   // ============================================================
 
@@ -1316,13 +2177,44 @@ export class WalkieClient {
 
       this.emitState()
 
-      const success:
-        boolean =
-        await this.reconnect()
+      /*
+       * 不等待单次 reconnect。
+       *
+       * 直接启动持续重连。
+       */
+
+      this.scheduleAutoReconnect()
+
+      /*
+       * 观察一小段时间，
+       * 如果很快恢复就继续。
+       */
+
+      const startTime:
+        number =
+        Date.now()
+
+      while (
+        Date.now() -
+          startTime <
+          4000
+      ) {
+
+        if (
+          this.connected &&
+            this.socketReady()
+        ) {
+
+          break
+        }
+
+        await this.sleep(
+          100
+        )
+      }
 
       if (
-        !success ||
-          !this.connected ||
+        !this.connected ||
           !this.socketReady()
       ) {
 
@@ -1330,7 +2222,7 @@ export class WalkieClient {
           'NONE'
 
         this.state.message =
-          '网络未恢复，请再按一次说话'
+          '网络正在自动恢复，请稍后再抢麦'
 
         this.emitState()
 
@@ -1386,36 +2278,29 @@ export class WalkieClient {
             }
 
             this.state.message =
-              '抢麦响应超时，正在恢复网络…'
+              '抢麦响应超时，正在检查网络…'
 
             this.state.network.quality =
-              '重连中'
+              '检测中'
 
             this.emitState()
 
-            void this.reconnect()
-              .then(
-                (
-                  success:
-                    boolean
-                ):
-                  void => {
+            this.state.talkStatus =
+              'NONE'
 
-                  this.state.talkStatus =
-                    'NONE'
+            this.emitState()
 
-                  this.state.message =
-                    success
-                      ? '网络已恢复，请重新抢麦'
-                      : '网络恢复失败，请重试'
+            /*
+             * 抢麦超时不立即摧毁连接。
+             *
+             * 先启动自动恢复检查。
+             */
 
-                  this.emitState()
-                }
-              )
+            this.scheduleAutoReconnect()
 
           },
           WalkieClient.TALK_REQUEST_TIMEOUT
-        )
+        ) as number
 
     } catch {
 
@@ -1429,16 +2314,7 @@ export class WalkieClient {
 
       this.emitState()
 
-      const success:
-        boolean =
-        await this.reconnect()
-
-      this.state.message =
-        success
-          ? '网络已恢复，请重新抢麦'
-          : '网络恢复失败，请稍后重试'
-
-      this.emitState()
+      this.scheduleAutoReconnect()
     }
   }
 
@@ -1497,8 +2373,10 @@ export class WalkieClient {
       this.savedChannelName.trim()
 
     if (
-      channel.length === 0 ||
-        channel === 'public'
+      channel.length ===
+        0 ||
+        channel ===
+          'public'
     ) {
 
       return
@@ -1537,6 +2415,11 @@ export class WalkieClient {
         message
       )
 
+      console.info(
+        'WALKIE CLIENT: ' +
+          `正在恢复频道=${channel}`
+      )
+
     } catch {
 
       this.restoringChannel =
@@ -1561,7 +2444,8 @@ export class WalkieClient {
       )
 
     if (
-      clean.length === 0
+      clean.length ===
+        0
     ) {
 
       return
@@ -1706,11 +2590,17 @@ export class WalkieClient {
       channelName.trim()
 
     if (
-      cleanChannel.length === 0
+      cleanChannel.length ===
+        0
     ) {
 
       return
     }
+
+    /*
+     * 保存频道，
+     * 以后自动重连使用。
+     */
 
     this.savedChannelName =
       cleanChannel
@@ -1724,7 +2614,8 @@ export class WalkieClient {
         cleanChannel
 
     if (
-      password.trim().length > 0
+      password.trim().length >
+        0
     ) {
 
       message =
@@ -1745,6 +2636,8 @@ export class WalkieClient {
         '加入频道失败'
 
       this.emitState()
+
+      this.scheduleAutoReconnect()
     }
   }
 
@@ -1775,7 +2668,8 @@ export class WalkieClient {
       name.trim()
 
     if (
-      cleanName.length === 0
+      cleanName.length ===
+        0
     ) {
 
       return
@@ -1839,8 +2733,10 @@ export class WalkieClient {
       channelName.trim()
 
     if (
-      cleanChannel.length === 0 ||
-        cleanChannel === 'public'
+      cleanChannel.length ===
+        0 ||
+        cleanChannel ===
+          'public'
     ) {
 
       return
@@ -1884,6 +2780,13 @@ export class WalkieClient {
       return
     }
 
+    /*
+     * 网络错误：
+     *
+     * 停止业务状态，
+     * 但不要停止自动重连。
+     */
+
     this.connected =
       false
 
@@ -1908,15 +2811,10 @@ export class WalkieClient {
     this.emitState()
 
     /*
-    * UDP 层已经明确出错。
-    *
-    * 不等待 5 秒后台检查。
-    *
-    * 直接进入自动恢复。
-    */
+     * 立即启动持续重连。
+     */
 
     this.scheduleAutoReconnect()
-
   }
 
   // ============================================================
@@ -1929,9 +2827,18 @@ export class WalkieClient {
   ):
     void {
 
+    this.lastServerActivityTime =
+      Date.now()
+
     let text:
       string =
       ''
+
+    /*
+     * ========================================================
+     * Binary
+     * ========================================================
+     */
 
     if (
       typeof message.data !==
@@ -1969,7 +2876,8 @@ export class WalkieClient {
       if (
         text.indexOf(
           'WALKIE_'
-        ) === 0
+        ) ===
+          0
       ) {
 
         console.info(
@@ -2001,7 +2909,8 @@ export class WalkieClient {
     }
 
     if (
-      text.length === 0
+      text.length ===
+        0
     ) {
 
       return
@@ -2012,22 +2921,50 @@ export class WalkieClient {
       text
     )
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // CONNECTED
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text ===
         'WALKIE_CONNECTED'
     ) {
 
+      /*
+       * 连接正式建立。
+       */
+
       this.connected =
         true
 
       this.state.connected =
         true
+      this.lastServerActivityTime =
+        Date.now()
+
+      this.pendingPingSequence =
+        []
+
+      this.pendingPingTime.clear()
+
+      this.pingResults =
+        []
+
+      /*
+       * 登录重试停止。
+       */
 
       this.stopLoginRetry()
+
+      /*
+       * 自动重连延迟恢复最快。
+       */
+
+      this.autoReconnectAttempt =
+        0
+
+      this.autoReconnectDelay =
+        WalkieClient.AUTO_RECONNECT_INITIAL_DELAY
 
       this.state.message =
         '服务器连接正常'
@@ -2038,50 +2975,37 @@ export class WalkieClient {
       this.emitState()
 
       /*
-       * CONNECTED 后正式 LOGIN。
+       * CONNECTED 后 LOGIN。
        */
 
-      void this.sendLogin()
-
-      /*
-       * 恢复频道。
-       */
-
-      void this.restoreSavedChannel()
-
-      /*
-       * 同步服务器数据。
-       */
-
-      void this.requestUserList()
-
-      void this.requestChannelList()
-
-      void this.requestChannelMembers()
+      void this.sendLoginAfterConnected()
 
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // KEEPALIVE
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text ===
         'WALKIE_KEEPALIVE'
     ) {
+      this.lastServerActivityTime =
+        Date.now()
 
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // USER_OK
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text.indexOf(
         'WALKIE_USER_OK:'
-      ) === 0
+      ) ===
+        0
     ) {
 
       this.handleUserOk(
@@ -2091,14 +3015,15 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // USER_STATUS
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text.indexOf(
         'WALKIE_USER_STATUS:'
-      ) === 0
+      ) ===
+        0
     ) {
 
       this.handleUserStatus(
@@ -2108,14 +3033,15 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // USER_LIST
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text.indexOf(
         'WALKIE_USER_LIST:'
-      ) === 0
+      ) ===
+        0
     ) {
 
       this.handleUserList(
@@ -2125,14 +3051,15 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // CHANNEL_MEMBERS
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text.indexOf(
         'WALKIE_CHANNEL_MEMBERS:'
-      ) === 0
+      ) ===
+        0
     ) {
 
       this.handleChannelMembers(
@@ -2142,14 +3069,15 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // CHANNEL_LIST
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text.indexOf(
         'WALKIE_CHANNEL_LIST:'
-      ) === 0
+      ) ===
+        0
     ) {
 
       this.handleChannelList(
@@ -2159,14 +3087,15 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // CHANNEL_INFO
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text.indexOf(
         'WALKIE_CHANNEL_INFO:'
-      ) === 0
+      ) ===
+        0
     ) {
 
       this.handleChannelInfo(
@@ -2176,14 +3105,15 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // CHANNEL_JOINED
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text.indexOf(
         'WALKIE_CHANNEL_JOINED:'
-      ) === 0
+      ) ===
+        0
     ) {
 
       this.handleChannelJoined(
@@ -2193,14 +3123,15 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // CHANNEL_ERROR
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text.indexOf(
         'WALKIE_CHANNEL_ERROR:'
-      ) === 0
+      ) ===
+        0
     ) {
 
       this.restoringChannel =
@@ -2216,14 +3147,15 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // CHANNEL_DELETED
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text.indexOf(
         'WALKIE_CHANNEL_DELETED:'
-      ) === 0
+      ) ===
+        0
     ) {
 
       this.handleChannelDeleted(
@@ -2233,9 +3165,9 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // TALK OK
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text ===
@@ -2257,9 +3189,9 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // TALK BUSY
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text ===
@@ -2279,9 +3211,9 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // TALK RELEASED
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text ===
@@ -2303,14 +3235,15 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // TALKING
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text.indexOf(
         'WALKIE_TALKING:'
-      ) === 0
+      ) ===
+        0
     ) {
 
       this.state.message =
@@ -2321,14 +3254,15 @@ export class WalkieClient {
       return
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // NET PONG
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       text.indexOf(
         'WALKIE_NET_PONG:'
-      ) === 0
+      ) ===
+        0
     ) {
 
       this.handleNetworkPong(
@@ -2336,6 +3270,46 @@ export class WalkieClient {
       )
 
       return
+    }
+  }
+
+  // ============================================================
+  // CONNECTED 后 LOGIN
+  // ============================================================
+
+  private async sendLoginAfterConnected():
+    Promise<void> {
+
+    try {
+
+      await this.sendLogin()
+
+      /*
+       * 恢复频道。
+       */
+
+      await this.restoreSavedChannel()
+
+      /*
+       * 数据同步。
+       */
+
+      void this.requestUserList()
+
+      void this.requestChannelList()
+
+      void this.requestChannelMembers()
+
+    } catch {
+
+      /*
+       * CONNECTED 后如果 LOGIN 发送失败，
+       * 不立即销毁整个连接。
+       *
+       * LoginRetry 会继续尝试。
+       */
+
+      this.startLoginRetry()
     }
   }
 
@@ -2432,7 +3406,8 @@ export class WalkieClient {
       payload.split(':')
 
     if (
-      parts.length > 0
+      parts.length >
+        0
     ) {
 
       const id:
@@ -2440,7 +3415,8 @@ export class WalkieClient {
         parts[0].trim()
 
       if (
-        id.length > 0
+        id.length >
+          0
       ) {
 
         this.state.userId =
@@ -2449,7 +3425,8 @@ export class WalkieClient {
     }
 
     if (
-      parts.length > 1
+      parts.length >
+        1
     ) {
 
       const name:
@@ -2457,7 +3434,8 @@ export class WalkieClient {
         parts[1].trim()
 
       if (
-        name.length > 0
+        name.length >
+          0
       ) {
 
         this.state.nickname =
@@ -2466,7 +3444,8 @@ export class WalkieClient {
     }
 
     if (
-      parts.length > 2
+      parts.length >
+        2
     ) {
 
       const channel:
@@ -2474,7 +3453,8 @@ export class WalkieClient {
         parts[2].trim()
 
       if (
-        channel.length > 0 &&
+        channel.length >
+          0 &&
           !this.restoringChannel
       ) {
 
@@ -2514,7 +3494,8 @@ export class WalkieClient {
       payload.split(':')
 
     if (
-      parts.length > 0
+      parts.length >
+        0
     ) {
 
       const id:
@@ -2522,7 +3503,8 @@ export class WalkieClient {
         parts[0].trim()
 
       if (
-        id.length > 0
+        id.length >
+          0
       ) {
 
         this.state.userId =
@@ -2531,7 +3513,8 @@ export class WalkieClient {
     }
 
     if (
-      parts.length > 1
+      parts.length >
+        1
     ) {
 
       const name:
@@ -2539,7 +3522,8 @@ export class WalkieClient {
         parts[1].trim()
 
       if (
-        name.length > 0
+        name.length >
+          0
       ) {
 
         this.state.nickname =
@@ -2548,7 +3532,8 @@ export class WalkieClient {
     }
 
     if (
-      parts.length > 4
+      parts.length >
+        4
     ) {
 
       const channel:
@@ -2556,7 +3541,8 @@ export class WalkieClient {
         parts[4].trim()
 
       if (
-        channel.length > 0 &&
+        channel.length >
+          0 &&
           !this.restoringChannel
       ) {
 
@@ -2592,7 +3578,8 @@ export class WalkieClient {
       payload.indexOf(':')
 
     if (
-      separator < 0
+      separator <
+        0
     ) {
 
       return
@@ -2619,7 +3606,8 @@ export class WalkieClient {
       )
 
     if (
-      channel.length > 0 &&
+      channel.length >
+        0 &&
         !this.restoringChannel
     ) {
 
@@ -2654,7 +3642,8 @@ export class WalkieClient {
       payload.indexOf(':')
 
     if (
-      separator < 0
+      separator <
+        0
     ) {
 
       this.state.onlineUsers =
@@ -2686,7 +3675,8 @@ export class WalkieClient {
       )
 
     if (
-      channel.length > 0 &&
+      channel.length >
+        0 &&
         !this.restoringChannel
     ) {
 
@@ -2736,7 +3726,8 @@ export class WalkieClient {
       let index:
         number =
         0;
-      index < items.length;
+      index <
+        items.length;
       index++
     ) {
 
@@ -2753,7 +3744,8 @@ export class WalkieClient {
         ''
 
       if (
-        parts.length > 0
+        parts.length >
+          0
       ) {
 
         name =
@@ -2761,7 +3753,8 @@ export class WalkieClient {
       }
 
       if (
-        name.length === 0
+        name.length ===
+          0
       ) {
 
         continue
@@ -2772,7 +3765,8 @@ export class WalkieClient {
         'PUBLIC'
 
       if (
-        parts.length > 1
+        parts.length >
+          1
       ) {
 
         type =
@@ -2786,7 +3780,8 @@ export class WalkieClient {
         0
 
       if (
-        parts.length > 2
+        parts.length >
+          2
       ) {
 
         const parsed:
@@ -2829,7 +3824,8 @@ export class WalkieClient {
     }
 
     if (
-      result.length > 0
+      result.length >
+        0
     ) {
 
       this.state.channels =
@@ -2868,7 +3864,8 @@ export class WalkieClient {
       'PUBLIC'
 
     if (
-      parts.length > 0
+      parts.length >
+        0
     ) {
 
       name =
@@ -2876,7 +3873,8 @@ export class WalkieClient {
     }
 
     if (
-      parts.length > 1
+      parts.length >
+        1
     ) {
 
       type =
@@ -2886,7 +3884,8 @@ export class WalkieClient {
     }
 
     if (
-      name.length > 0
+      name.length >
+        0
     ) {
 
       this.state.currentChannel =
@@ -2931,7 +3930,8 @@ export class WalkieClient {
       ''
 
     if (
-      parts.length > 0
+      parts.length >
+        0
     ) {
 
       channel =
@@ -2939,7 +3939,8 @@ export class WalkieClient {
     }
 
     if (
-      channel.length > 0
+      channel.length >
+        0
     ) {
 
       this.state.currentChannel =
@@ -3046,7 +4047,6 @@ export class WalkieClient {
   // ============================================================
   // NET PONG
   // ============================================================
-
   private handleNetworkPong(
     text:
       string
@@ -3064,9 +4064,9 @@ export class WalkieClient {
       payload.split(':')
 
     if (
-      parts.length < 2
+      parts.length <
+        2
     ) {
-
       return
     }
 
@@ -3078,68 +4078,49 @@ export class WalkieClient {
       )
 
     if (
-      Number.isNaN(
-        sequence
-      )
+      Number.isNaN(sequence)
     ) {
-
       return
     }
 
     const sentTime:
     number | undefined =
-      this.pendingPingTime.get(
-        sequence
-      )
+      this.pendingPingTime.get(sequence)
 
     if (
       sentTime ===
         undefined
     ) {
-
       return
     }
 
-    this.pendingPingTime.delete(
-      sequence
-    )
-
-    this.removePendingSequence(
-      sequence
-    )
+    this.pendingPingTime.delete(sequence)
+    this.removePendingSequence(sequence)
 
     const latency:
       number =
       Math.max(
         0,
-        Date.now() -
-          sentTime
+        Date.now() - sentTime
       )
+
+    this.lastServerActivityTime =
+      Date.now()
+
+    this.addPingResult(true)
 
     this.state.network.latency =
       latency
 
     this.state.network.loss =
-      0
+      this.calculatePingLoss()
 
-    if (
-      latency < 80
-    ) {
-
-      this.state.network.quality =
-        '良好'
-
-    } else if (
-      latency < 180
-    ) {
-
-      this.state.network.quality =
-        '一般'
-
+    if (latency < 80) {
+      this.state.network.quality = '良好'
+    } else if (latency < 180) {
+      this.state.network.quality = '一般'
     } else {
-
-      this.state.network.quality =
-        '较差'
+      this.state.network.quality = '较差'
     }
 
     this.emitState()
@@ -3199,7 +4180,8 @@ export class WalkieClient {
     try {
 
       await this.udp.send(
-        'WALKIE_KEEPALIVE'
+        'WALKIE_KEEPALIVE:' +
+          this.deviceId
       )
 
     } catch {
@@ -3217,28 +4199,27 @@ export class WalkieClient {
         '网络异常'
 
       this.state.message =
-        '心跳发送失败'
+        '心跳发送失败，正在自动重连…'
 
       this.emitState()
 
       this.scheduleAutoReconnect()
-
     }
   }
 
   // ============================================================
   // Network Ping
   // ============================================================
-
   private startNetworkPing():
     void {
 
     this.stopNetworkPing()
 
+    this.pingResults = []
+
     this.networkPingTimer =
       setInterval(
         (): void => {
-
           void this.sendNetworkPing()
         },
         WalkieClient.NETWORK_PING_INTERVAL
@@ -3246,29 +4227,18 @@ export class WalkieClient {
 
     void this.sendNetworkPing()
   }
-
   private stopNetworkPing():
     void {
 
-    if (
-      this.networkPingTimer !==
-        null
-    ) {
-
-      clearInterval(
-        this.networkPingTimer
-      )
-
-      this.networkPingTimer =
-        null
+    if (this.networkPingTimer !== null) {
+      clearInterval(this.networkPingTimer)
+      this.networkPingTimer = null
     }
 
-    this.pendingPingSequence =
-      []
-
+    this.pendingPingSequence = []
     this.pendingPingTime.clear()
+    this.pingResults = []
   }
-
   private async sendNetworkPing():
     Promise<void> {
 
@@ -3276,127 +4246,22 @@ export class WalkieClient {
       !this.connected ||
         !this.udp.getBound()
     ) {
-
       return
     }
-
-    /*
-     * ========================================================
-     * 第一部分：
-     *
-     * 检查最早等待中的 Ping。
-     *
-     * Android：
-     *
-     * PING_TIMEOUT ≈ 1800ms
-     *
-     * 如果超过这个时间还没有 PONG，
-     * 就认为 UDP 网络已经失效。
-     * ========================================================
-     */
 
     const now:
       number =
       Date.now()
 
-    if (
-      this.pendingPingSequence.length >
-        0
-    ) {
-
-      const oldestSequence:
-        number =
-        this.pendingPingSequence[0]
-
-      const oldestTime:
-        number | undefined =
-        this.pendingPingTime.get(
-          oldestSequence
-        )
-
-      if (
-        oldestTime !==
-          undefined &&
-        now -
-          oldestTime >=
-          WalkieClient.NETWORK_PING_TIMEOUT
-      ) {
-
-        /*
-         * 清掉所有旧 Ping。
-         */
-
-        this.pendingPingSequence =
-          []
-
-        this.pendingPingTime.clear()
-
-        /*
-         * 标记连接失效。
-         */
-
-        this.connected =
-          false
-
-        this.state.connected =
-          false
-
-        this.state.talkStatus =
-          'NONE'
-
-        this.state.network.quality =
-          '网络超时'
-
-        this.state.message =
-          '服务器无响应，正在自动重连…'
-
-        this.emitState()
-
-        console.warn(
-          'WALKIE CLIENT: ' +
-            'Network Ping 超时，触发自动重连'
-        )
-
-        this.scheduleAutoReconnect()
-
-        return
-      }
-    }
-
     /*
-     * ========================================================
-     * 第二部分：
-     *
-     * 发送新的 Ping。
-     * ========================================================
+     * Ping 只做网络质量统计。
+     * 不因为 Ping 超时主动断线。
      */
 
-    const sequence:
-      number =
-      this.pingSequence
-
-    this.pingSequence +=
-      1
-
-    const timestamp:
-      number =
-      now
-
-    this.pendingPingSequence.push(
-      sequence
-    )
-
-    this.pendingPingTime.set(
-      sequence,
-      timestamp
-    )
-
-    /*
-     * 保持固定窗口。
-     */
+    this.expirePingStatistics(now)
 
     while (
-      this.pendingPingSequence.length >
+      this.pendingPingSequence.length >=
         WalkieClient.NETWORK_PING_WINDOW
     ) {
 
@@ -3404,15 +4269,18 @@ export class WalkieClient {
         number =
         this.pendingPingSequence[0]
 
-      this.pendingPingSequence.splice(
-        0,
-        1
-      )
-
-      this.pendingPingTime.delete(
-        first
-      )
+      this.pendingPingSequence.splice(0, 1)
+      this.pendingPingTime.delete(first)
     }
+
+    const sequence:
+      number =
+      this.pingSequence
+
+    this.pingSequence += 1
+
+    this.pendingPingSequence.push(sequence)
+    this.pendingPingTime.set(sequence, now)
 
     try {
 
@@ -3420,235 +4288,142 @@ export class WalkieClient {
         'WALKIE_NET_PING:' +
           sequence +
           ':' +
-          timestamp
+          now +
+          ':' +
+          this.deviceId
       )
 
     } catch {
 
-      /*
-       * 删除当前 Ping。
-       */
-
-      this.pendingPingTime.delete(
-        sequence
-      )
-
-      this.removePendingSequence(
-        sequence
-      )
-
-      /*
-       * 网络已经失效。
-       */
-
-      this.connected =
-        false
-
-      this.state.connected =
-        false
-
-      this.state.talkStatus =
-        'NONE'
-
-      this.state.network.quality =
-        '网络异常'
-
-      this.state.message =
-        '网络连接已失效，正在自动重连…'
-
-      this.emitState()
-
-      console.warn(
-        'WALKIE CLIENT: ' +
-          'Network Ping 发送失败，触发自动重连'
-      )
-
-      this.scheduleAutoReconnect()
+      this.pendingPingTime.delete(sequence)
+      this.removePendingSequence(sequence)
+      this.addPingResult(false)
+      this.updateNetworkStatus()
     }
   }
 
   // ============================================================
-  // 统一触发自动重连
-  // ============================================================
-
-  private scheduleAutoReconnect():
+  private addPingResult(
+    success:
+      boolean
+  ):
     void {
 
-    if (
-      this.manualDisconnect
+    this.pingResults.push(success)
+
+    while (
+      this.pingResults.length >
+        WalkieClient.NETWORK_PING_WINDOW
     ) {
-
-      return
+      this.pingResults.shift()
     }
-
-    if (
-      this.connected &&
-        this.socketReady()
-    ) {
-
-      return
-    }
-
-    if (
-      this.autoReconnectBusy
-    ) {
-
-      return
-    }
-
-    if (
-      this.reconnecting
-    ) {
-
-      return
-    }
-
-    if (
-      this.autoReconnectTimer !==
-        null
-    ) {
-
-      return
-    }
-
-    this.autoReconnectTimer =
-      setTimeout(
-        (): void => {
-
-          this.autoReconnectTimer =
-            null
-
-          if (
-            this.manualDisconnect
-          ) {
-
-            return
-          }
-
-          if (
-            this.connected &&
-              this.socketReady()
-          ) {
-
-            return
-          }
-
-          if (
-            this.autoReconnectBusy
-          ) {
-
-            return
-          }
-
-          this.autoReconnectBusy =
-            true
-
-          this.state.message =
-            '网络断开，正在自动重连…'
-
-          this.state.network.quality =
-            '重连中'
-
-          this.emitState()
-
-          void this.reconnect()
-            .then(
-              (
-                success:
-                  boolean
-              ): void => {
-
-                if (
-                  success
-                ) {
-
-                  this.state.message =
-                    '网络已自动恢复'
-
-                  this.state.network.quality =
-                    '良好'
-
-                  void this.requestUserList()
-
-                  void this.requestChannelList()
-
-                  void this.requestChannelMembers()
-
-                } else {
-
-                  this.state.message =
-                    '网络恢复中…'
-
-                  this.state.network.quality =
-                    '连接中'
-
-                }
-
-                this.emitState()
-              }
-            )
-            .catch(
-              (): void => {
-
-                this.state.message =
-                  '自动重连失败，继续恢复…'
-
-                this.state.network.quality =
-                  '连接中'
-
-                this.emitState()
-              }
-            )
-            .finally(
-              (): void => {
-
-                this.autoReconnectBusy =
-                  false
-
-                /*
-                 * reconnect() 没有成功：
-                 *
-                 * 不立即无限递归。
-                 *
-                 * 由后台恢复定时器继续检查，
-                 * 同时 Ping 恢复以后也会再次触发。
-                 */
-              }
-            )
-
-        },
-        WalkieClient.AUTO_RECONNECT_DELAY
-      )
   }
 
-  // ============================================================
+  private calculatePingLoss():
+    number {
+
+    if (this.pingResults.length === 0) {
+      return 0
+    }
+
+    let lost:
+      number =
+      0
+
+    for (
+      let index:
+        number =
+        0;
+      index < this.pingResults.length;
+      index++
+    ) {
+      if (!this.pingResults[index]) {
+        lost += 1
+      }
+    }
+
+    return Math.round(
+      lost * 100 / this.pingResults.length
+    )
+  }
+
+  private expirePingStatistics(
+    now:
+      number
+  ):
+    void {
+
+    const expired:
+      number[] =
+      []
+
+    for (
+      let index:
+        number =
+        0;
+      index < this.pendingPingSequence.length;
+      index++
+    ) {
+
+      const sequence:
+        number =
+        this.pendingPingSequence[index]
+
+      const sentTime:
+      number | undefined =
+        this.pendingPingTime.get(sequence)
+
+      if (
+        sentTime !== undefined &&
+          now - sentTime >= WalkieClient.NETWORK_PING_TIMEOUT
+      ) {
+        expired.push(sequence)
+      }
+    }
+
+    for (
+      let index:
+        number =
+        0;
+      index < expired.length;
+      index++
+    ) {
+
+      const sequence:
+        number =
+        expired[index]
+
+      this.pendingPingTime.delete(sequence)
+      this.removePendingSequence(sequence)
+      this.addPingResult(false)
+    }
+
+    if (expired.length > 0) {
+      this.updateNetworkStatus()
+    }
+  }
+
+  private updateNetworkStatus():
+    void {
+
+    this.state.network.loss =
+      this.calculatePingLoss()
+
+    if (this.state.network.loss >= 20) {
+      this.state.network.quality = '较差'
+    } else if (this.state.network.loss >= 8) {
+      this.state.network.quality = '一般'
+    }
+  }
+
   // 停止全部定时器
   // ============================================================
-
   private stopTimers():
     void {
 
     this.stopLoginRetry()
-
     this.stopKeepAlive()
-
     this.stopNetworkPing()
-
-    if (
-      this.autoReconnectTimer !==
-        null
-    ) {
-
-      clearTimeout(
-        this.autoReconnectTimer
-      )
-
-      this.autoReconnectTimer =
-        null
-    }
-
-    this.autoReconnectBusy =
-      false
   }
 
   // ============================================================
@@ -3673,7 +4448,7 @@ export class WalkieClient {
   }
 
   // ============================================================
-  // 删除 Pending Sequence
+  // 删除 Pending Ping
   // ============================================================
 
   private removePendingSequence(
@@ -3762,7 +4537,8 @@ export class WalkieClient {
         item.indexOf('|')
 
       if (
-        separator <= 0
+        separator <=
+          0
       ) {
 
         continue
@@ -3799,11 +4575,16 @@ export class WalkieClient {
         userId,
 
         nickname:
-        nickname.length > 0
+        nickname.length >
+          0
           ? nickname
           : '未命名用户'
       })
     }
+
+    /*
+     * 去重。
+     */
 
     const unique:
       WalkieUser[] =
@@ -4013,7 +4794,7 @@ export class WalkieClient {
   ):
     Promise<void> {
 
-    return new Promise(
+    return new Promise<void>(
       (
         resolve:
           () => void
@@ -4040,7 +4821,8 @@ export class WalkieClient {
       this.stateCallback
 
     if (
-      callback !== null
+      callback !==
+        null
     ) {
 
       callback(

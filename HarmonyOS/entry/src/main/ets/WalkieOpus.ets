@@ -1,16 +1,20 @@
 import walkieOpus from 'libwalkieopus.so'
 
+
 /*
  * ============================================================
  * WALKIE Native Opus / Native OHAudio
+ *
+ * V24.0
  *
  * HarmonyOS 7.0 / API 26
  *
  * 同一个 libwalkieopus.so 同时提供：
  *
- *   Opus Encoder
- *   Opus Decoder
- *   Native OHAudio Capturer
+ *   1. Opus Encoder
+ *   2. Opus Decoder
+ *   3. Opus PLC
+ *   4. Native OHAudio Capturer
  * ============================================================
  */
 
@@ -58,7 +62,6 @@ export class WalkieOpus {
       }
 
     } catch {
-
       // 统一返回 false
     }
 
@@ -74,14 +77,17 @@ export class WalkieOpus {
   // ============================================================
 
   public encode(
-    pcm: ArrayBuffer
-  ): ArrayBuffer | null {
+    pcm:
+      ArrayBuffer
+  ):
+    ArrayBuffer | null {
 
     if (
       !this.encoderReady
     ) {
 
-      const ready: boolean =
+      const ready:
+        boolean =
         this.createEncoder()
 
       if (
@@ -93,7 +99,8 @@ export class WalkieOpus {
     }
 
     if (
-      pcm.byteLength !== 640
+      pcm.byteLength !==
+        640
     ) {
 
       console.error(
@@ -107,7 +114,7 @@ export class WalkieOpus {
     try {
 
       const result:
-      ArrayBuffer | null =
+        ArrayBuffer | null =
         walkieOpus.encode(
           pcm
         )
@@ -128,7 +135,8 @@ export class WalkieOpus {
   // Destroy Encoder
   // ============================================================
 
-  public destroyEncoder(): void {
+  public destroyEncoder():
+    void {
 
     if (
       !this.encoderReady
@@ -142,7 +150,6 @@ export class WalkieOpus {
       walkieOpus.destroyEncoder()
 
     } catch {
-
       // 忽略释放异常
     }
 
@@ -154,7 +161,8 @@ export class WalkieOpus {
   // Opus Decoder
   // ============================================================
 
-  public createDecoder(): boolean {
+  public createDecoder():
+    boolean {
 
     if (
       this.decoderReady
@@ -165,7 +173,8 @@ export class WalkieOpus {
 
     try {
 
-      const result: boolean =
+      const result:
+        boolean =
         walkieOpus.createDecoder()
 
       if (
@@ -183,7 +192,6 @@ export class WalkieOpus {
       }
 
     } catch {
-
       // 统一返回 false
     }
 
@@ -199,14 +207,17 @@ export class WalkieOpus {
   // ============================================================
 
   public decode(
-    opusData: ArrayBuffer
-  ): ArrayBuffer | null {
+    opusData:
+      ArrayBuffer
+  ):
+    ArrayBuffer | null {
 
     if (
       !this.decoderReady
     ) {
 
-      const ready: boolean =
+      const ready:
+        boolean =
         this.createDecoder()
 
       if (
@@ -218,14 +229,16 @@ export class WalkieOpus {
     }
 
     if (
-      opusData.byteLength <= 0
+      opusData.byteLength <=
+        0
     ) {
 
       return null
     }
 
     if (
-      opusData.byteLength > 1208
+      opusData.byteLength >
+        1208
     ) {
 
       return null
@@ -234,7 +247,7 @@ export class WalkieOpus {
     try {
 
       const result:
-      ArrayBuffer | null =
+        ArrayBuffer | null =
         walkieOpus.decode(
           opusData
         )
@@ -252,10 +265,63 @@ export class WalkieOpus {
   }
 
   // ============================================================
+  // V24.0 Opus PLC
+  //
+  // 只在上层已经确认：
+  //
+  //     missing == 1
+  //
+  // 时调用。
+  //
+  // 输出：
+  //
+  //     320 samples
+  //     640 bytes PCM
+  // ============================================================
+
+  public decodePlc():
+    ArrayBuffer | null {
+
+    if (
+      !this.decoderReady
+    ) {
+
+      const ready:
+        boolean =
+        this.createDecoder()
+
+      if (
+        !ready
+      ) {
+
+        return null
+      }
+    }
+
+    try {
+
+      const result:
+        ArrayBuffer | null =
+        walkieOpus.decodePlc()
+
+      return result
+
+    } catch {
+
+      console.error(
+        'WALKIE OPUS: PLC 解码失败'
+      )
+
+      return null
+    }
+  }
+
+  // ============================================================
   // Destroy Decoder
   // ============================================================
 
-  public destroyDecoder(): void {
+  public destroyDecoder():
+    void {
 
     if (
       !this.decoderReady
@@ -269,7 +335,6 @@ export class WalkieOpus {
       walkieOpus.destroyDecoder()
 
     } catch {
-
       // 忽略
     }
 
@@ -281,7 +346,8 @@ export class WalkieOpus {
   // Native OHAudio Start
   // ============================================================
 
-  public startCapture(): boolean {
+  public startCapture():
+    boolean {
 
     if (
       this.captureReady
@@ -292,7 +358,8 @@ export class WalkieOpus {
 
     try {
 
-      const result: boolean =
+      const result:
+        boolean =
         walkieOpus.startCapture()
 
       if (
@@ -303,19 +370,20 @@ export class WalkieOpus {
           true
 
         console.info(
-          'WALKIE OHAUDIO: ★Native Capturer 启动成功★'
+          'WALKIE OHAUDIO: ' +
+            '★Native Capturer 启动成功★'
         )
 
         return true
       }
 
     } catch {
-
       // 统一返回 false
     }
 
     console.error(
-      'WALKIE OHAUDIO: Native Capturer 启动失败'
+      'WALKIE OHAUDIO: ' +
+        'Native Capturer 启动失败'
     )
 
     return false
@@ -325,7 +393,8 @@ export class WalkieOpus {
   // Native OHAudio Stop
   // ============================================================
 
-  public stopCapture(): void {
+  public stopCapture():
+    void {
 
     if (
       !this.captureReady
@@ -339,7 +408,6 @@ export class WalkieOpus {
       walkieOpus.stopCapture()
 
     } catch {
-
       // 忽略
     }
 
@@ -347,7 +415,8 @@ export class WalkieOpus {
       false
 
     console.info(
-      'WALKIE OHAUDIO: Native Capturer 已停止'
+      'WALKIE OHAUDIO: ' +
+        'Native Capturer 已停止'
     )
   }
 
@@ -355,14 +424,14 @@ export class WalkieOpus {
   // Native OHAudio Release
   // ============================================================
 
-  public releaseCapture(): void {
+  public releaseCapture():
+    void {
 
     try {
 
       walkieOpus.releaseCapture()
 
     } catch {
-
       // 忽略
     }
 
@@ -374,7 +443,8 @@ export class WalkieOpus {
   // 统一释放
   // ============================================================
 
-  public destroy(): void {
+  public destroy():
+    void {
 
     this.stopCapture()
 
@@ -387,23 +457,33 @@ export class WalkieOpus {
   // 固定参数
   // ============================================================
 
-  public getSampleRate(): number {
+  public getSampleRate():
+    number {
+
     return 16000
   }
 
-  public getChannels(): number {
+  public getChannels():
+    number {
+
     return 1
   }
 
-  public getFrameSamples(): number {
+  public getFrameSamples():
+    number {
+
     return 320
   }
 
-  public getFrameBytes(): number {
+  public getFrameBytes():
+    number {
+
     return 640
   }
 
-  public getFrameDurationMs(): number {
+  public getFrameDurationMs():
+    number {
+
     return 20
   }
 }

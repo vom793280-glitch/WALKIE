@@ -1,17 +1,8 @@
 import {
   AbilityConstant,
-  ConfigurationConstant,
   UIAbility,
-  Want,
-  abilityAccessCtrl,
-  PermissionRequestResult,
-  wantAgent,
-  WantAgent
+  Want
 } from '@kit.AbilityKit'
-
-import {
-  hilog
-} from '@kit.PerformanceAnalysisKit'
 
 import {
   window
@@ -22,609 +13,177 @@ import {
 } from '@kit.BasicServicesKit'
 
 import {
-  backgroundTaskManager
-} from '@kit.BackgroundTasksKit'
+  notificationManager
+} from '@kit.NotificationKit'
 
-
-const DOMAIN:
-  number =
-  0x0000
-
-
-/*
- * ============================================================
- * WALKIE HarmonyOS EntryAbility
- *
- * 当前阶段：
- *
- *   1. 后台长时任务
- *   2. 锁屏后台运行
- *   3. 后台 UDP / 音频保持
- *   4. 自动重连
- *
- * 当前已经验证成功：
- *
- *   DeviceID
- *   昵称恢复
- *   当前频道恢复
- *   在线人员准确
- *   Opus
- *   AudioRenderer
- *   SPEAKER
- *   VOICE_COMMUNICATION
- *
- * ============================================================
- */
+import {
+  WalkieBackgroundTask
+} from '../WalkieBackgroundTask'
 
 
 /*
  * ============================================================
- * APP 前后台状态
+ * WALKIE HarmonyOS
+ *
+ * V24.5
+ *
+ * EntryAbility
+ *
+ * 目标：
+ *
+ * 1. 正常启动 WALKIE
+ * 2. 启动长期后台任务
+ * 3. 请求通知显示权限
+ * 4. 锁屏后继续运行
+ * 5. 后台任务通知点击后回到 WALKIE
+ *
  * ============================================================
  */
-
-AppStorage.setOrCreate(
-  'walkie_app_active',
-  false
-)
-
 
 export default class EntryAbility
   extends UIAbility {
 
-  /*
-   * ==========================================================
-   * 本地状态：
-   *
-   * 仅用于记录“我们最近一次申请是否成功”。
-   *
-   * ★注意：
-   *
-   * 这个变量不再作为系统任务是否存在的唯一依据。
-   * ==========================================================
-   */
-
-  private backgroundTaskStarted:
-    boolean =
-    false
 
   /*
-   * 防止同一时间多次申请。
+   * ==========================================================
+   * Ability 创建
+   * ==========================================================
    */
-
-  private backgroundTaskStarting:
-    boolean =
-    false
-
-
-  // ============================================================
-  // Ability 创建
-  // ============================================================
-
   onCreate(
-    want:
-      Want,
-    launchParam:
-      AbilityConstant.LaunchParam
-  ):
-    void {
+    want: Want,
+    launchParam: AbilityConstant.LaunchParam
+  ): void {
 
-    hilog.info(
-      DOMAIN,
-      'WALKIE',
-      '%{public}s',
-      'Ability onCreate'
+    console.info(
+      'WALKIE V24.5: EntryAbility.onCreate'
     )
+
 
     /*
      * ========================================================
-     * APP 第一次启动时申请后台长时任务。
+     * 启动后台长时任务
+     *
+     * 不等待。
+     *
+     * 后台任务独立运行。
      * ========================================================
      */
-
-    void this.ensureWalkieBackgroundTask()
-  }
-
-
-  // ============================================================
-  // Ability 销毁
-  // ============================================================
-
-  onDestroy():
-    void {
-
-    hilog.info(
-      DOMAIN,
-      'WALKIE',
-      '%{public}s',
-      'Ability onDestroy'
+    void WalkieBackgroundTask.start(
+      this.context
     )
-
-    /*
-     * Ability 真正销毁时释放连续任务。
-     */
-
-    void this.stopWalkieBackgroundTask()
   }
 
 
-  // ============================================================
-  // WindowStage 创建
-  // ============================================================
-
+  /*
+   * ==========================================================
+   * 创建窗口
+   * ==========================================================
+   */
   onWindowStageCreate(
-    windowStage:
-      window.WindowStage
-  ):
-    void {
+    windowStage: window.WindowStage
+  ): void {
 
-    hilog.info(
-      DOMAIN,
-      'WALKIE',
-      '%{public}s',
-      'Ability onWindowStageCreate'
+    console.info(
+      'WALKIE V24.5: WindowStage 创建'
     )
 
 
-    // ==========================================================
-    // 加载主页面
-    // ==========================================================
-
+    /*
+     * ========================================================
+     * 加载 WALKIE 主页面
+     * ========================================================
+     */
     windowStage.loadContent(
       'pages/Index',
       (
-        err:
-          BusinessError
-      ):
-        void => {
+        err: BusinessError
+      ): void => {
 
         if (
           err.code
         ) {
 
-          hilog.error(
-            DOMAIN,
-            'WALKIE',
-            'Failed to load content. ' +
-              'Cause: %{public}s',
-            JSON.stringify(
-              err
-            )
+          console.error(
+            'WALKIE V24.5: 主页面加载失败 ' +
+              `code=${err.code} ` +
+              `message=${err.message}`
           )
 
           return
         }
 
-        hilog.info(
-          DOMAIN,
-          'WALKIE',
-          '%{public}s',
-          'Succeeded in loading content.'
-        )
-      }
-    )
 
-
-    // ==========================================================
-    // 颜色模式
-    // ==========================================================
-
-    try {
-
-      this.context
-        .getApplicationContext()
-        .setColorMode(
-          ConfigurationConstant.ColorMode
-            .COLOR_MODE_NOT_SET
+        console.info(
+          'WALKIE V24.5: 主页面加载成功'
         )
 
-    } catch (
-      error
-    ) {
-
-      const businessError:
-        BusinessError =
-        error as BusinessError
-
-      hilog.error(
-        DOMAIN,
-        'WALKIE',
-        'Failed to set colorMode. ' +
-          'code=%{public}s ' +
-          'message=%{public}s',
-        `${businessError.code}`,
-        businessError.message
-      )
-    }
-
-
-    // ==========================================================
-    // 请求麦克风权限
-    // ==========================================================
-
-    void this.requestMicrophonePermission()
-  }
-
-
-  // ============================================================
-  // ★核心★
-  //
-  // 确保 WALKIE 后台任务存在
-  // ============================================================
-
-  private async ensureWalkieBackgroundTask():
-    Promise<void> {
-
-    /*
-     * ========================================================
-     * 正在申请中：
-     *
-     * 不重复执行。
-     * ========================================================
-     */
-
-    if (
-      this.backgroundTaskStarting
-    ) {
-
-      hilog.info(
-        DOMAIN,
-        'WALKIE_BG',
-        '%{public}s',
-        '后台任务正在申请中，跳过重复申请'
-      )
-
-      return
-    }
-
-
-    /*
-     * ========================================================
-     * 进入申请状态。
-     * ========================================================
-     */
-
-    this.backgroundTaskStarting =
-      true
-
-
-    try {
-
-      // ======================================================
-      // 创建通知点击后的 WantAgent
-      // ======================================================
-
-      const wantAgentInfo:
-        wantAgent.WantAgentInfo = {
-
-        wants: [
-          {
-            bundleName:
-              this.context
-                .abilityInfo
-                .bundleName,
-
-            abilityName:
-              this.context
-                .abilityInfo
-                .name
-          }
-        ],
-
-        operationType:
-          wantAgent.OperationType
-            .START_ABILITY,
-
-        requestCode:
-          1001,
-
-        wantAgentFlags: [
-          wantAgent.WantAgentFlags
-            .UPDATE_PRESENT_FLAG
-        ]
-      }
-
-
-      // ======================================================
-      // 获取 WantAgent
-      // ======================================================
-
-      const wantAgentObj:
-        WantAgent =
-        await wantAgent.getWantAgent(
-          wantAgentInfo
-        )
-
-
-      // ======================================================
-      // WALKIE 长时任务类型
-      //
-      // audioPlayback
-      // audioRecording
-      // dataTransfer
-      // ======================================================
-
-      const bgModes:
-        Array<string> = [
-
-        'audioPlayback',
-
-        'audioRecording',
-
-        'dataTransfer'
-      ]
-
-
-      // ======================================================
-      // 申请 Continuous Task
-      // ======================================================
-
-      const notification:
-        backgroundTaskManager
-          .ContinuousTaskNotification =
-        await backgroundTaskManager
-          .startBackgroundRunning(
-            this.context,
-            bgModes,
-            wantAgentObj
-          )
-
-
-      /*
-       * ========================================================
-       * ★申请成功★
-       * ========================================================
-       */
-
-      this.backgroundTaskStarted =
-        true
-
-      hilog.info(
-        DOMAIN,
-        'WALKIE_BG',
-        '★后台长时任务重新确认成功★ ' +
-          'notificationId=%{public}s',
-        `${notification.notificationId}`
-      )
-
-      hilog.info(
-        DOMAIN,
-        'WALKIE_BG',
-        'backgroundModes=%{public}s',
-        bgModes.join(',')
-      )
-
-    } catch (
-      error
-    ) {
-
-      const businessError:
-        BusinessError =
-        error as BusinessError
-
-      /*
-       * ========================================================
-       * 9800005
-       *
-       * 官方含义：
-       *
-       * Continuous task verification failed
-       *
-       * 我们这里重点处理：
-       *
-       * 应用已经存在一个 Continuous Task。
-       *
-       * 这不是 fatal error。
-       *
-       * 如果系统原来的任务还在：
-       *
-       *     保持不动。
-       *
-       * 如果系统任务已经失效：
-       *
-       *     下一次进入后台时再申请。
-       * ========================================================
-       */
-
-      if (
-        businessError.code ===
-          9800005
-      ) {
-
-        hilog.info(
-          DOMAIN,
-          'WALKIE_BG',
-          '%{public}s',
-          'Continuous Task 已存在，跳过重复创建'
-        )
-
-      } else if (
-        businessError.code ===
-          9800006
-      ) {
 
         /*
-         * 9800006：
+         * ====================================================
+         * 请求通知权限
          *
-         * Notification verification failed.
+         * 官方要求：
+         * loadContent 成功以后才能请求。
          *
-         * 这个错误与通知本身有关。
+         * 这一步非常重要：
+         *
+         * 如果应用通知开关关闭，
+         * 系统连续任务通知可能不会正常出现在
+         * 通知栏。
+         * ====================================================
          */
-
-        hilog.error(
-          DOMAIN,
-          'WALKIE_BG',
-          '后台通知校验失败 ' +
-            'code=%{public}s ' +
-            'message=%{public}s',
-          `${businessError.code}`,
-          businessError.message
-        )
-
-      } else {
-
-        hilog.error(
-          DOMAIN,
-          'WALKIE_BG',
-          '★后台长时任务申请失败★ ' +
-            'code=%{public}s ' +
-            'message=%{public}s',
-          `${businessError.code}`,
-          businessError.message
-        )
-      }
-
-    } finally {
-
-      /*
-       * 允许下一次进入后台重新检查。
-       */
-
-      this.backgroundTaskStarting =
-        false
-    }
-  }
-
-
-  // ============================================================
-  // 停止 WALKIE 后台任务
-  // ============================================================
-
-  private async stopWalkieBackgroundTask():
-    Promise<void> {
-
-    /*
-     * 只有我们确认曾经成功申请过，
-     * 才主动停止。
-     */
-
-    if (
-      !this.backgroundTaskStarted
-    ) {
-
-      return
-    }
-
-    try {
-
-      await backgroundTaskManager
-        .stopBackgroundRunning(
-          this.context
-        )
-
-      hilog.info(
-        DOMAIN,
-        'WALKIE_BG',
-        '%{public}s',
-        '后台长时任务已停止'
-      )
-
-    } catch (
-      error
-    ) {
-
-      const businessError:
-        BusinessError =
-        error as BusinessError
-
-      hilog.error(
-        DOMAIN,
-        'WALKIE_BG',
-        '停止后台任务失败 ' +
-          'code=%{public}s ' +
-          'message=%{public}s',
-        `${businessError.code}`,
-        businessError.message
-      )
-    }
-
-    this.backgroundTaskStarted =
-      false
-  }
-
-
-  // ============================================================
-  // 麦克风运行时权限
-  // ============================================================
-
-  private async requestMicrophonePermission():
-    Promise<void> {
-
-    try {
-
-      const atManager:
-        abilityAccessCtrl.AtManager =
-        abilityAccessCtrl.createAtManager()
-
-
-      const permissionResult:
-        PermissionRequestResult =
-        await atManager
-          .requestPermissionsFromUser(
-            this.context,
-            [
-              'ohos.permission.MICROPHONE'
-            ]
+        void EntryAbility
+          .requestNotificationPermission(
+            this.context
           )
+      }
+    )
+  }
 
 
-      hilog.info(
-        DOMAIN,
-        'WALKIE_PERMISSION',
-        'permissions=%{public}s',
-        JSON.stringify(
-          permissionResult.permissions
-        )
-      )
+  /*
+   * ==========================================================
+   * 请求通知权限
+   * ==========================================================
+   */
+  private static async requestNotificationPermission(
+    context: import('@kit.AbilityKit')
+      .common.UIAbilityContext
+  ): Promise<void> {
 
+    try {
 
-      hilog.info(
-        DOMAIN,
-        'WALKIE_PERMISSION',
-        'authResults=%{public}s',
-        JSON.stringify(
-          permissionResult.authResults
-        )
-      )
-
-
-      hilog.info(
-        DOMAIN,
-        'WALKIE_PERMISSION',
-        'dialogShownResults=%{public}s',
-        JSON.stringify(
-          permissionResult.dialogShownResults
-        )
-      )
-
-
-      /*
-       * 0 = PERMISSION_GRANTED
-       */
+      const enabled:
+        boolean =
+        await notificationManager
+          .isNotificationEnabled()
 
       if (
-        permissionResult.authResults.length >
-          0 &&
-        permissionResult.authResults[0] ===
-          0
+        enabled
       ) {
 
-        hilog.info(
-          DOMAIN,
-          'WALKIE_PERMISSION',
-          '%{public}s',
-          'MICROPHONE 授权成功'
+        console.info(
+          'WALKIE V24.5: 通知已经开启'
         )
 
-      } else {
-
-        hilog.error(
-          DOMAIN,
-          'WALKIE_PERMISSION',
-          '%{public}s',
-          'MICROPHONE 未获得授权'
-        )
+        return
       }
+
+
+      console.info(
+        'WALKIE V24.5: 请求开启通知权限'
+      )
+
+
+      await notificationManager
+        .requestEnableNotification(
+          context
+        )
+
+
+      console.info(
+        'WALKIE V24.5: 通知权限请求完成'
+      )
 
     } catch (
       error
@@ -634,162 +193,94 @@ export default class EntryAbility
         BusinessError =
         error as BusinessError
 
-      hilog.error(
-        DOMAIN,
-        'WALKIE_PERMISSION',
-        'MICROPHONE 权限申请失败，' +
-          'code=%{public}s ' +
-          'message=%{public}s',
-        `${businessError.code}`,
-        businessError.message
+
+      console.error(
+        'WALKIE V24.5: ' +
+          '请求通知权限失败 ' +
+          `code=${businessError.code} ` +
+          `message=${businessError.message}`
       )
     }
   }
 
 
-  // ============================================================
-  // WindowStage 销毁
-  // ============================================================
+  /*
+   * ==========================================================
+   * WindowStage 销毁
+   * ==========================================================
+   */
+  onWindowStageDestroy(): void {
 
-  onWindowStageDestroy():
-    void {
-
-    hilog.info(
-      DOMAIN,
-      'WALKIE',
-      '%{public}s',
-      'Ability onWindowStageDestroy'
+    console.info(
+      'WALKIE V24.5: WindowStage 销毁'
     )
   }
 
 
-  // ============================================================
-  // 前台
-  // ============================================================
+  /*
+   * ==========================================================
+   * 进入前台
+   * ==========================================================
+   */
+  onForeground(): void {
 
-  onForeground():
-    void {
-
-    hilog.info(
-      DOMAIN,
-      'WALKIE',
-      '%{public}s',
-      'Ability onForeground'
+    console.info(
+      'WALKIE V24.5: ★应用进入前台★'
     )
 
 
     /*
-     * ========================================================
-     * APP 回到前台。
-     * ========================================================
-     */
-
-    AppStorage.setOrCreate(
-      'walkie_app_active',
-      true
-    )
-
-
-    /*
-     * ========================================================
-     * 这里不主动 stopBackgroundRunning。
+     * 如果之前的后台任务仍然存在，
+     * WalkieBackgroundTask 会直接返回。
      *
-     * 当前 Continuous Task 如果还存在，
-     * 就让它继续存在。
-     *
-     * 如果之前因为系统策略已经失效，
-     * 下一次 onBackground() 会重新申请。
-     * ========================================================
+     * 如果已经被系统回收，
+     * 这里会重新申请。
      */
-
-    hilog.info(
-      DOMAIN,
-      'WALKIE_BG',
-      '%{public}s',
-      'WALKIE 回到前台，保留后台任务状态'
+    void WalkieBackgroundTask.start(
+      this.context
     )
   }
 
 
-  // ============================================================
-  // ★关键★
-  //
-  // 后台
-  // ============================================================
+  /*
+   * ==========================================================
+   * 进入后台
+   * ==========================================================
+   */
+  onBackground(): void {
 
-  onBackground():
-    void {
-
-    hilog.info(
-      DOMAIN,
-      'WALKIE',
-      '%{public}s',
-      'Ability onBackground'
+    console.info(
+      'WALKIE V24.5: ★应用进入后台★'
     )
 
 
     /*
-     * ========================================================
-     * APP 进入后台。
+     * 绝对不能在这里停止后台长时任务。
      *
-     * 不关闭：
+     * WALKIE 要继续：
      *
-     *   UDP
-     *   WalkieClient
-     *   AudioRenderer
-     *
-     * ========================================================
+     * UDP
+     * KeepAlive
+     * 音频接收
+     * 音频播放
      */
-
-    AppStorage.setOrCreate(
-      'walkie_app_active',
-      false
-    )
+  }
 
 
-    hilog.info(
-      DOMAIN,
-      'WALKIE_BG',
-      '%{public}s',
-      'WALKIE 进入后台，准备重新确认 Continuous Task'
+  /*
+   * ==========================================================
+   * Ability 销毁
+   * ==========================================================
+   */
+  onDestroy(): void {
+
+    console.info(
+      'WALKIE V24.5: EntryAbility.onDestroy'
     )
 
 
     /*
-     * ========================================================
-     * ★核心★
-     *
-     * 不再判断：
-     *
-     *   backgroundTaskStarted
-     *
-     * 是否为 true。
-     *
-     * 因为：
-     *
-     * 我们无法靠这个变量知道系统任务
-     * 是否已经被系统撤销。
-     *
-     * 每次真正进入后台：
-     *
-     *     都重新向系统申请一次。
-     *
-     * 两种结果：
-     *
-     * 1. 系统任务已经存在
-     *
-     *      → 9800005
-     *      → 说明已有任务
-     *      → 不影响现有任务
-     *
-     * 2. 系统任务已经失效
-     *
-     *      → 本次申请成功
-     *      → 通知栏重新出现
-     *
-     * ========================================================
+     * 不主动停止后台任务。
      */
-
-    void this.ensureWalkieBackgroundTask()
   }
 }

@@ -19,15 +19,21 @@ import {
  * ============================================================
  * WALKIE HarmonyOS
  *
+ * V24.0
+ *
  * Android → HarmonyOS 播放
  *
  * 当前播放链路：
  *
  *   Android Opus
  *        ↓
- *   UDP
+ *   W23A + StreamID + Sequence
  *        ↓
- *   HarmonyOS Opus Decoder
+ *   VPS V21 透明转发
+ *        ↓
+ *   HarmonyOS W23A
+ *        ↓
+ *   Opus Decoder
  *        ↓
  *   16kHz / Mono / S16LE PCM
  *        ↓
@@ -37,19 +43,19 @@ import {
  *        ↓
  *   AudioRenderer
  *
- * 当前版本重点：
+ * V24.0：
  *
- *   1. Opus 严格串行解码
- *   2. 16kHz / Mono / S16LE
- *   3. PCM 原样播放
- *   4. AudioSession 使用 VOICE_COMMUNICATION
- *   5. AudioSessionManager 强制 SPEAKER
- *   6. AudioRenderer 再指定 SPEAKER
- *   7. Renderer volume = 1.0
- *   8. 不做重采样
- *   9. 不做滤波
- *   10. 不做额外 PCM 增益
- *   11. 保留 W23A + Legacy Opus
+ *   1. 正常顺序包立即播放
+ *   2. Sequence 跳号进入短暂重排等待
+ *   3. 等待窗口 15ms
+ *   4. missing=1 时使用 Opus PLC 补 1 帧
+ *   5. missing>=2 暂不 PLC
+ *   6. PLC PCM 进入现有播放队列
+ *   7. 不修改音量
+ *   8. 不修改 AudioSession
+ *   9. 不修改 SPEAKER
+ *   10. 不修改 PCM 数据
+ *   11. 修复 Renderer 重复 start
  *
  * ============================================================
  */
@@ -61,11 +67,11 @@ export class WalkiePlayback {
   // ============================================================
 
   private audioManager:
-    audio.AudioManager | null =
+  audio.AudioManager | null =
     null
 
   private audioSessionManager:
-    audio.AudioSessionManager | null =
+  audio.AudioSessionManager | null =
     null
 
   private audioSessionActive:
@@ -77,7 +83,7 @@ export class WalkiePlayback {
   // ============================================================
 
   private renderer:
-    audio.AudioRenderer | null =
+  audio.AudioRenderer | null =
     null
 
   private rendererReady:
@@ -109,7 +115,7 @@ export class WalkiePlayback {
     12
 
   private currentPcm:
-    Uint8Array | null =
+  Uint8Array | null =
     null
 
   private currentPcmOffset:
@@ -117,7 +123,7 @@ export class WalkiePlayback {
     0
 
   // ============================================================
-  // Opus 包处理队列
+  // UDP 音频包处理队列
   // ============================================================
 
   private packetQueue:
@@ -141,16 +147,56 @@ export class WalkiePlayback {
     false
 
   // ============================================================
-  // W23A 流状态
+  // W23A Stream
   // ============================================================
 
   private currentStreamId:
     number =
     -1
 
+  private expectedSequence:
+    number =
+    -1
+
   private lastSequence:
     number =
     -1
+
+  // ============================================================
+  // W23A 重排缓冲
+  // ============================================================
+
+  private reorderBuffer:
+    Map<number, ArrayBuffer> =
+    new Map<number, ArrayBuffer>()
+
+  /*
+   * 轻微乱序等待时间。
+   */
+
+  private static readonly REORDER_WAIT_MS:
+    number =
+    15
+
+  /*
+   * 防止异常 Sequence 大跳。
+   */
+
+  private static readonly MAX_SEQUENCE_JUMP:
+    number =
+    1000
+
+  /*
+   * 当前正在等待哪个 Sequence。
+   */
+
+  private reorderWaitingSequence:
+    number =
+    -1
+
+  private reorderTimer:
+  number | null =
+    null
 
   // ============================================================
   // 播放参数
@@ -161,7 +207,7 @@ export class WalkiePlayback {
     1.0
 
   // ============================================================
-  // 初始化应用级 AudioSession
+  // AudioSession
   // ============================================================
 
   private async ensureAudioSession():
@@ -177,12 +223,6 @@ export class WalkiePlayback {
 
     try {
 
-      /*
-       * ========================================================
-       * 获取 AudioManager
-       * ========================================================
-       */
-
       if (
         this.audioManager ===
           null
@@ -191,12 +231,6 @@ export class WalkiePlayback {
         this.audioManager =
           audio.getAudioManager()
       }
-
-      /*
-       * ========================================================
-       * 获取 AudioSessionManager
-       * ========================================================
-       */
 
       if (
         this.audioSessionManager ===
@@ -213,19 +247,12 @@ export class WalkiePlayback {
         this.audioSessionManager
 
       /*
-       * ========================================================
-       * 设置 AudioSession 场景
-       *
-       * 官方要求：
-       *
-       * AudioSessionManager 的
-       * setDefaultOutputDevice()
-       * 在 VOICE_COMMUNICATION 场景下生效。
-       * ========================================================
+       * VOICE_COMMUNICATION
        */
 
       sessionManager.setAudioSessionScene(
-        audio.AudioSessionScene.AUDIO_SESSION_SCENE_VOICE_COMMUNICATION
+        audio.AudioSessionScene
+          .AUDIO_SESSION_SCENE_VOICE_COMMUNICATION
       )
 
       console.info(
@@ -234,11 +261,7 @@ export class WalkiePlayback {
       )
 
       /*
-       * ========================================================
        * 激活 AudioSession
-       *
-       * 允许应用级音频策略真正生效。
-       * ========================================================
        */
 
       if (
@@ -249,7 +272,8 @@ export class WalkiePlayback {
           audio.AudioSessionStrategy = {
 
           concurrencyMode:
-          audio.AudioConcurrencyMode.CONCURRENCY_MIX_WITH_OTHERS
+          audio.AudioConcurrencyMode
+            .CONCURRENCY_MIX_WITH_OTHERS
         }
 
         await sessionManager.activateAudioSession(
@@ -266,16 +290,8 @@ export class WalkiePlayback {
       }
 
       /*
-       * ========================================================
-       * ★关键★
-       *
-       * 应用级默认输出设备：
-       *
+       * 应用级默认输出：
        * SPEAKER
-       *
-       * AudioSessionManager 的优先级高于
-       * AudioRenderer.setDefaultOutputDevice。
-       * ========================================================
        */
 
       await sessionManager.setDefaultOutputDevice(
@@ -286,15 +302,6 @@ export class WalkiePlayback {
         'WALKIE PLAYBACK: ' +
           '★AudioSessionManager → SPEAKER★'
       )
-
-      /*
-       * ========================================================
-       * 读取应用级默认设备
-       *
-       * getDefaultOutputDevice()
-       * 为同步接口。
-       * ========================================================
-       */
 
       const defaultDevice:
         audio.DeviceType =
@@ -331,7 +338,7 @@ export class WalkiePlayback {
       return true
 
     } catch (
-      error
+    error
     ) {
 
       const businessError:
@@ -364,12 +371,6 @@ export class WalkiePlayback {
       return true
     }
 
-    /*
-     * ========================================================
-     * 先确保应用级 AudioSession。
-     * ========================================================
-     */
-
     const sessionReady:
       boolean =
       await this.ensureAudioSession()
@@ -382,9 +383,7 @@ export class WalkiePlayback {
     }
 
     /*
-     * ========================================================
-     * 防止多个地方同时创建 Renderer。
-     * ========================================================
+     * 防止多个异步流程同时创建 Renderer。
      */
 
     if (
@@ -423,52 +422,38 @@ export class WalkiePlayback {
 
     try {
 
-      /*
-       * ========================================================
-       * 音频格式
-       *
-       * 16000 Hz
-       * Mono
-       * S16LE
-       * RAW
-       * ========================================================
-       */
-
       const streamInfo:
         audio.AudioStreamInfo = {
 
         samplingRate:
-        audio.AudioSamplingRate.SAMPLE_RATE_16000,
+        audio.AudioSamplingRate
+          .SAMPLE_RATE_16000,
 
         channels:
         audio.AudioChannel.CHANNEL_1,
 
         sampleFormat:
-        audio.AudioSampleFormat.SAMPLE_FORMAT_S16LE,
+        audio.AudioSampleFormat
+          .SAMPLE_FORMAT_S16LE,
 
         encodingType:
-        audio.AudioEncodingType.ENCODING_TYPE_RAW
+        audio.AudioEncodingType
+          .ENCODING_TYPE_RAW
       }
-
-      /*
-       * ========================================================
-       * Renderer 场景
-       *
-       * 与 Android 的 VOICE_COMMUNICATION 对齐。
-       * ========================================================
-       */
 
       const rendererInfo:
         audio.AudioRendererInfo = {
 
         usage:
-        audio.StreamUsage.STREAM_USAGE_VOICE_COMMUNICATION,
+        audio.StreamUsage
+          .STREAM_USAGE_VOICE_COMMUNICATION,
 
         rendererFlags:
         0,
 
         volumeMode:
-        audio.AudioVolumeMode.SYSTEM_GLOBAL
+        audio.AudioVolumeMode
+          .SYSTEM_GLOBAL
       }
 
       const options:
@@ -482,9 +467,7 @@ export class WalkiePlayback {
       }
 
       /*
-       * ========================================================
        * 创建 Renderer
-       * ========================================================
        */
 
       const renderer:
@@ -497,9 +480,7 @@ export class WalkiePlayback {
         renderer
 
       /*
-       * ========================================================
        * writeData
-       * ========================================================
        */
 
       renderer.on(
@@ -517,14 +498,7 @@ export class WalkiePlayback {
       )
 
       /*
-       * ========================================================
-       * Renderer 级别再次指定 SPEAKER
-       *
-       * 虽然 AudioSessionManager 优先级更高，
-       * 这里仍然保留。
-       *
-       * 这样当前 Renderer 本身也明确要求 SPEAKER。
-       * ========================================================
+       * Renderer → SPEAKER
        */
 
       try {
@@ -539,7 +513,7 @@ export class WalkiePlayback {
         )
 
       } catch (
-        error
+      error
       ) {
 
         const businessError:
@@ -555,11 +529,7 @@ export class WalkiePlayback {
       }
 
       /*
-       * ========================================================
-       * Renderer 音量
-       *
-       * 1.0 = 不衰减。
-       * ========================================================
+       * volume=1.0
        */
 
       try {
@@ -574,7 +544,7 @@ export class WalkiePlayback {
         )
 
       } catch (
-        error
+      error
       ) {
 
         const businessError:
@@ -588,12 +558,6 @@ export class WalkiePlayback {
             `message=${businessError.message}`
         )
       }
-
-      /*
-       * ========================================================
-       * Renderer 创建完成
-       * ========================================================
-       */
 
       this.rendererReady =
         true
@@ -623,7 +587,7 @@ export class WalkiePlayback {
       return true
 
     } catch (
-      error
+    error
     ) {
 
       const businessError:
@@ -653,7 +617,7 @@ export class WalkiePlayback {
   }
 
   // ============================================================
-  // AudioRenderer PCM 输出
+  // PCM 输出
   // ============================================================
 
   private onWriteData(
@@ -668,10 +632,6 @@ export class WalkiePlayback {
         buffer
       )
 
-    /*
-     * 没有 PCM 时输出静音。
-     */
-
     output.fill(
       0
     )
@@ -680,31 +640,10 @@ export class WalkiePlayback {
       number =
       0
 
-    /*
-     * ========================================================
-     * PCM 原样复制
-     *
-     * 不进行：
-     *
-     *   × 增益
-     *   × 限幅
-     *   × 滤波
-     *   × 重采样
-     *   × 格式转换
-     *
-     * Decoder 给什么，
-     * Renderer 就播放什么。
-     * ========================================================
-     */
-
     while (
       outputOffset <
         output.length
     ) {
-
-      /*
-       * 当前 PCM 已经播放完。
-       */
 
       if (
         this.currentPcm === null ||
@@ -728,7 +667,8 @@ export class WalkiePlayback {
           0
 
         if (
-          this.currentPcm === null
+          this.currentPcm ===
+            null
         ) {
 
           break
@@ -756,12 +696,6 @@ export class WalkiePlayback {
           remainingOutput
         )
 
-      /*
-       * ======================================================
-       * 保持 S16LE 原始字节顺序。
-       * ======================================================
-       */
-
       output.set(
         current.subarray(
           this.currentPcmOffset,
@@ -772,15 +706,15 @@ export class WalkiePlayback {
       )
 
       outputOffset +=
-        copyLength
+      copyLength
 
       this.currentPcmOffset +=
-        copyLength
+      copyLength
     }
   }
 
   // ============================================================
-  // 接收音频包
+  // 收到 UDP 音频包
   // ============================================================
 
   public async playPacket(
@@ -797,20 +731,12 @@ export class WalkiePlayback {
       return
     }
 
-    /*
-     * ========================================================
-     * Opus 包进入串行处理队列。
-     * ========================================================
-     */
-
     this.packetQueue.push(
       data
     )
 
     /*
-     * 网络堵塞时，
-     * 丢弃最老的数据，
-     * 防止延迟越来越大。
+     * 防止弱网时处理延迟无限增长。
      */
 
     while (
@@ -821,12 +747,6 @@ export class WalkiePlayback {
       this.packetQueue.shift()
     }
 
-    /*
-     * ========================================================
-     * 只允许一个处理循环。
-     * ========================================================
-     */
-
     if (
       !this.packetProcessing
     ) {
@@ -836,7 +756,7 @@ export class WalkiePlayback {
   }
 
   // ============================================================
-  // 串行处理 Opus
+  // 串行处理 UDP 包
   // ============================================================
 
   private async processPacketQueue():
@@ -849,10 +769,6 @@ export class WalkiePlayback {
       return
     }
 
-    /*
-     * 在第一次 await 前锁定。
-     */
-
     this.packetProcessing =
       true
 
@@ -864,7 +780,7 @@ export class WalkiePlayback {
       ) {
 
         const data:
-          ArrayBuffer | undefined =
+        ArrayBuffer | undefined =
           this.packetQueue.shift()
 
         if (
@@ -881,7 +797,7 @@ export class WalkiePlayback {
       }
 
     } catch (
-      error
+    error
     ) {
 
       console.error(
@@ -898,7 +814,7 @@ export class WalkiePlayback {
         false
 
       /*
-       * 如果处理期间来了新包，
+       * 处理期间又收到数据，
        * 继续处理。
        */
 
@@ -913,157 +829,25 @@ export class WalkiePlayback {
   }
 
   // ============================================================
-  // 处理一个音频包
+  // Opus 解码 + PCM 入队
   // ============================================================
 
-  private async processOnePacket(
-    data:
+  private async decodeAndQueue(
+    opusData:
       ArrayBuffer
   ):
     Promise<void> {
 
-    let opusData:
-      ArrayBuffer | null =
-      null
-
-    /*
-     * ========================================================
-     * W23A
-     * ========================================================
-     */
-
     if (
-      WalkieAudioPacket.isW23A(
-        data
-      )
-    ) {
-
-      const streamId:
-        number =
-        WalkieAudioPacket.readStreamId(
-          data
-        )
-
-      const sequence:
-        number =
-        WalkieAudioPacket.readSequence(
-          data
-        )
-
-      if (
-        streamId < 0 ||
-          sequence < 0
-      ) {
-
-        return
-      }
-
-      /*
-       * 新语音流。
-       */
-
-      if (
-        this.currentStreamId !==
-          streamId
-      ) {
-
-        this.currentStreamId =
-          streamId
-
-        this.lastSequence =
-          -1
-
-        this.pcmQueue =
-          []
-
-        this.currentPcm =
-          null
-
-        this.currentPcmOffset =
-          0
-
-        console.info(
-          'WALKIE PLAYBACK: ' +
-            `W23A新音频流 stream=${streamId}`
-        )
-      }
-
-      /*
-       * 丢掉旧包 / 重复包。
-       */
-
-      if (
-        this.lastSequence >=
-          0 &&
-          sequence <=
-            this.lastSequence
-      ) {
-
-        return
-      }
-
-      this.lastSequence =
-        sequence
-
-      opusData =
-        WalkieAudioPacket.extractOpus(
-          data
-        )
-
-    } else {
-
-      /*
-       * ========================================================
-       * Legacy 裸 Opus
-       * ========================================================
-       */
-
-      opusData =
-        data
-
-      if (
-        !this.started
-      ) {
-
-        console.info(
-          'WALKIE PLAYBACK: ' +
-            `Legacy Opus length=${data.byteLength}`
-        )
-      }
-    }
-
-    /*
-     * ========================================================
-     * Opus 数据检查
-     * ========================================================
-     */
-
-    if (
-      opusData ===
-        null ||
-        opusData.byteLength <=
-          0
+      opusData.byteLength <=
+        0
     ) {
 
       return
     }
 
-    /*
-     * ========================================================
-     * Opus 解码
-     *
-     * 已经确认：
-     *
-     * frames=1
-     * samplesPerFrame=320
-     * decodedSamples=320
-     * pcmBytes=640
-     *
-     * ========================================================
-     */
-
     const pcmData:
-      ArrayBuffer | null =
+    ArrayBuffer | null =
       this.opus.decode(
         opusData
       )
@@ -1089,12 +873,6 @@ export class WalkiePlayback {
       return
     }
 
-    /*
-     * ========================================================
-     * 确保 AudioRenderer
-     * ========================================================
-     */
-
     const ready:
       boolean =
       await this.ensureRenderer()
@@ -1105,12 +883,6 @@ export class WalkiePlayback {
 
       return
     }
-
-    /*
-     * ========================================================
-     * 解码后的 PCM
-     * ========================================================
-     */
 
     const pcmBytes:
       Uint8Array =
@@ -1127,9 +899,7 @@ export class WalkiePlayback {
     }
 
     /*
-     * ========================================================
      * 防止播放延迟越来越高。
-     * ========================================================
      */
 
     while (
@@ -1140,28 +910,19 @@ export class WalkiePlayback {
       this.pcmQueue.shift()
     }
 
-    /*
-     * ========================================================
-     * 原始 PCM 直接入队
-     * ========================================================
-     */
-
     this.pcmQueue.push(
       pcmBytes
     )
 
     /*
-     * ========================================================
-     * 首次起播
-     *
-     * 当前 20ms / frame：
+     * 首次起播：
      *
      * 3 帧 ≈ 60ms
-     * ========================================================
      */
 
     if (
       !this.started &&
+        !this.playing &&
         this.pcmQueue.length >=
           3
     ) {
@@ -1171,21 +932,996 @@ export class WalkiePlayback {
   }
 
   // ============================================================
+  // 清空重排状态
+  // ============================================================
+
+  private clearReorderState():
+    void {
+
+    if (
+      this.reorderTimer !==
+        null
+    ) {
+
+      clearTimeout(
+        this.reorderTimer
+      )
+
+      this.reorderTimer =
+        null
+    }
+
+    this.reorderWaitingSequence =
+      -1
+
+    this.reorderBuffer.clear()
+
+    this.expectedSequence =
+      -1
+
+    this.lastSequence =
+      -1
+  }
+
+  // ============================================================
+  // 新 W23A 音频流
+  // ============================================================
+
+  private beginNewStream(
+    streamId:
+      number,
+    sequence:
+      number
+  ):
+    void {
+
+    this.clearReorderState()
+
+    this.currentStreamId =
+      streamId
+
+    this.expectedSequence =
+      sequence
+
+    this.lastSequence =
+      sequence - 1
+
+    /*
+     * 新讲话流清空旧 PCM。
+     */
+
+    this.pcmQueue =
+      []
+
+    this.currentPcm =
+      null
+
+    this.currentPcmOffset =
+      0
+
+    console.info(
+      'WALKIE PLAYBACK: ' +
+        `W23A新音频流 ` +
+        `stream=${streamId} ` +
+        `firstSequence=${sequence}`
+    )
+  }
+
+  // ============================================================
+  // 找到缓冲区最小 Sequence
+  // ============================================================
+
+  private findSmallestBufferedSequence():
+    number {
+
+    let smallest:
+      number =
+      -1
+
+    for (
+      const sequence of
+      this.reorderBuffer.keys()
+    ) {
+
+      if (
+        smallest <
+          0 ||
+          sequence <
+            smallest
+      ) {
+
+        smallest =
+          sequence
+      }
+    }
+
+    return smallest
+  }
+
+  // ============================================================
+  // 解码一个 W23A 包
+  // ============================================================
+
+  private async decodeW23APacket(
+    data:
+      ArrayBuffer
+  ):
+    Promise<void> {
+
+    const opusData:
+    ArrayBuffer | null =
+      WalkieAudioPacket.extractOpus(
+        data
+      )
+
+    if (
+      opusData ===
+        null ||
+        opusData.byteLength <=
+          0
+    ) {
+
+      return
+    }
+
+    await this.decodeAndQueue(
+      opusData
+    )
+  }
+
+  // ============================================================
+  // 刷新连续 Sequence
+  // ============================================================
+
+  private async flushReorderBuffer():
+    Promise<void> {
+
+    if (
+      this.expectedSequence <
+        0
+    ) {
+
+      return
+    }
+
+    while (
+      this.reorderBuffer.has(
+        this.expectedSequence
+      )
+    ) {
+
+      const sequence:
+        number =
+        this.expectedSequence
+
+      const data:
+      ArrayBuffer | undefined =
+        this.reorderBuffer.get(
+          sequence
+        )
+
+      this.reorderBuffer.delete(
+        sequence
+      )
+
+      if (
+        data ===
+          undefined
+      ) {
+
+        continue
+      }
+
+      await this.decodeW23APacket(
+        data
+      )
+
+      this.lastSequence =
+        sequence
+
+      this.expectedSequence =
+        sequence + 1
+    }
+
+    /*
+     * 如果缓存已经清空，
+     * 就取消等待计时器。
+     */
+
+    if (
+      this.reorderBuffer.size ===
+        0
+    ) {
+
+      this.cancelReorderTimerIfResolved()
+    }
+  }
+
+  // ============================================================
+  // 取消已经解决的重排等待
+  // ============================================================
+
+  private cancelReorderTimerIfResolved():
+    void {
+
+    if (
+      this.reorderWaitingSequence <
+        0
+    ) {
+
+      return
+    }
+
+    if (
+      this.expectedSequence !==
+        this.reorderWaitingSequence
+    ) {
+
+      if (
+        this.reorderTimer !==
+          null
+      ) {
+
+        clearTimeout(
+          this.reorderTimer
+        )
+
+        this.reorderTimer =
+          null
+      }
+
+      this.reorderWaitingSequence =
+        -1
+    }
+  }
+
+  // ============================================================
+  // 开始 15ms 重排等待
+  // ============================================================
+
+  private startReorderWait():
+    void {
+
+    if (
+      this.expectedSequence <
+        0 ||
+        this.reorderBuffer.size ===
+          0
+    ) {
+
+      return
+    }
+
+    const smallest:
+      number =
+      this.findSmallestBufferedSequence()
+
+    if (
+      smallest <
+        0 ||
+        smallest <=
+          this.expectedSequence
+    ) {
+
+      return
+    }
+
+    /*
+     * 已经在等待同一个缺口。
+     */
+
+    if (
+      this.reorderWaitingSequence ===
+        this.expectedSequence &&
+        this.reorderTimer !==
+          null
+    ) {
+
+      return
+    }
+
+    /*
+     * 如果之前有计时器，
+     * 先取消。
+     */
+
+    if (
+      this.reorderTimer !==
+        null
+    ) {
+
+      clearTimeout(
+        this.reorderTimer
+      )
+
+      this.reorderTimer =
+        null
+    }
+
+    this.reorderWaitingSequence =
+      this.expectedSequence
+
+    const waitingSequence:
+      number =
+      this.expectedSequence
+
+    console.info(
+      'WALKIE PLAYBACK: ' +
+        `W23A 发现缺口 ` +
+        `expected=${waitingSequence} ` +
+        `next=${smallest} ` +
+        `等待=${WalkiePlayback.REORDER_WAIT_MS}ms`
+    )
+
+    /*
+     * 注意：
+     *
+     * 这里不能 await。
+     *
+     * 让新的 UDP 包可以继续进入队列。
+     */
+
+    this.reorderTimer =
+      setTimeout(
+        (): void => {
+
+          void this.resolveReorderTimeout(
+            waitingSequence
+          )
+
+        },
+        WalkiePlayback.REORDER_WAIT_MS
+      ) as number
+  }
+
+  // ============================================================
+  // V24.0
+  //
+  // 重排等待超时
+  //
+  // missing=1 → PLC
+  // missing>=2 → 暂不 PLC
+  // ============================================================
+
+  private async resolveReorderTimeout(
+    waitingSequence:
+      number
+  ):
+    Promise<void> {
+
+    /*
+     * ========================================================
+     * 定时器结束
+     * ========================================================
+     */
+
+    this.reorderTimer =
+      null
+
+    /*
+     * ========================================================
+     * 如果期待序号已经改变，
+     * 说明缺口已经解决。
+     * ========================================================
+     */
+
+    if (
+      this.expectedSequence !==
+        waitingSequence
+    ) {
+
+      this.reorderWaitingSequence =
+        -1
+
+      return
+    }
+
+    /*
+     * ========================================================
+     * 缺失包已经在等待期间到达
+     *
+     * 不进行 PLC。
+     * ========================================================
+     */
+
+    if (
+      this.reorderBuffer.has(
+        waitingSequence
+      )
+    ) {
+
+      this.reorderWaitingSequence =
+        -1
+
+      await this.flushReorderBuffer()
+
+      return
+    }
+
+    /*
+     * ========================================================
+     * 找到目前最小的后续包
+     * ========================================================
+     */
+
+    const smallest:
+      number =
+      this.findSmallestBufferedSequence()
+
+    if (
+      smallest < 0
+    ) {
+
+      this.reorderWaitingSequence =
+        -1
+
+      return
+    }
+
+    /*
+     * 没有真正的缺口。
+     */
+
+    if (
+      smallest <=
+        waitingSequence
+    ) {
+
+      this.reorderWaitingSequence =
+        -1
+
+      await this.flushReorderBuffer()
+
+      return
+    }
+
+    /*
+     * ========================================================
+     * 计算缺失数量
+     *
+     * 例如：
+     *
+     * expected=3509
+     * next=3518
+     *
+     * missing=9
+     *
+     * ========================================================
+     */
+
+    const missing:
+      number =
+      smallest -
+        waitingSequence
+
+    /*
+     * ========================================================
+     * 单帧 PLC
+     * ========================================================
+     */
+
+    if (
+      missing ===
+        1
+    ) {
+
+      console.warn(
+        'WALKIE PLAYBACK: ' +
+          `W23A ★确认单帧丢包★ ` +
+          `missingSequence=${waitingSequence} ` +
+          `next=${smallest} ` +
+          '→ PLC'
+      )
+
+      /*
+       * ======================================================
+       * 调用 Native Opus PLC
+       * ======================================================
+       */
+
+      const plcPcm:
+      ArrayBuffer | null =
+        this.opus.decodePlc()
+
+      /*
+       * ======================================================
+       * PLC 成功
+       * ======================================================
+       */
+
+      if (
+        plcPcm !==
+          null &&
+          plcPcm.byteLength >
+            0
+      ) {
+
+        /*
+         * 确保 Renderer 已经存在。
+         */
+
+        const ready:
+          boolean =
+          await this.ensureRenderer()
+
+        if (
+          ready
+        ) {
+
+          const plcBytes:
+            Uint8Array =
+            new Uint8Array(
+              plcPcm
+            )
+
+          /*
+           * 控制 PCM 队列长度。
+           */
+
+          while (
+            this.pcmQueue.length >=
+              this.pcmQueueLimit
+          ) {
+
+            this.pcmQueue.shift()
+          }
+
+          /*
+           * PLC PCM 和正常 PCM
+           * 使用完全相同的播放路径。
+           */
+
+          this.pcmQueue.push(
+            plcBytes
+          )
+
+          console.info(
+            'WALKIE PLAYBACK: ' +
+              `★Opus PLC 成功★ ` +
+              `sequence=${waitingSequence} ` +
+              `pcm=${plcPcm.byteLength}B`
+          )
+
+          /*
+           * 如果播放器因为特殊状态没有启动，
+           * 而且已经有足够 PCM，
+           * 尝试启动一次。
+           *
+           * startRenderer() 内部已经有双重状态保护。
+           */
+
+          if (
+            !this.started &&
+              !this.playing &&
+              this.pcmQueue.length >=
+                3
+          ) {
+
+            await this.startRenderer()
+          }
+
+        } else {
+
+          console.error(
+            'WALKIE PLAYBACK: ' +
+              'PLC 已生成，但 AudioRenderer 未就绪'
+          )
+        }
+
+      } else {
+
+        console.error(
+          'WALKIE PLAYBACK: ' +
+            `Opus PLC 失败 sequence=${waitingSequence}`
+        )
+      }
+
+    } else {
+
+      /*
+       * ======================================================
+       * 连续丢包 >= 2
+       *
+       * 当前 V24.0 不连续 PLC。
+       * ======================================================
+       */
+
+      console.warn(
+        'WALKIE PLAYBACK: ' +
+          `W23A 确认连续丢包 ` +
+          `start=${waitingSequence} ` +
+          `next=${smallest} ` +
+          `missing=${missing} ` +
+          '→ V24.0 暂不 PLC'
+      )
+    }
+
+    /*
+     * ========================================================
+     * 跳到下一个已经收到的 Sequence
+     * ========================================================
+     */
+
+    this.expectedSequence =
+      smallest
+
+    this.reorderWaitingSequence =
+      -1
+
+    /*
+     * ========================================================
+     * 播放已经缓存的包
+     * ========================================================
+     */
+
+    await this.flushReorderBuffer()
+
+    /*
+     * ========================================================
+     * 后面还有缺口
+     * ========================================================
+     */
+
+    if (
+      this.reorderBuffer.size >
+        0
+    ) {
+
+      this.startReorderWait()
+    }
+  }
+
+  // ============================================================
+  // 处理 W23A
+  // ============================================================
+
+  private async handleW23A(
+    data:
+      ArrayBuffer
+  ):
+    Promise<void> {
+
+    const streamId:
+      number =
+      WalkieAudioPacket.readStreamId(
+        data
+      )
+
+    const sequence:
+      number =
+      WalkieAudioPacket.readSequence(
+        data
+      )
+
+    if (
+      streamId < 0 ||
+        sequence < 0
+    ) {
+
+      return
+    }
+
+    /*
+     * ========================================================
+     * 新 Stream
+     * ========================================================
+     */
+
+    if (
+      this.currentStreamId !==
+        streamId
+    ) {
+
+      this.beginNewStream(
+        streamId,
+        sequence
+      )
+
+      /*
+       * 第一包直接播放。
+       */
+
+      await this.decodeW23APacket(
+        data
+      )
+
+      this.lastSequence =
+        sequence
+
+      this.expectedSequence =
+        sequence + 1
+
+      return
+    }
+
+    /*
+     * ========================================================
+     * Sequence 异常大跳
+     * ========================================================
+     */
+
+    const jump:
+      number =
+      sequence -
+        this.expectedSequence
+
+    if (
+      jump >
+        WalkiePlayback.MAX_SEQUENCE_JUMP
+    ) {
+
+      console.warn(
+        'WALKIE PLAYBACK: ' +
+          `W23A Sequence 大跳跃 ` +
+          `expected=${this.expectedSequence} ` +
+          `received=${sequence} ` +
+          `jump=${jump} ` +
+          '，直接恢复当前流'
+      )
+
+      this.reorderBuffer.clear()
+
+      if (
+        this.reorderTimer !==
+          null
+      ) {
+
+        clearTimeout(
+          this.reorderTimer
+        )
+
+        this.reorderTimer =
+          null
+      }
+
+      this.reorderWaitingSequence =
+        -1
+
+      this.expectedSequence =
+        sequence
+
+      await this.decodeW23APacket(
+        data
+      )
+
+      this.lastSequence =
+        sequence
+
+      this.expectedSequence =
+        sequence + 1
+
+      return
+    }
+
+    /*
+     * ========================================================
+     * 旧包 / 重复包
+     * ========================================================
+     */
+
+    if (
+      sequence <
+        this.expectedSequence
+    ) {
+
+      console.info(
+        'WALKIE PLAYBACK: ' +
+          `W23A 迟到/重复包丢弃 ` +
+          `sequence=${sequence} ` +
+          `expected=${this.expectedSequence} ` +
+          '(可能是乱序包)'
+      )
+
+      return
+    }
+
+    /*
+     * ========================================================
+     * 正好是下一帧
+     * ========================================================
+     */
+
+    if (
+      sequence ===
+        this.expectedSequence
+    ) {
+
+      await this.decodeW23APacket(
+        data
+      )
+
+      this.lastSequence =
+        sequence
+
+      this.expectedSequence =
+        sequence + 1
+
+      /*
+       * 后面的缓存包如果已经连续，
+       * 立即全部播放。
+       */
+
+      await this.flushReorderBuffer()
+
+      return
+    }
+
+    /*
+     * ========================================================
+     * sequence > expected
+     *
+     * 发现真实 Sequence GAP。
+     * ========================================================
+     */
+
+    const sequenceGap:
+      number =
+      sequence -
+        this.expectedSequence
+
+    console.warn(
+      'WALKIE PLAYBACK: ' +
+        '★W23A Sequence GAP★ ' +
+        `expected=${this.expectedSequence} ` +
+        `received=${sequence} ` +
+        `gap=${sequenceGap}`
+    )
+
+    /*
+     * ========================================================
+     * 加入重排缓存
+     * ========================================================
+     */
+
+    if (
+      !this.reorderBuffer.has(
+        sequence
+      )
+    ) {
+
+      this.reorderBuffer.set(
+        sequence,
+        data
+      )
+
+      console.info(
+        'WALKIE PLAYBACK: ' +
+          `W23A 乱序缓存 ` +
+          `sequence=${sequence} ` +
+          `expected=${this.expectedSequence} ` +
+          `buffer=${this.reorderBuffer.size}`
+      )
+
+    } else {
+
+      console.info(
+        'WALKIE PLAYBACK: ' +
+          `W23A 重复缓存包忽略 ` +
+          `sequence=${sequence}`
+      )
+
+      return
+    }
+
+    /*
+     * 启动 15ms 重排等待。
+     */
+
+    this.startReorderWait()
+  }
+
+  // ============================================================
+  // 处理一个音频包
+  // ============================================================
+
+  private async processOnePacket(
+    data:
+      ArrayBuffer
+  ):
+    Promise<void> {
+
+    /*
+     * ========================================================
+     * W23A
+     * ========================================================
+     */
+
+    if (
+      WalkieAudioPacket.isW23A(
+        data
+      )
+    ) {
+
+      await this.handleW23A(
+        data
+      )
+
+      return
+    }
+
+    /*
+     * ========================================================
+     * Legacy 裸 Opus
+     * ========================================================
+     */
+
+    if (
+      this.currentStreamId !==
+        -1 ||
+        this.reorderBuffer.size >
+          0
+    ) {
+
+      this.clearReorderState()
+
+      this.currentStreamId =
+        -1
+
+      console.info(
+        'WALKIE PLAYBACK: ' +
+          '切换到 Legacy Opus'
+      )
+    }
+
+    if (
+      !this.started
+    ) {
+
+      console.info(
+        'WALKIE PLAYBACK: ' +
+          `Legacy Opus length=${data.byteLength}`
+      )
+    }
+
+    await this.decodeAndQueue(
+      data
+    )
+  }
+
+  // ============================================================
   // 开始播放
   // ============================================================
 
   private async startRenderer():
     Promise<void> {
 
+    /*
+     * ========================================================
+     * V24.0 关键修复
+     *
+     * 在真正 await renderer.start() 之前，
+     * 先把 started 设为 true。
+     *
+     * 防止多个异步流程同时调用 start()。
+     *
+     * 原来的问题：
+     *
+     *   流程 A 检查 playing=false
+     *   流程 B 检查 playing=false
+     *   A → renderer.start()
+     *   B → renderer.start()
+     *
+     * 第二次 start()
+     * → 6800301 illegal state
+     *
+     * 现在：
+     *
+     *   A → started=true
+     *   B → 看到 started=true → return
+     *
+     * ========================================================
+     */
+
     if (
-      this.playing
+      this.playing ||
+        this.started
     ) {
 
       return
     }
 
     const renderer:
-      audio.AudioRenderer | null =
+    audio.AudioRenderer | null =
       this.renderer
 
     if (
@@ -1197,14 +1933,24 @@ export class WalkiePlayback {
       return
     }
 
+    /*
+     * ========================================================
+     * 关键保护点
+     *
+     * 注意：
+     *
+     * 一定在 await 前设置。
+     * ========================================================
+     */
+
+    this.started =
+      true
+
     try {
 
       await renderer.start()
 
       this.playing =
-        true
-
-      this.started =
         true
 
       console.info(
@@ -1216,12 +1962,24 @@ export class WalkiePlayback {
           'AudioSession=VOICE_COMMUNICATION ' +
           'SessionOutput=SPEAKER ' +
           'RendererOutput=SPEAKER ' +
-          'volume=1.0'
+          'volume=1.0 ' +
+          'reorder=V24.0 PLC=single-frame'
       )
 
     } catch (
-      error
+    error
     ) {
+
+      /*
+       * start() 真失败时，
+       * 恢复状态，允许下次重新启动。
+       */
+
+      this.playing =
+        false
+
+      this.started =
+        false
 
       const businessError:
         BusinessError =
@@ -1245,7 +2003,31 @@ export class WalkiePlayback {
 
     /*
      * ========================================================
-     * 清空 Opus 队列
+     * 停止重排计时器
+     * ========================================================
+     */
+
+    if (
+      this.reorderTimer !==
+        null
+    ) {
+
+      clearTimeout(
+        this.reorderTimer
+      )
+
+      this.reorderTimer =
+        null
+    }
+
+    this.reorderWaitingSequence =
+      -1
+
+    this.reorderBuffer.clear()
+
+    /*
+     * ========================================================
+     * 清空 UDP 包
      * ========================================================
      */
 
@@ -1254,7 +2036,7 @@ export class WalkiePlayback {
 
     /*
      * ========================================================
-     * 清空 PCM 队列
+     * 清空 PCM
      * ========================================================
      */
 
@@ -1269,11 +2051,14 @@ export class WalkiePlayback {
 
     /*
      * ========================================================
-     * 重置流状态
+     * 重置 W23A
      * ========================================================
      */
 
     this.currentStreamId =
+      -1
+
+    this.expectedSequence =
       -1
 
     this.lastSequence =
@@ -1286,7 +2071,7 @@ export class WalkiePlayback {
      */
 
     const renderer:
-      audio.AudioRenderer | null =
+    audio.AudioRenderer | null =
       this.renderer
 
     if (
@@ -1327,6 +2112,30 @@ export class WalkiePlayback {
 
     /*
      * ========================================================
+     * 停止重排计时器
+     * ========================================================
+     */
+
+    if (
+      this.reorderTimer !==
+        null
+    ) {
+
+      clearTimeout(
+        this.reorderTimer
+      )
+
+      this.reorderTimer =
+        null
+    }
+
+    this.reorderWaitingSequence =
+      -1
+
+    this.reorderBuffer.clear()
+
+    /*
+     * ========================================================
      * 清空队列
      * ========================================================
      */
@@ -1345,11 +2154,14 @@ export class WalkiePlayback {
 
     /*
      * ========================================================
-     * 重置流状态
+     * 重置状态
      * ========================================================
      */
 
     this.currentStreamId =
+      -1
+
+    this.expectedSequence =
       -1
 
     this.lastSequence =
@@ -1366,12 +2178,12 @@ export class WalkiePlayback {
 
     /*
      * ========================================================
-     * 释放 Renderer
+     * Renderer
      * ========================================================
      */
 
     const renderer:
-      audio.AudioRenderer | null =
+    audio.AudioRenderer | null =
       this.renderer
 
     this.renderer =
@@ -1404,9 +2216,7 @@ export class WalkiePlayback {
 
     /*
      * ========================================================
-     * 释放 AudioSession
-     *
-     * AudioSession 生命周期结束。
+     * AudioSession
      * ========================================================
      */
 
@@ -1427,7 +2237,7 @@ export class WalkiePlayback {
         )
 
       } catch (
-        error
+      error
       ) {
 
         const businessError:
@@ -1445,6 +2255,12 @@ export class WalkiePlayback {
       this.audioSessionActive =
         false
     }
+
+    /*
+     * ========================================================
+     * Decoder
+     * ========================================================
+     */
 
     this.opus.destroyDecoder()
   }
