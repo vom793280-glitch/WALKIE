@@ -12,6 +12,8 @@ export function decode(
   opusData: ArrayBuffer
 ): ArrayBuffer | null
 
+export function decodePlc(): ArrayBuffer | null
+
 export function destroyDecoder(): void
 
 export function startCapture(): boolean

@@ -36,7 +36,7 @@ import {
  * ============================================================
  * WALKIE HarmonyOS
  *
- * V24.3
+ * V24.8.3
  *
  * HarmonyOS 7.0 / API 26
  *
@@ -367,6 +367,14 @@ export class WalkieClient {
     new Map<number, number>()
 
   /*
+   * Android V23.1 → HarmonyOS V24.6
+   * 网络抖动计算。
+   */
+  private lastMeasuredLatency:
+    number =
+    -1
+
+  /*
    * 连续 Ping 超时次数。
    */
 
@@ -541,12 +549,14 @@ export class WalkieClient {
       netConnection.on(
         'netAvailable',
         (): void => {
+
           console.info(
-            'WALKIE NET: netAvailable'
+            'WALKIE NET: ★netAvailable★'
           )
+
           this.refreshBearerSignature(
             'netAvailable',
-            false
+            true
           )
         }
       )
@@ -609,7 +619,7 @@ export class WalkieClient {
                 true
               )
             },
-            300
+            50
           )
         }
       )
@@ -801,7 +811,7 @@ export class WalkieClient {
 
     this.scheduleNetworkMigration(
       reason,
-      120
+      0
     )
   }
 
@@ -868,6 +878,7 @@ export class WalkieClient {
         this.manualDisconnect ||
         !this.connected
     ) {
+
       return
     }
 
@@ -879,45 +890,139 @@ export class WalkieClient {
       Date.now()
 
     try {
+
       console.warn(
-        'WALKIE NET MIGRATION: ★开始UDP端点迁移★ ' +
+        'WALKIE NET MIGRATION: ★开始快速UDP端点迁移★ ' +
           `reason=${reason}`
       )
 
+      // ========================================================
+      // 第一步：创建新 UDP Socket
+      // ========================================================
+
       /*
-       * 不发送 GOODBYE！
-       * GOODBYE 会让服务器删除当前会话。
-       * open() 内部会关闭旧 UDP 并创建新的临时端口。
+       * 不发送 GOODBYE。
+       *
+       * migrate() 不会先关闭旧 Socket。
+       *
+       * 新 Socket bind 成功以后：
+       *
+       * old Socket
+       *       +
+       * new Socket
+       *
+       * 会短暂同时存在。
        */
-      await this.udp.open(
+
+      await this.udp.migrate(
         WalkieClient.SERVER_IP,
-        WalkieClient.SERVER_PORT
+        WalkieClient.SERVER_PORT,
+        3000
       )
+
+      // ========================================================
+      // 第二步：清除旧 Ping 状态
+      // ========================================================
 
       this.lastServerActivityTime =
         Date.now()
 
-      /*
-       * 清掉旧端点上的 Ping 记录，防止切网期间把旧 Ping
-       * 错算成新的丢包。
-       */
       this.pendingPingSequence =
         []
+
       this.pendingPingTime.clear()
 
-      /*
-       * 第一个包立即用稳定 DeviceID 告诉 VPS：
-       * “这是原来的用户，只是 UDP endpoint 变了”。
-       */
-      await this.udp.send(
-        'WALKIE_HELLO:' +
-          this.deviceId +
-          ':V24.2'
-      )
+      // ========================================================
+      // 第三步：连续 HELLO
+      // ========================================================
 
       /*
-       * 再连续发一次 PING + KEEPALIVE，双保险刷新 NAT endpoint。
+       * ======================================================
+       * V24.8.2 核心修复
+       * ======================================================
+       *
+       * HarmonyOS 切网时：
+       *
+       * netAvailable
+       * netCapabilitiesChange
+       * netConnectionPropertiesChange
+       *
+       * 与真正的新网络可发 UDP 的时间可能存在很短延迟。
+       *
+       * 如果只发送一次：
+       *
+       * HELLO
+       *
+       * 很容易刚好发送在切换窗口。
+       *
+       * 所以这里连续发送 12 次：
+       *
+       * 150ms × 12
+       *
+       * 约 1.65 秒。
+       *
+       * 一旦 VPS 收到其中任何一次：
+       *
+       * DeviceID
+       *      ↓
+       * 新 UDP endpoint
+       *
+       * 后面的音频就开始走新地址。
        */
+
+      const helloCount:
+        number =
+        5
+
+      for (
+        let helloIndex:
+          number =
+          0;
+
+        helloIndex <
+          helloCount;
+
+        helloIndex++
+      ) {
+
+        try {
+
+          await this.udp.send(
+            'WALKIE_HELLO:' +
+              this.deviceId +
+              ':V24.8.3'
+          )
+
+          console.info(
+            'WALKIE NET MIGRATION: ' +
+              `HELLO ${helloIndex + 1}/${helloCount}`
+          )
+
+        } catch (
+        error
+        ) {
+
+          console.warn(
+            'WALKIE NET MIGRATION: ' +
+              'HELLO瞬时失败，继续下一轮'
+          )
+        }
+
+        if (
+          helloIndex + 1 <
+            helloCount
+        ) {
+
+          await this.sleep(
+            80
+          )
+        }
+      }
+
+      // ========================================================
+      // 第四步：PING
+      // ========================================================
+
       const sequence:
         number =
         this.pingSequence
@@ -932,68 +1037,129 @@ export class WalkieClient {
       this.pendingPingSequence.push(
         sequence
       )
+
       this.pendingPingTime.set(
         sequence,
         now
       )
 
-      await this.udp.send(
-        'WALKIE_NET_PING:' +
-          sequence +
-          ':' +
-          now +
-          ':' +
-          this.deviceId
-      )
+      try {
 
-      await this.udp.send(
-        'WALKIE_KEEPALIVE:' +
-          this.deviceId
-      )
+        await this.udp.send(
+          'WALKIE_NET_PING:' +
+            sequence +
+            ':' +
+            now +
+            ':' +
+            this.deviceId
+        )
+
+      } catch (
+      error
+      ) {
+
+        console.warn(
+          'WALKIE NET MIGRATION: ' +
+            '迁移后PING发送失败'
+        )
+      }
+
+      // ========================================================
+      // 第五步：KEEPALIVE
+      // ========================================================
+
+      try {
+
+        await this.udp.send(
+          'WALKIE_KEEPALIVE:' +
+            this.deviceId
+        )
+
+      } catch (
+      error
+      ) {
+
+        console.warn(
+          'WALKIE NET MIGRATION: ' +
+            '迁移后KEEPALIVE发送失败'
+        )
+      }
+
+      // ========================================================
+      // 第六步：维持现有连接状态
+      // ========================================================
 
       /*
-       * 保留当前频道，不执行完整 reconnect()。
-       * CONNECTED 到来后原有逻辑会继续 LOGIN / 状态同步。
+       * 非常重要：
+       *
+       * 不执行：
+       *
+       * connected = false
+       *
+       * 不执行：
+       *
+       * playback.stop()
+       *
+       * 不执行：
+       *
+       * reconnect()
+       *
+       * 这样播放链路不会因为切网主动清空。
        */
+
       this.state.network.quality =
         '良好'
+
       this.state.message =
         '网络已切换，连接已迁移'
+
       this.emitState()
 
       console.info(
-        'WALKIE NET MIGRATION: ★UDP端点迁移成功★ ' +
+        'WALKIE NET MIGRATION: ★迁移流程完成★ ' +
           `elapsed=${Date.now() - startTime}ms`
       )
+
     } catch (
     error
     ) {
+
       const businessError:
         BusinessError =
         error as BusinessError
 
       console.error(
         'WALKIE NET MIGRATION: 迁移失败 ' +
-          `code=${businessError.code} message=${businessError.message}`
+          `code=${businessError.code} ` +
+          `message=${businessError.message}`
       )
 
       /*
-       * 迁移失败才进入原来的持续自动重连兜底。
+       * 只有真正迁移失败，
+       * 才进入原来的自动重连兜底。
        */
+
       this.connected =
         false
+
       this.state.connected =
         false
+
       this.state.network.quality =
         '重连中'
+
       this.state.message =
         '网络切换失败，正在恢复连接…'
+
       this.emitState()
 
       this.scheduleAutoReconnect()
+
     } finally {
+
       this.networkMigrationRunning =
         false
+
       this.lastNetworkMigrationTime =
         Date.now()
     }
@@ -4115,13 +4281,48 @@ export class WalkieClient {
     this.state.network.loss =
       this.calculatePingLoss()
 
-    if (latency < 80) {
-      this.state.network.quality = '良好'
-    } else if (latency < 180) {
-      this.state.network.quality = '一般'
+    /*
+     * Android V23.1 风格 jitter：
+     * 使用相邻 Ping 延迟变化衡量抖动。
+     * 使用平滑处理，避免一次尖峰立即改变播放策略。
+     */
+    if (
+      this.lastMeasuredLatency >= 0
+    ) {
+
+      const instantJitter:
+        number =
+        Math.abs(
+          latency -
+            this.lastMeasuredLatency
+        )
+
+      if (
+        this.state.network.jitter < 0
+      ) {
+
+        this.state.network.jitter =
+          instantJitter
+
+      } else {
+
+        this.state.network.jitter =
+          Math.round(
+            this.state.network.jitter * 0.75 +
+              instantJitter * 0.25
+          )
+      }
     } else {
-      this.state.network.quality = '较差'
+
+      this.state.network.jitter =
+        0
     }
+
+    this.lastMeasuredLatency =
+      latency
+
+    this.updateNetworkStatus()
+    this.updatePlaybackNetworkQuality()
 
     this.emitState()
   }
@@ -4238,6 +4439,9 @@ export class WalkieClient {
     this.pendingPingSequence = []
     this.pendingPingTime.clear()
     this.pingResults = []
+    this.lastMeasuredLatency = -1
+    this.state.network.jitter = -1
+    this.updatePlaybackNetworkQuality()
   }
   private async sendNetworkPing():
     Promise<void> {
@@ -4403,17 +4607,75 @@ export class WalkieClient {
     }
   }
 
+  private updatePlaybackNetworkQuality():
+    void {
+
+    this.playback.setNetworkQuality(
+      this.state.network.latency,
+      this.state.network.loss,
+      this.state.network.jitter
+    )
+  }
+
   private updateNetworkStatus():
     void {
 
     this.state.network.loss =
       this.calculatePingLoss()
 
-    if (this.state.network.loss >= 20) {
-      this.state.network.quality = '较差'
-    } else if (this.state.network.loss >= 8) {
-      this.state.network.quality = '一般'
+    const latency:
+      number =
+      this.state.network.latency
+
+    const loss:
+      number =
+      this.state.network.loss
+
+    const jitter:
+      number =
+      this.state.network.jitter
+
+    if (
+      latency < 0
+    ) {
+
+      this.state.network.quality =
+        '检测中'
+
+    } else if (
+      loss >= 20 ||
+        latency >= 300 ||
+        jitter >= 100
+    ) {
+
+      this.state.network.quality =
+        '较差'
+
+    } else if (
+      loss >= 8 ||
+        latency >= 180 ||
+        jitter >= 50
+    ) {
+
+      this.state.network.quality =
+        '一般'
+
+    } else if (
+      loss >= 3 ||
+        latency >= 100 ||
+        jitter >= 25
+    ) {
+
+      this.state.network.quality =
+        '良好'
+
+    } else {
+
+      this.state.network.quality =
+        '优秀'
     }
+
+    this.updatePlaybackNetworkQuality()
   }
 
   // 停止全部定时器

@@ -19,7 +19,7 @@ import {
  * ============================================================
  * WALKIE HarmonyOS
  *
- * V24.0
+ * V24.8.6
  *
  * Android → HarmonyOS 播放
  *
@@ -43,7 +43,7 @@ import {
  *        ↓
  *   AudioRenderer
  *
- * V24.0：
+ * V24.6：
  *
  *   1. 正常顺序包立即播放
  *   2. Sequence 跳号进入短暂重排等待
@@ -110,9 +110,34 @@ export class WalkiePlayback {
     Array<Uint8Array> =
     []
 
+  /*
+   * Android V24.8.4 自适应播放缓冲基线：
+   *
+   * 良好网络：12 帧 ≈ 240ms
+   * 中等弱网：16 帧 ≈ 320ms
+   * 严重弱网：20 帧 ≈ 400ms
+   *
+   * 这里保留 12 作为基础值，
+   * 实际上限由网络质量动态决定。
+   */
   private readonly pcmQueueLimit:
     number =
     12
+
+  /*
+   * Android 网络质量 → 播放策略。
+   */
+  private networkLatencyMs:
+    number =
+    -1
+
+  private networkLossPercent:
+    number =
+    0
+
+  private networkJitterMs:
+    number =
+    -1
 
   private currentPcm:
   Uint8Array | null =
@@ -177,6 +202,33 @@ export class WalkiePlayback {
   private static readonly REORDER_WAIT_MS:
     number =
     15
+
+  /*
+   * V24.8.6
+   *
+   * 网络抖动较大时，适当延长重排等待。
+   * 正常网络仍保持 15ms。
+   */
+  private getReorderWaitMs():
+    number {
+
+    if (
+      this.networkJitterMs >= 50 ||
+        this.networkLossPercent >= 5
+    ) {
+
+      return 40
+    }
+
+    if (
+      this.networkJitterMs >= 30
+    ) {
+
+      return 30
+    }
+
+    return WalkiePlayback.REORDER_WAIT_MS
+  }
 
   /*
    * 防止异常 Sequence 大跳。
@@ -829,6 +881,131 @@ export class WalkiePlayback {
   }
 
   // ============================================================
+  // Android V23.1 → HarmonyOS V24.6
+  // 自适应播放策略
+  // ============================================================
+
+  /**
+   * 由 WalkieClient 提供当前网络质量。
+   *
+   * Android 的网络质量判断不是只看延迟，
+   * 而是同时考虑 loss / latency / jitter。
+   */
+  public setNetworkQuality(
+    latency:
+      number,
+    loss:
+      number,
+    jitter:
+      number
+  ):
+    void {
+
+    this.networkLatencyMs =
+      latency
+
+    this.networkLossPercent =
+      Math.max(
+        0,
+        Math.min(
+          100,
+          loss
+        )
+      )
+
+    this.networkJitterMs =
+      jitter
+
+    console.info(
+      'WALKIE PLAYBACK: ' +
+        '自适应网络参数更新 ' +
+        `latency=${this.networkLatencyMs}ms ` +
+        `loss=${this.networkLossPercent}% ` +
+        `jitter=${this.networkJitterMs}ms ` +
+        `queueLimit=${this.getDynamicPcmQueueLimit()} ` +
+        `startBuffer=${this.getAdaptiveStartBufferPackets()}`
+    )
+  }
+
+  /**
+   * Android V23.1 对应的动态最大播放队列。
+   */
+  private getDynamicPcmQueueLimit():
+    number {
+
+    const loss:
+      number =
+      this.networkLossPercent
+
+    const latency:
+      number =
+      this.networkLatencyMs
+
+    const jitter:
+      number =
+      this.networkJitterMs
+
+    if (
+      loss >= 12 ||
+        latency >= 250 ||
+        jitter >= 70
+    ) {
+
+      return 20
+    }
+
+    if (
+      loss >= 5 ||
+        latency >= 150 ||
+        jitter >= 35
+    ) {
+
+      return 16
+    }
+
+    return this.pcmQueueLimit
+  }
+
+  /**
+   * Android V23.1 对应的恢复/起播缓冲。
+   */
+  private getAdaptiveStartBufferPackets():
+    number {
+
+    const loss:
+      number =
+      this.networkLossPercent
+
+    const latency:
+      number =
+      this.networkLatencyMs
+
+    const jitter:
+      number =
+      this.networkJitterMs
+
+    if (
+      loss >= 12 ||
+        latency >= 250 ||
+        jitter >= 70
+    ) {
+
+      return 6
+    }
+
+    if (
+      loss >= 5 ||
+        latency >= 150 ||
+        jitter >= 35
+    ) {
+
+      return 4
+    }
+
+    return 3
+  }
+
+  // ============================================================
   // Opus 解码 + PCM 入队
   // ============================================================
 
@@ -904,7 +1081,7 @@ export class WalkiePlayback {
 
     while (
       this.pcmQueue.length >=
-        this.pcmQueueLimit
+        this.getDynamicPcmQueueLimit()
     ) {
 
       this.pcmQueue.shift()
@@ -917,14 +1094,14 @@ export class WalkiePlayback {
     /*
      * 首次起播：
      *
-     * 3 帧 ≈ 60ms
+     * 动态起播缓冲：3 / 4 / 6 帧
      */
 
     if (
       !this.started &&
         !this.playing &&
         this.pcmQueue.length >=
-          3
+          this.getAdaptiveStartBufferPackets()
     ) {
 
       await this.startRenderer()
@@ -1245,12 +1422,16 @@ export class WalkiePlayback {
       number =
       this.expectedSequence
 
+    const reorderWaitMs:
+      number =
+      this.getReorderWaitMs()
+
     console.info(
       'WALKIE PLAYBACK: ' +
         `W23A 发现缺口 ` +
         `expected=${waitingSequence} ` +
         `next=${smallest} ` +
-        `等待=${WalkiePlayback.REORDER_WAIT_MS}ms`
+        `等待=${reorderWaitMs}ms`
     )
 
     /*
@@ -1270,7 +1451,7 @@ export class WalkiePlayback {
           )
 
         },
-        WalkiePlayback.REORDER_WAIT_MS
+        reorderWaitMs
       ) as number
   }
 
@@ -1396,149 +1577,121 @@ export class WalkiePlayback {
 
     /*
      * ========================================================
-     * 单帧 PLC
+     * V24.8.4
+     *
+     * 连续丢 1 / 2 / 3 包：
+     *
+     * 1包 = PLC 20ms
+     * 2包 = PLC 40ms
+     * 3包 = PLC 60ms
+     *
+     * 不再只补 1 包。
+     *
+     * 超过 3 包：
+     * 仍然直接跳到下一个真实包，
+     * 避免长时间 PLC 产生明显机器人音。
      * ========================================================
      */
 
     if (
-      missing ===
-        1
+      missing >= 1 &&
+        missing <= 12
     ) {
 
       console.warn(
         'WALKIE PLAYBACK: ' +
-          `W23A ★确认单帧丢包★ ` +
-          `missingSequence=${waitingSequence} ` +
+          `W23A ★连续丢包PLC★ ` +
+          `start=${waitingSequence} ` +
           `next=${smallest} ` +
-          '→ PLC'
+          `missing=${missing}`
       )
 
-      /*
-       * ======================================================
-       * 调用 Native Opus PLC
-       * ======================================================
-       */
+      for (
+        let plcIndex:
+          number =
+          0;
 
-      const plcPcm:
-      ArrayBuffer | null =
-        this.opus.decodePlc()
+        plcIndex <
+          missing;
 
-      /*
-       * ======================================================
-       * PLC 成功
-       * ======================================================
-       */
-
-      if (
-        plcPcm !==
-          null &&
-          plcPcm.byteLength >
-            0
+        plcIndex++
       ) {
 
-        /*
-         * 确保 Renderer 已经存在。
-         */
+        const plcPcm:
+        ArrayBuffer | null =
+          this.opus.decodePlc()
+
+        if (
+          plcPcm ===
+            null ||
+            plcPcm.byteLength <=
+              0
+        ) {
+
+          console.warn(
+            'WALKIE PLAYBACK: ' +
+              `PLC失败 index=${plcIndex + 1}/${missing}`
+          )
+
+          break
+        }
 
         const ready:
           boolean =
           await this.ensureRenderer()
 
         if (
-          ready
+          !ready
         ) {
 
-          const plcBytes:
-            Uint8Array =
-            new Uint8Array(
-              plcPcm
-            )
-
-          /*
-           * 控制 PCM 队列长度。
-           */
-
-          while (
-            this.pcmQueue.length >=
-              this.pcmQueueLimit
-          ) {
-
-            this.pcmQueue.shift()
-          }
-
-          /*
-           * PLC PCM 和正常 PCM
-           * 使用完全相同的播放路径。
-           */
-
-          this.pcmQueue.push(
-            plcBytes
-          )
-
-          console.info(
+          console.warn(
             'WALKIE PLAYBACK: ' +
-              `★Opus PLC 成功★ ` +
-              `sequence=${waitingSequence} ` +
-              `pcm=${plcPcm.byteLength}B`
+              'PLC生成成功，但Renderer未就绪'
           )
 
-          /*
-           * 如果播放器因为特殊状态没有启动，
-           * 而且已经有足够 PCM，
-           * 尝试启动一次。
-           *
-           * startRenderer() 内部已经有双重状态保护。
-           */
-
-          if (
-            !this.started &&
-              !this.playing &&
-              this.pcmQueue.length >=
-                3
-          ) {
-
-            await this.startRenderer()
-          }
-
-        } else {
-
-          console.error(
-            'WALKIE PLAYBACK: ' +
-              'PLC 已生成，但 AudioRenderer 未就绪'
-          )
+          break
         }
 
-      } else {
+        const plcBytes:
+          Uint8Array =
+          new Uint8Array(
+            plcPcm
+          )
 
-        console.error(
+        while (
+          this.pcmQueue.length >=
+            this.getDynamicPcmQueueLimit()
+        ) {
+
+          this.pcmQueue.shift()
+        }
+
+        this.pcmQueue.push(
+          plcBytes
+        )
+
+        console.info(
           'WALKIE PLAYBACK: ' +
-            `Opus PLC 失败 sequence=${waitingSequence}`
+            `★PLC ${plcIndex + 1}/${missing}★ ` +
+            `pcm=${plcPcm.byteLength}B`
         )
       }
 
     } else {
 
-      /*
-       * ======================================================
-       * 连续丢包 >= 2
-       *
-       * 当前 V24.0 不连续 PLC。
-       * ======================================================
-       */
-
       console.warn(
         'WALKIE PLAYBACK: ' +
-          `W23A 确认连续丢包 ` +
+          `W23A 连续丢包过多 ` +
           `start=${waitingSequence} ` +
           `next=${smallest} ` +
           `missing=${missing} ` +
-          '→ V24.0 暂不 PLC'
+          '→ 不连续PLC'
       )
     }
 
     /*
      * ========================================================
-     * 跳到下一个已经收到的 Sequence
+     * 跳到下一个真实收到的 Sequence
      * ========================================================
      */
 
@@ -1548,19 +1701,7 @@ export class WalkiePlayback {
     this.reorderWaitingSequence =
       -1
 
-    /*
-     * ========================================================
-     * 播放已经缓存的包
-     * ========================================================
-     */
-
     await this.flushReorderBuffer()
-
-    /*
-     * ========================================================
-     * 后面还有缺口
-     * ========================================================
-     */
 
     if (
       this.reorderBuffer.size >
@@ -1963,7 +2104,7 @@ export class WalkiePlayback {
           'SessionOutput=SPEAKER ' +
           'RendererOutput=SPEAKER ' +
           'volume=1.0 ' +
-          'reorder=V24.0 PLC=single-frame'
+          'reorder=V24.8.5 PLC=1-12-frame adaptive-buffer'
       )
 
     } catch (
