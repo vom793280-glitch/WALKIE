@@ -13,7 +13,7 @@ import java.util.concurrent.ArrayBlockingQueue
 /**
  * WALKIE 音频播放调度器
  *
- * V24.9.1
+ * V24.9.2
  *
  * 负责：
  *
@@ -47,6 +47,60 @@ class WalkieAudioPlayback(
     private val logger: (String) -> Unit = {}
 ) {
 
+    companion object {
+
+        /*
+         * ============================================================
+         * V24.9.2 音频真实时间轴
+         * ============================================================
+         *
+         * 当前WALKIE：
+         *
+         * 16000Hz
+         * 16bit
+         * mono
+         *
+         * 每个PCM帧：
+         *
+         * 320 samples
+         * 640 bytes
+         *
+         * = 20ms音频。
+         *
+         * 因此播放器正常情况下应该按照约20ms/帧
+         * 的速度消费PCM。
+         */
+        private const val FRAME_DURATION_MS =
+            20L
+
+        /*
+         * 队列为空时避免高速空转。
+         */
+        private const val EMPTY_QUEUE_DELAY_MS =
+            3L
+
+        /*
+         * 恢复失败后稍等一小段时间。
+         */
+        private const val RECOVERY_RETRY_DELAY_MS =
+            30L
+
+        /*
+         * ============================================================
+         * V24.9.2：
+         *
+         * AudioTrack真正发生underrun以后，
+         * 至少等待8帧PCM重新进入。
+         *
+         * 8帧 × 20ms = 160ms
+         *
+         * 原来是3帧 = 60ms，
+         * 网络恢复后缓冲太浅，容易再次underrun。
+         */
+        private const val MIN_RECOVERY_PACKETS =
+            8
+    }
+
     /*
      * ============================================================
      * 播放协程
@@ -64,14 +118,10 @@ class WalkieAudioPlayback(
      * PCM队列
      * ============================================================
      *
-     * 每一个元素保持一个完整20ms PCM帧。
+     * 每一个元素：
      *
-     * 640 bytes =
-     * 16000Hz / 50 =
-     * 320 samples =
-     * 640 bytes
+     * 640 bytes = 20ms PCM
      */
-
     private val playbackQueue =
         ArrayBlockingQueue<ByteArray>(
             queueCapacity
@@ -122,35 +172,30 @@ class WalkieAudioPlayback(
         if (
             data.size % 2 != 0
         ) {
+
             logger(
                 "WALKIE AUDIO PLAYBACK: " +
                         "PCM长度为奇数，丢弃=${data.size}"
             )
+
             return
         }
 
         if (
             data.size > 8192
         ) {
+
             logger(
                 "WALKIE AUDIO PLAYBACK: " +
                         "PCM过大，丢弃=${data.size}"
             )
+
             return
         }
 
         /*
          * ========================================================
-         * 根据当前网络状态动态决定最大队列长度
-         * ========================================================
-         *
-         * 网络越差：
-         *
-         *     允许更多缓存
-         *
-         * 网络越好：
-         *
-         *     保持更低延迟
+         * 动态最大队列
          * ========================================================
          */
 
@@ -189,15 +234,9 @@ class WalkieAudioPlayback(
             )
 
         /*
-         * ========================================================
-         * 队列过长：
-         *
-         * 丢弃最老的PCM帧。
-         *
-         * 保证实时性。
-         * ========================================================
+         * 超出实时范围时，
+         * 丢弃最老帧。
          */
-
         while (
             playbackQueue.size >=
             dynamicMaxQueue
@@ -214,10 +253,10 @@ class WalkieAudioPlayback(
          * Track不存在时，
          * 请求恢复。
          */
-
         if (
             !audioPlayer.isReady()
         ) {
+
             recoveryRequested =
                 true
         }
@@ -374,7 +413,7 @@ class WalkieAudioPlayback(
 
     /*
      * ============================================================
-     * 启动播放Worker
+     * 启动Worker
      * ============================================================
      */
 
@@ -385,6 +424,7 @@ class WalkieAudioPlayback(
             if (
                 !playbackScope.isActive
             ) {
+
                 return
             }
 
@@ -395,12 +435,14 @@ class WalkieAudioPlayback(
                 currentJob != null &&
                 currentJob.isActive
             ) {
+
                 return
             }
 
             if (
                 workerStarting
             ) {
+
                 return
             }
 
@@ -462,63 +504,40 @@ class WalkieAudioPlayback(
             val recoveryTarget =
                 recoveryPacketsProvider()
                     .coerceIn(
-                        1,
+                        MIN_RECOVERY_PACKETS,
                         maxQueuePackets
                     )
 
             /*
              * ========================================================
-             * 当前需要的启动缓存
+             * 首次播放
              * ========================================================
              *
-             * V24.9.1：
+             * 网络恢复后至少准备8帧，
+             * 再启动连续播放。
              *
-             * 首次播放不再强制等待3包。
+             * 8帧 × 20ms = 160ms。
              *
-             * 收到第一帧有效PCM后即可开始播放。
-             *
-             * 这样可以避免：
-             *
-             * 鸿蒙 -> Android
-             *
-             * 在不同发送节奏下，
-             * 因为启动缓存不足而长时间无法开始播放。
-             * ========================================================
+             * 这样可以比原来的60ms提供更大的
+             * AudioTrack安全余量。
              */
-
             val requiredPackets =
                 when {
 
-                    /*
-                     * 首次播放：
-                     *
-                     * 只需要1包PCM即可启动。
-                     */
                     firstStart ->
-                        1
+                        maxOf(
+                            MIN_RECOVERY_PACKETS,
+                            startBufferPackets
+                        ).coerceAtMost(
+                            maxQueuePackets
+                        )
 
-                    /*
-                     * 播放恢复：
-                     *
-                     * 仍然使用动态恢复缓冲策略。
-                     */
                     recovering ->
                         recoveryTarget
 
-                    /*
-                     * 正常播放：
-                     *
-                     * 保持1包实时播放。
-                     */
                     else ->
                         1
                 }
-
-            /*
-             * ========================================================
-             * 缓冲不足
-             * ========================================================
-             */
 
             if (
                 playbackQueue.size <
@@ -526,15 +545,17 @@ class WalkieAudioPlayback(
             ) {
 
                 if (
-                    recovering ||
-                    firstStart
+                    firstStart ||
+                    recovering
                 ) {
 
                     delay(4L)
 
                 } else {
 
-                    delay(8L)
+                    delay(
+                        EMPTY_QUEUE_DELAY_MS
+                    )
                 }
 
                 continue
@@ -543,12 +564,13 @@ class WalkieAudioPlayback(
             if (
                 !playbackScope.isActive
             ) {
+
                 break
             }
 
             /*
              * ========================================================
-             * 确保 AudioTrack
+             * 确保AudioTrack
              * ========================================================
              */
 
@@ -559,16 +581,12 @@ class WalkieAudioPlayback(
                 recoveryRequested =
                     true
 
-                delay(30L)
+                delay(
+                    RECOVERY_RETRY_DELAY_MS
+                )
 
                 continue
             }
-
-            /*
-             * ========================================================
-             * 首次播放 / 恢复播放
-             * ========================================================
-             */
 
             if (
                 firstStart ||
@@ -591,28 +609,39 @@ class WalkieAudioPlayback(
      * 恢复播放
      * ============================================================
      *
-     * 重要：
+     * V24.9.2核心：
      *
-     * 不再把多个20ms PCM帧合并成40ms/60ms大块。
+     * 恢复阶段必须快速预填AudioTrack。
      *
-     * 保持：
+     * 不能：
      *
-     * 20ms
+     * 第1帧
      * ↓
-     * AudioTrack.write()
-     *
-     * 20ms
+     * 等20ms
      * ↓
-     * AudioTrack.write()
-     *
-     * 20ms
+     * 第2帧
      * ↓
-     * AudioTrack.write()
+     * 等20ms
      *
-     * 这样声音时间轴最稳定。
-     * ============================================================
+     * 因为AudioTrack已经在播放第一帧，
+     * 慢慢填充会造成再次underrun。
+     *
+     * 正确方式：
+     *
+     * 第1帧
+     * ↓
+     * 第2帧
+     * ↓
+     * 第3帧
+     * ↓
+     * ...
+     * ↓
+     * 第8帧
+     *
+     * 快速写入AudioTrack。
+     *
+     * AudioTrack自身负责真实20ms播放时钟。
      */
-
     private suspend fun playRecovery(
         requiredPackets: Int
     ) {
@@ -622,19 +651,13 @@ class WalkieAudioPlayback(
                     requiredPackets +
                             2
                     ).coerceAtMost(
-                    recoveryPacketsProvider()
-                        .coerceAtLeast(1) +
-                            2
+                    maxQueuePackets
                 )
 
         /*
-         * ========================================================
-         * 队列异常过长：
-         *
-         * 丢弃最老帧。
-         * ========================================================
+         * 如果积压太多，
+         * 保留最新实时声音。
          */
-
         while (
             playbackQueue.size >
             recoveryLimit
@@ -643,25 +666,21 @@ class WalkieAudioPlayback(
             playbackQueue.poll()
         }
 
-        /*
-         * ========================================================
-         * 一帧一帧播放
-         * ========================================================
-         */
-
         var playedPackets =
             0
 
+        /*
+         * ========================================================
+         * V24.9.2：
+         *
+         * 快速预填，不再等待20ms。
+         * ========================================================
+         */
         while (
             playedPackets <
-            requiredPackets
+            requiredPackets &&
+            playbackScope.isActive
         ) {
-
-            if (
-                !playbackScope.isActive
-            ) {
-                return
-            }
 
             val frame =
                 playbackQueue.poll()
@@ -669,6 +688,7 @@ class WalkieAudioPlayback(
             if (
                 frame == null
             ) {
+
                 break
             }
 
@@ -681,30 +701,24 @@ class WalkieAudioPlayback(
                 !success
             ) {
 
-                /*
-                 * 当前帧播放失败，
-                 * 放回最前面。
-                 */
-
                 requeueFront(
-                    listOf(frame)
+                    listOf(
+                        frame
+                    )
                 )
 
                 recoveryRequested =
                     true
 
-                delay(30L)
+                delay(
+                    RECOVERY_RETRY_DELAY_MS
+                )
 
                 return
             }
 
             playedPackets++
         }
-
-        /*
-         * 如果一包都没成功，
-         * 保持恢复状态。
-         */
 
         if (
             playedPackets <= 0
@@ -720,16 +734,44 @@ class WalkieAudioPlayback(
          * ========================================================
          * 恢复完成
          * ========================================================
+         *
+         * 必须至少达到8帧。
          */
+        if (
+            playedPackets >=
+            MIN_RECOVERY_PACKETS
+        ) {
 
-        recoveryRequested =
-            false
+            recoveryRequested =
+                false
 
-        firstStart =
-            false
+            firstStart =
+                false
 
-        lastUnderrunCount =
-            audioPlayer.getUnderrunCount()
+            lastUnderrunCount =
+                audioPlayer.getUnderrunCount()
+
+            logger(
+                "WALKIE AUDIO PLAYBACK: " +
+                        "恢复播放完成 packets=$playedPackets " +
+                        "queue=${playbackQueue.size}"
+            )
+
+        } else {
+
+            /*
+             * 不足8帧，
+             * 保持恢复状态。
+             */
+            recoveryRequested =
+                true
+
+            logger(
+                "WALKIE AUDIO PLAYBACK: " +
+                        "恢复播放暂未完成 packets=$playedPackets " +
+                        "queue=${playbackQueue.size}"
+            )
+        }
     }
 
     /*
@@ -737,14 +779,15 @@ class WalkieAudioPlayback(
      * 正常播放
      * ============================================================
      *
-     * 正常情况下：
+     * 每一个PCM帧 = 20ms
      *
-     * 一个队列元素 =
-     * 一个20ms PCM帧
+     * 因此：
      *
-     * 每次只取一个。
-     *
-     * ============================================================
+     * write
+     * ↓
+     * 20ms
+     * ↓
+     * write下一帧
      */
 
     private suspend fun playNormal() {
@@ -755,23 +798,22 @@ class WalkieAudioPlayback(
         if (
             frame == null
         ) {
+
             return
         }
 
         if (
             !playbackScope.isActive
         ) {
+
             requeueFront(
-                listOf(frame)
+                listOf(
+                    frame
+                )
             )
+
             return
         }
-
-        /*
-         * ========================================================
-         * 直接播放一个20ms帧
-         * ========================================================
-         */
 
         val success =
             audioPlayer.writeAndPlay(
@@ -783,20 +825,24 @@ class WalkieAudioPlayback(
         ) {
 
             requeueFront(
-                listOf(frame)
+                listOf(
+                    frame
+                )
             )
 
             recoveryRequested =
                 true
 
-            delay(25L)
+            delay(
+                RECOVERY_RETRY_DELAY_MS
+            )
 
             return
         }
 
         /*
          * ========================================================
-         * underrun检测
+         * 检测真实underrun
          * ========================================================
          */
 
@@ -827,41 +873,27 @@ class WalkieAudioPlayback(
         lastUnderrunCount =
             currentUnderrun
 
-        /*
-         * ========================================================
-         * 队列不足：
-         *
-         * 提前进入恢复模式。
-         * ========================================================
-         */
-
-        val recoveryTarget =
-            recoveryPacketsProvider()
-                .coerceAtLeast(1)
-
-        if (
-            playbackQueue.size <
-            recoveryTarget
-        ) {
-
-            recoveryRequested =
-                true
-
-        } else {
-
-            recoveryRequested =
-                false
-        }
-
         firstStart =
             false
-    }
 
-    /*
-     * ============================================================
-     * 将失败帧放回队列最前面
-     * ============================================================
-     */
+        /*
+         * ========================================================
+         * V24.9.2：
+         *
+         * 这里不再 delay(20ms)。
+         *
+         * AudioTrack.writeAndPlay() 内部使用
+         * WRITE_BLOCKING，由 AudioTrack 自己负责
+         * 底层播放节奏。
+         *
+         * 人工再加20ms会变成：
+         *
+         * write耗时 + 20ms
+         *
+         * 导致实际消费速度慢于20ms/帧。
+         * ========================================================
+         */
+    }
 
     private fun requeueFront(
         frames: List<ByteArray>
@@ -870,12 +902,9 @@ class WalkieAudioPlayback(
         if (
             frames.isEmpty()
         ) {
+
             return
         }
-
-        /*
-         * 先保存原队列。
-         */
 
         val existing =
             ArrayList<ByteArray>(
@@ -889,11 +918,8 @@ class WalkieAudioPlayback(
         playbackQueue.clear()
 
         /*
-         * ========================================================
-         * 失败帧优先
-         * ========================================================
+         * 失败帧优先。
          */
-
         for (
         frame in frames
         ) {
@@ -902,6 +928,7 @@ class WalkieAudioPlayback(
                 playbackQueue.size >=
                 queueCapacity
             ) {
+
                 break
             }
 
@@ -911,11 +938,8 @@ class WalkieAudioPlayback(
         }
 
         /*
-         * ========================================================
-         * 再恢复原队列
-         * ========================================================
+         * 原有队列继续保留。
          */
-
         for (
         frame in existing
         ) {
@@ -924,6 +948,7 @@ class WalkieAudioPlayback(
                 playbackQueue.size >=
                 queueCapacity
             ) {
+
                 break
             }
 

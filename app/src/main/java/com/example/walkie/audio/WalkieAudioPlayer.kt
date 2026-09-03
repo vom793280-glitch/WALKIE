@@ -53,35 +53,72 @@ class WalkieAudioPlayer(
 
         private const val MAX_PCM_DATA_SIZE =
             8192
+
+        /*
+         * ============================================================
+         * V24.9.1 音频设备切换保护
+         * ============================================================
+         *
+         * Android 在：
+         *
+         * WiFi / 移动网络变化
+         * 系统音频设备切换
+         * 蓝牙设备变化
+         * 锁屏/解锁
+         *
+         * 过程中，AudioTrack.write() 可能短暂返回 0。
+         *
+         * 这个 0 不一定意味着 AudioTrack 已经死亡。
+         *
+         * 因此：
+         *
+         * result < 0
+         *      ↓
+         * 才按照真正错误处理
+         *
+         * result == 0
+         *      ↓
+         * 短暂等待
+         *      ↓
+         * 重试
+         *
+         * 防止：
+         *
+         * write=0
+         * ↓
+         * release
+         * ↓
+         * create
+         * ↓
+         * write=0
+         * ↓
+         * release
+         *
+         * 形成无限AudioTrack重建循环。
+         * ============================================================
+         */
+
+        private const val MAX_ZERO_WRITE_RETRY =
+            5
+
+        private const val ZERO_WRITE_RETRY_DELAY_MS =
+            12L
+
+        private const val MAX_SHORT_WRITE_RETRY =
+            3
+
+        /*
+         * 创建Track以后，
+         * 稍微给Android音频服务一点时间完成路由稳定。
+         */
+        private const val TRACK_START_DELAY_MS =
+            10L
     }
 
     /*
      * ============================================================
      * AudioTrack 生命周期锁
      * ============================================================
-     *
-     * 所有：
-     *
-     * 1. 创建
-     * 2. write
-     * 3. play
-     * 4. release
-     *
-     * 都经过同一把锁。
-     *
-     * 防止：
-     *
-     * playback线程
-     *      ↓
-     * write()
-     *
-     * 同时
-     *
-     * Service线程
-     *      ↓
-     * release()
-     *
-     * 造成生命周期竞争。
      */
     private val lock =
         Any()
@@ -139,18 +176,6 @@ class WalkieAudioPlayer(
      * ============================================================
      * 确保 AudioTrack 存在
      * ============================================================
-     *
-     * 注意：
-     *
-     * 创建以后不立即 play()。
-     *
-     * 收到真正 PCM 后：
-     *
-     * write()
-     *   ↓
-     * 成功
-     *   ↓
-     * play()
      */
     fun ensureAudioPlayer(): Boolean {
 
@@ -313,11 +338,6 @@ class WalkieAudioPlayer(
                 return false
             }
 
-        /*
-         * ============================================================
-         * 检查初始化状态
-         * ============================================================
-         */
         val initialized =
             try {
 
@@ -349,16 +369,10 @@ class WalkieAudioPlayer(
 
         /*
          * ============================================================
-         * 只在创建新 Track 时设置扬声器。
+         * V24.9.1：
+         * 创建Track以后才进行一次初始扬声器路由。
          *
-         * 不再在每一次 write() 前重复调用
-         * setPreferredDevice()。
-         *
-         * 这是 V24.9.1 第一阶段针对：
-         *
-         * “收到第一包声音瞬间崩溃”
-         *
-         * 的重要安全调整。
+         * 不在每次write()前操作设备路由。
          * ============================================================
          */
         try {
@@ -377,10 +391,22 @@ class WalkieAudioPlayer(
         }
 
         /*
-         * ============================================================
-         * 音量
-         * ============================================================
+         * 给Android音频服务一个极短的时间完成Track注册。
+         *
+         * 特别是系统正在做device switching时，
+         * 立即write可能出现result=0。
          */
+        try {
+
+            Thread.sleep(
+                TRACK_START_DELAY_MS
+            )
+
+        } catch (_: InterruptedException) {
+
+            Thread.currentThread().interrupt()
+        }
+
         try {
 
             track.setVolume(
@@ -399,11 +425,6 @@ class WalkieAudioPlayer(
             )
         }
 
-        /*
-         * ============================================================
-         * 只有到这里才正式交给播放器管理。
-         * ============================================================
-         */
         audioTrack =
             track
 
@@ -424,9 +445,6 @@ class WalkieAudioPlayer(
         pcmData: ByteArray
     ): Boolean {
 
-        /*
-         * 基础数据检查
-         */
         if (
             pcmData.isEmpty()
         ) {
@@ -459,7 +477,7 @@ class WalkieAudioPlayer(
 
             /*
              * ========================================================
-             * 当前 Track 不存在或者已经失效
+             * 当前Track不存在或已经明显无效
              * ========================================================
              */
             if (
@@ -490,70 +508,85 @@ class WalkieAudioPlayer(
                 }
             }
 
-            /*
-             * 到这里 Track 已经确定。
-             *
-             * 注意：
-             *
-             * 这里不再调用 setPreferredDevice()。
-             */
             val currentTrack =
                 track
+                    ?: return false
+
+            val data =
+                applyGain(
+                    pcmData
+                )
 
             if (
-                currentTrack == null
+                data.isEmpty() ||
+                data.size % 2 != 0
             ) {
 
                 return false
             }
 
-            return try {
+            /*
+             * ========================================================
+             * V24.9.1关键修复：
+             *
+             * write()==0
+             *
+             * 不再立刻release AudioTrack。
+             *
+             * Android在device switching时可能暂时返回0。
+             *
+             * 所以给当前Track几次机会。
+             * ========================================================
+             */
 
-                /*
-                 * ====================================================
-                 * 增益处理
-                 * ====================================================
-                 */
-                val data =
-                    applyGain(
-                        pcmData
-                    )
+            var totalWritten =
+                0
 
-                if (
-                    data.isEmpty() ||
-                    data.size % 2 != 0
-                ) {
+            var zeroRetryCount =
+                0
 
-                    return false
-                }
+            var shortRetryCount =
+                0
 
-                /*
-                 * ====================================================
-                 * 写入 PCM
-                 * ====================================================
-                 */
+            while (
+                totalWritten <
+                data.size
+            ) {
+
                 val result =
-                    currentTrack.write(
-                        data,
-                        0,
-                        data.size,
-                        AudioTrack.WRITE_BLOCKING
-                    )
+                    try {
+
+                        currentTrack.write(
+                            data,
+                            totalWritten,
+                            data.size -
+                                    totalWritten,
+                            AudioTrack.WRITE_BLOCKING
+                        )
+
+                    } catch (
+                        e: Throwable
+                    ) {
+
+                        logger(
+                            "$TAG: write异常=${e.message}"
+                        )
+
+                        releaseIfCurrentLocked(
+                            currentTrack
+                        )
+
+                        return false
+                    }
 
                 /*
                  * ====================================================
-                 * Android AudioTrack：
-                 *
-                 * write < 0
-                 * 说明本次没有正常写入。
-                 *
-                 * ERROR_DEAD_OBJECT：
-                 * 当前Track已经失效，
-                 * 必须释放并重新创建。
+                 * 真正的致命AudioTrack错误
                  * ====================================================
                  */
                 if (
-                    result < 0
+                    result <
+                    0
                 ) {
 
                     logger(
@@ -568,20 +601,153 @@ class WalkieAudioPlayer(
                 }
 
                 /*
-                 * 理论上 WRITE_BLOCKING 应该写完整。
+                 * ====================================================
+                 * result == 0
                  *
-                 * 如果出现短写，
-                 * 不继续往下 play，
-                 * 交给上层恢复。
+                 * 临时没有写进去。
+                 *
+                 * 特别是Android正在：
+                 *
+                 * creating an audioTrack during device switching
+                 *
+                 * 时不能立刻把Track杀掉。
+                 * ====================================================
                  */
                 if (
-                    result != data.size
+                    result == 0
+                ) {
+
+                    zeroRetryCount++
+
+                    logger(
+                        "$TAG: AudioTrack短写 result=0 " +
+                                "retry=$zeroRetryCount/" +
+                                MAX_ZERO_WRITE_RETRY
+                    )
+
+                    if (
+                        zeroRetryCount >=
+                        MAX_ZERO_WRITE_RETRY
+                    ) {
+
+                        /*
+                         * =================================================
+                         * 多次0仍然无法恢复。
+                         *
+                         * 这里先返回false。
+                         *
+                         * 注意：
+                         *
+                         * 不释放当前Track。
+                         *
+                         * 让下一份PCM再次进入时继续尝试，
+                         * 避免进入“创建 -> 失效 -> 创建”的死循环。
+                         * =================================================
+                         */
+                        logger(
+                            "$TAG: AudioTrack连续短写0，" +
+                                    "暂不释放Track，等待下一包PCM恢复"
+                        )
+
+                        return false
+                    }
+
+                    try {
+
+                        Thread.sleep(
+                            ZERO_WRITE_RETRY_DELAY_MS
+                        )
+
+                    } catch (
+                        _: InterruptedException
+                    ) {
+
+                        Thread.currentThread().interrupt()
+
+                        return false
+                    }
+
+                    continue
+                }
+
+                /*
+                 * ====================================================
+                 * 正常写入了一部分。
+                 *
+                 * 继续写剩余数据。
+                 * ====================================================
+                 */
+                totalWritten +=
+                    result
+
+                if (
+                    result <
+                    data.size -
+                    totalWritten +
+                    result
+                ) {
+
+                    shortRetryCount++
+
+                    if (
+                        shortRetryCount >
+                        MAX_SHORT_WRITE_RETRY
+                    ) {
+
+                        logger(
+                            "$TAG: AudioTrack持续短写，" +
+                                    "written=$totalWritten/" +
+                                    data.size
+                        )
+
+                        return false
+                    }
+                } else {
+
+                    shortRetryCount =
+                        0
+                }
+
+                zeroRetryCount =
+                    0
+            }
+
+            /*
+             * ========================================================
+             * 写入成功后再启动播放。
+             * ========================================================
+             */
+            val playState =
+                try {
+
+                    currentTrack.playState
+
+                } catch (
+                    e: Throwable
                 ) {
 
                     logger(
-                        "$TAG: AudioTrack短写 " +
-                                "result=$result " +
-                                "expected=${data.size}"
+                        "$TAG: 获取playState异常=${e.message}"
+                    )
+
+                    AudioTrack.PLAYSTATE_STOPPED
+                }
+
+            if (
+                playState !=
+                AudioTrack.PLAYSTATE_PLAYING
+            ) {
+
+                try {
+
+                    currentTrack.play()
+
+                } catch (
+                    e: Throwable
+                ) {
+
+                    logger(
+                        "$TAG: AudioTrack.play异常=${e.message}"
                     )
 
                     releaseIfCurrentLocked(
@@ -590,69 +756,9 @@ class WalkieAudioPlayer(
 
                     return false
                 }
-
-                /*
-                 * ====================================================
-                 * 写入成功之后才进入 PLAYING。
-                 * ====================================================
-                 */
-                val playState =
-                    try {
-
-                        currentTrack.playState
-
-                    } catch (
-                        e: Throwable
-                    ) {
-
-                        logger(
-                            "$TAG: 获取playState异常=${e.message}"
-                        )
-
-                        AudioTrack.PLAYSTATE_STOPPED
-                    }
-
-                if (
-                    playState !=
-                    AudioTrack.PLAYSTATE_PLAYING
-                ) {
-
-                    try {
-
-                        currentTrack.play()
-
-                    } catch (
-                        e: Throwable
-                    ) {
-
-                        logger(
-                            "$TAG: AudioTrack.play异常=${e.message}"
-                        )
-
-                        releaseIfCurrentLocked(
-                            currentTrack
-                        )
-
-                        return false
-                    }
-                }
-
-                true
-
-            } catch (
-                e: Throwable
-            ) {
-
-                logger(
-                    "$TAG: write/play异常=${e.message}"
-                )
-
-                releaseIfCurrentLocked(
-                    currentTrack
-                )
-
-                false
             }
+
+            return true
         }
     }
 
@@ -705,67 +811,109 @@ class WalkieAudioPlayer(
                 return false
             }
 
-            return try {
+            val data =
+                applyGain(
+                    pcmData
+                )
 
-                val data =
-                    applyGain(
-                        pcmData
-                    )
+            var written =
+                0
+
+            var retryCount =
+                0
+
+            while (
+                written <
+                data.size
+            ) {
 
                 val result =
-                    track.write(
-                        data,
-                        0,
-                        data.size,
-                        AudioTrack.WRITE_BLOCKING
-                    )
+                    try {
 
-                if (
-                    result !=
-                    data.size
-                ) {
+                        track.write(
+                            data,
+                            written,
+                            data.size -
+                                    written,
+                            AudioTrack.WRITE_BLOCKING
+                        )
 
-                    if (
-                        result < 0
+                    } catch (
+                        e: Throwable
                     ) {
 
                         logger(
-                            "$TAG: write错误=$result"
+                            "$TAG: write异常=${e.message}"
                         )
 
-                    } else {
-
-                        logger(
-                            "$TAG: write短写=$result/" +
-                                    data.size
+                        releaseIfCurrentLocked(
+                            track
                         )
+
+                        return false
                     }
+
+                if (
+                    result <
+                    0
+                ) {
+
+                    logger(
+                        "$TAG: write错误=$result"
+                    )
 
                     releaseIfCurrentLocked(
                         track
                     )
 
-                    false
-
-                } else {
-
-                    true
+                    return false
                 }
 
-            } catch (
-                e: Throwable
-            ) {
+                if (
+                    result == 0
+                ) {
 
-                logger(
-                    "$TAG: write异常=${e.message}"
-                )
+                    retryCount++
 
-                releaseIfCurrentLocked(
-                    track
-                )
+                    if (
+                        retryCount >=
+                        MAX_ZERO_WRITE_RETRY
+                    ) {
 
-                false
+                        logger(
+                            "$TAG: write连续返回0，" +
+                                    "暂不释放Track"
+                        )
+
+                        return false
+                    }
+
+                    try {
+
+                        Thread.sleep(
+                            ZERO_WRITE_RETRY_DELAY_MS
+                        )
+
+                    } catch (
+                        _: InterruptedException
+                    ) {
+
+                        Thread.currentThread().interrupt()
+
+                        return false
+                    }
+
+                    continue
+                }
+
+                written +=
+                    result
+
+                retryCount =
+                    0
             }
+
+            return true
         }
     }
 
@@ -1092,17 +1240,14 @@ class WalkieAudioPlayer(
      * ============================================================
      * 内置扬声器
      * ============================================================
-     *
-     * 只在创建 AudioTrack 时调用。
-     *
-     * 不再每次 write() 前调用。
      */
     private fun setSpeakerLocked(
         track: AudioTrack
     ) {
 
         if (
-            Build.VERSION.SDK_INT < 23
+            Build.VERSION.SDK_INT <
+            23
         ) {
 
             return

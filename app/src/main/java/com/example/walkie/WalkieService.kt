@@ -223,7 +223,7 @@ class WalkieService : Service() {
          * 可以及时检查KEEPALIVE和服务器活动状态。
          */
         private const val SOCKET_RECEIVE_TIMEOUT =
-            500
+            100
 
         /*
          * 服务器超过30秒没有任何返回，
@@ -237,10 +237,10 @@ class WalkieService : Service() {
          * 重连速度保留原来的快速策略。
          */
         private const val INITIAL_RECONNECT_INTERVAL =
-            300L
+            100L
 
         private const val MAX_RECONNECT_INTERVAL =
-            1500L
+            500L
 
         private const val NETWORK_PING_INTERVAL =
             2000L
@@ -3265,12 +3265,29 @@ class WalkieService : Service() {
                 true
             ) {
 
-                println(
-                    "WALKIE $WALKIE_VERSION: " +
-                            "连接任务已存在，忽略重复连接请求"
-                )
+                if (
+                    !isConnected &&
+                    !udpManager.isOpen()
+                ) {
 
-                return
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "检测到旧连接任务仍在退出，" +
+                                "立即取消旧任务并启动新一代连接"
+                    )
+
+                    networkJob?.cancel()
+                    networkJob = null
+
+                } else {
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "连接任务已存在且连接仍有效，忽略重复连接请求"
+                    )
+
+                    return
+                }
             }
 
             /*
@@ -3772,17 +3789,50 @@ class WalkieService : Service() {
              */
 
             /*
-             * HELLO只发送一次。
-             *
-             * 网络迁移成功时，
-             * handleNetworkAvailable()
-             * 会另外发送5次迁移HELLO。
-             *
-             * 这里不重复发送。
-             */
-            sendMessageNow(
-                "$MSG_HELLO:$deviceId:$WALKIE_VERSION"
-            )
+ * 网络重新建立后：
+ *
+ * HELLO 连续发送3次。
+ *
+ * 目的：
+ *
+ * 1. 提高网络刚恢复时首个UDP控制包到达率
+ * 2. 尽快让VPS重新确认当前UDP端点
+ * 3. 不等待第一次HELLO的结果再重试
+ *
+ * 三次之间只间隔40ms，
+ * 不会增加明显恢复延迟。
+ */
+            repeat(3) { index ->
+
+                if (
+                    !isConnectionGenerationCurrent(
+                        generation
+                    ) ||
+                    shuttingDown
+                ) {
+
+                    return
+                }
+
+                sendMessageNow(
+                    "$MSG_HELLO:$deviceId:$WALKIE_VERSION"
+                )
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "重连HELLO ${index + 1}/3 " +
+                            "generation=$generation"
+                )
+
+                if (
+                    index < 2
+                ) {
+
+                    delay(
+                        40L
+                    )
+                }
+            }
 
             val now =
                 System.currentTimeMillis()
