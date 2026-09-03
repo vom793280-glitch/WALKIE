@@ -1,7 +1,8 @@
 import {
   AbilityConstant,
   UIAbility,
-  Want
+  Want,
+  abilityAccessCtrl
 } from '@kit.AbilityKit'
 
 import {
@@ -34,13 +35,16 @@ import {
  * 1. 保留 V24.8.6 后台长时任务
  * 2. 保留锁屏后台运行
  * 3. 保留通知权限
- * 4. 新增全局悬浮 PTT
+ * 4. 保留全局悬浮 PTT
+ * 5. 修复麦克风权限声明后没有运行时授权弹窗的问题
+ *
+ * HarmonyOS 7.0 / API 26
  *
  * ============================================================
  */
 
 export default class EntryAbility
-  extends UIAbility {
+extends UIAbility {
 
   // ==========================================================
   // V24.9.0
@@ -48,7 +52,7 @@ export default class EntryAbility
   // ==========================================================
 
   private floatingPttWindow:
-    window.Window | null =
+  window.Window | null =
     null
 
 
@@ -127,6 +131,22 @@ export default class EntryAbility
 
         /*
          * ====================================================
+         * 请求麦克风权限
+         *
+         * 必须在主页面加载后主动申请。
+         *
+         * module.json5 负责声明权限，
+         * 这里负责真正向用户弹出授权框。
+         * ====================================================
+         */
+
+        void EntryAbility
+          .requestMicrophonePermission(
+            this.context
+          )
+
+        /*
+         * ====================================================
          * 请求通知权限
          * ====================================================
          */
@@ -147,6 +167,102 @@ export default class EntryAbility
         this.createFloatingPttWindow()
       }
     )
+  }
+
+
+  // ==========================================================
+  // 麦克风权限
+  // ==========================================================
+
+  private static async requestMicrophonePermission(
+    context:
+      import('@kit.AbilityKit')
+        .common.UIAbilityContext
+  ):
+    Promise<void> {
+
+    try {
+
+      console.info(
+        'WALKIE V24.9.0: ' +
+          '准备申请麦克风权限'
+      )
+
+      const atManager:
+        abilityAccessCtrl.AtManager =
+        abilityAccessCtrl.createAtManager()
+
+      const result =
+        await atManager.requestPermissionsFromUser(
+          context,
+          [
+            'ohos.permission.MICROPHONE'
+          ]
+        )
+
+      console.info(
+        'WALKIE V24.9.0: ' +
+          `麦克风权限申请结果=${JSON.stringify(result)}`
+      )
+
+      const authResults:
+        Array<number> =
+        result.authResults
+
+      if (
+        authResults.length > 0 &&
+          authResults[0] ===
+            abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED
+      ) {
+
+        console.info(
+          'WALKIE V24.9.0: ' +
+            '★★★★ 麦克风权限已授权 ★★★★'
+        )
+
+      } else {
+
+        console.error(
+          'WALKIE V24.9.0: ' +
+            '❌ 麦克风权限未授权'
+        )
+      }
+
+    } catch (
+    error
+    ) {
+
+      const businessError:
+        BusinessError =
+        error as BusinessError
+
+      console.error(
+        'WALKIE V24.9.0: ' +
+          '申请麦克风权限失败 ' +
+          `code=${businessError.code} ` +
+          `message=${businessError.message}`
+      )
+
+      console.error(
+        'WALKIE V24.9.0: ' +
+          `权限申请异常=${JSON.stringify(error)}`
+      )
+    }
+  }
+
+
+  // ==========================================================
+  // 获取 AccessTokenId
+  // ==========================================================
+
+  private static getAccessTokenId(
+    context:
+      import('@kit.AbilityKit')
+        .common.UIAbilityContext
+  ):
+    number {
+
+    return context.applicationInfo.accessTokenId
   }
 
 
@@ -175,15 +291,6 @@ export default class EntryAbility
       /*
        * ======================================================
        * 系统悬浮窗配置
-       *
-       * 注意：
-       *
-       * 这里直接使用 this.context
-       * 不使用 common.BaseContext。
-       *
-       * 这是为了兼容你当前
-       * HarmonyOS 7.0 / API 26
-       * 工程的 ArkTS 类型检查。
        * ======================================================
        */
 
@@ -191,13 +298,13 @@ export default class EntryAbility
         window.Configuration = {
 
         name:
-          'WALKIE_FLOAT_PTT',
+        'WALKIE_FLOAT_PTT',
 
         windowType:
-          window.WindowType.TYPE_FLOAT,
+        window.WindowType.TYPE_FLOAT,
 
         ctx:
-          this.context
+        this.context
       }
 
       /*
@@ -254,7 +361,7 @@ export default class EntryAbility
       )
 
     } catch (
-      error
+    error
     ) {
 
       const businessError:
@@ -298,7 +405,7 @@ export default class EntryAbility
       )
 
     } catch (
-      error
+    error
     ) {
 
       console.warn(
@@ -313,9 +420,6 @@ export default class EntryAbility
     /*
      * ========================================================
      * 初始位置
-     *
-     * 先放在右侧中下区域。
-     * 用户之后可以拖动。
      * ========================================================
      */
 
@@ -327,7 +431,7 @@ export default class EntryAbility
       )
 
     } catch (
-      error
+    error
     ) {
 
       console.warn(
@@ -387,7 +491,7 @@ export default class EntryAbility
               )
 
           } catch (
-            error
+          error
           ) {
 
             console.warn(
@@ -415,7 +519,7 @@ export default class EntryAbility
             )
 
           } catch (
-            error
+          error
           ) {
 
             console.error(
@@ -430,7 +534,7 @@ export default class EntryAbility
       )
 
     } catch (
-      error
+    error
     ) {
 
       console.error(
@@ -490,7 +594,7 @@ export default class EntryAbility
       )
 
     } catch (
-      error
+    error
     ) {
 
       const businessError:
@@ -614,7 +718,7 @@ export default class EntryAbility
      */
 
     const floatWindow:
-      window.Window | null =
+    window.Window | null =
       this.floatingPttWindow
 
     this.floatingPttWindow =
@@ -638,7 +742,7 @@ export default class EntryAbility
       )
 
     } catch (
-      error
+    error
     ) {
 
       console.warn(

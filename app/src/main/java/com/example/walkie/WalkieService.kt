@@ -1,5 +1,9 @@
-﻿package com.example.walkie
+package com.example.walkie
 
+import com.example.walkie.audio.WalkieAudioPlayer
+import com.example.walkie.audio.WalkieAudioPlayback
+import com.example.walkie.network.WalkieNetworkMonitor
+import com.example.walkie.network.WalkieNetworkStats
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
@@ -15,13 +19,11 @@ import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
-import android.media.AudioTrack
 import android.media.ToneGenerator
 import android.media.MediaRecorder
 import android.media.audiofx.AcousticEchoCanceler
 import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
-import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.os.Build
@@ -53,7 +55,7 @@ class WalkieService : Service() {
 
     companion object {
 
-        private const val WALKIE_VERSION = "V23.3"
+        private const val WALKIE_VERSION = "V24.9.1"
 
         const val ACTION_START =
             "com.example.walkie.ACTION_START"
@@ -277,35 +279,35 @@ class WalkieService : Service() {
         private const val PLAYBACK_GAIN =
             1.0f
 
-                /*
-         * ============================================================
-         * V23.1 弱网音频协议
-         * ============================================================
-         *
-         * Header:
-         *
-         * 4 bytes  MAGIC     = W23A
-         * 4 bytes  STREAM_ID
-         * 4 bytes  SEQUENCE
-         * N bytes  OPUS
-         *
-         * StreamID：
-         *
-         * 区分：
-         *
-         * 1. 不同说话人
-         * 2. Service重新启动
-         * 3. 手机重新连接
-         *
-         * Sequence：
-         *
-         * 检测：
-         *
-         * 1. 丢包
-         * 2. 乱序
-         * 3. 重复包
-         * ============================================================
-         */
+        /*
+ * ============================================================
+ * V23.1 弱网音频协议
+ * ============================================================
+ *
+ * Header:
+ *
+ * 4 bytes  MAGIC     = W23A
+ * 4 bytes  STREAM_ID
+ * 4 bytes  SEQUENCE
+ * N bytes  OPUS
+ *
+ * StreamID：
+ *
+ * 区分：
+ *
+ * 1. 不同说话人
+ * 2. Service重新启动
+ * 3. 手机重新连接
+ *
+ * Sequence：
+ *
+ * 检测：
+ *
+ * 1. 丢包
+ * 2. 乱序
+ * 3. 重复包
+ * ============================================================
+ */
 
         private const val AUDIO_V231_MAGIC =
             "W23A"
@@ -490,6 +492,9 @@ class WalkieService : Service() {
     private var isNetworkAvailable =
         true
 
+    private var lastNetworkPingTime =
+        0L
+
     private var activeNetwork:
             Network? =
         null
@@ -514,8 +519,8 @@ class WalkieService : Service() {
     private var connectionGeneration =
         0L
 
-    private var networkCallback:
-            ConnectivityManager.NetworkCallback? =
+    private var networkMonitor:
+            WalkieNetworkMonitor? =
         null
 
     private var networkJob:
@@ -549,66 +554,60 @@ class WalkieService : Service() {
      * ============================================================
      * V21 网络质量
      * ============================================================
+     *
+     * 网络质量统计独立到 WalkieNetworkStats。
+     * WalkieService 只保留对外状态代理，避免业务代码被统计细节淹没。
      */
 
-    private val networkStatsLock = Any()
+    private val networkStats by lazy {
+        WalkieNetworkStats(
+            serverPort = SERVER_PORT,
+            pingMessagePrefix = MSG_NET_PING,
+            pongMessagePrefix = MSG_NET_PONG,
+            pingWindowSize = NETWORK_PING_WINDOW,
+            pingTimeoutMs = NETWORK_PING_TIMEOUT,
+            bitrateWindowMs = NETWORK_BITRATE_WINDOW,
+            statusMinIntervalMs = NETWORK_STATUS_MIN_INTERVAL,
+            defaultRecoveryPackets = PLAYBACK_RECOVERY_BUFFER_PACKETS,
+            socketProvider = { udpSocket },
+            serverAddressProvider = { serverAddress },
+            isConnectedProvider = { isConnected },
+            packageNameProvider = { packageName },
+            context = applicationContext,
+            actionNetworkStatus = ACTION_NETWORK_STATUS,
+            extraLatency = EXTRA_NETWORK_LATENCY,
+            extraLoss = EXTRA_NETWORK_LOSS,
+            extraQuality = EXTRA_NETWORK_QUALITY,
+            extraBitrate = EXTRA_NETWORK_BITRATE,
+            extraUploadBitrate = EXTRA_NETWORK_UPLOAD_BITRATE,
+            extraDownloadBitrate = EXTRA_NETWORK_DOWNLOAD_BITRATE,
+            extraJitter = EXTRA_NETWORK_JITTER,
+            logger = { message -> println(message) }
+        )
+    }
 
-    private val pingPending =
-        HashMap<Long, Long>()
+    private val networkLatencyMs: Long
+        get() = networkStats.latencyMs
 
-    private val pingResults =
-        ArrayDeque<Boolean>()
+    private val networkJitterMs: Long
+        get() = networkStats.jitterMs
 
-    private var pingSequence =
-        0L
+    private val networkLossPercent: Float
+        get() = networkStats.lossPercent
 
-    private var lastNetworkPingTime =
-        0L
+    private val networkQuality: String
+        get() = networkStats.quality
 
-    private var lastNetworkBroadcastTime =
-        0L
+    private val networkBitrateKbps: Float
+        get() = networkStats.uploadBitrateKbps
 
-    private var networkLatencyMs =
-        -1L
+    private val networkDownloadBitrateKbps: Float
+        get() = networkStats.downloadBitrateKbps
 
-    private var networkJitterMs =
-        -1L
-
-    private var networkLossPercent =
-        100f
-
-    private var networkQuality =
-        "检测中"
-
-    private var txAudioWindowBytes =
-        0L
-
-    private var txAudioWindowStart =
-        0L
-
-    private var networkBitrateKbps =
-        0f
-
-    private var networkDownloadBitrateKbps =
-        0f
-
-    private var rxAudioWindowBytes =
-        0L
-
-    private var rxAudioWindowStart =
-        0L
-
-    private var adaptivePlaybackRecoveryPackets =
-        PLAYBACK_RECOVERY_BUFFER_PACKETS
+    private val adaptivePlaybackRecoveryPackets: Int
+        get() = networkStats.adaptiveRecoveryPackets
 
     /*
-     * V21：
-     * 连续 Opus 解码失败次数。
-     *
-     * 防止网络抖动/损坏包连续出现时，
-     * 播放端一直沿用旧的稳定状态。
-     */
-        /*
      * ============================================================
      * V23.1 音频流状态
      * ============================================================
@@ -647,7 +646,7 @@ class WalkieService : Service() {
 
     private val audioV231JitterBuffer =
         java.util.TreeMap<Long, ByteArray>()
-private var consecutiveDecodeFailures =
+    private var consecutiveDecodeFailures =
         0
 
     /*
@@ -660,38 +659,67 @@ private var consecutiveDecodeFailures =
         ArrayList<UserInfo>()
 
     /*
-     * ============================================================
-     * 播放
-     * ============================================================
-     */
+ * ============================================================
+ * 播放
+ * ============================================================
+ */
 
-    private var audioTrack:
-            AudioTrack? =
-        null
+    private val audioPlayer by lazy {
 
-    private var playbackJob:
-            Job? =
-        null
+        WalkieAudioPlayer(
+            context = applicationContext,
+            sampleRate = SAMPLE_RATE,
+            packetSize = AUDIO_PACKET_SIZE,
+            gain = PLAYBACK_GAIN
+        ) { message ->
 
-    private val playbackQueue =
-        ArrayBlockingQueue<ByteArray>(
-            PLAYBACK_QUEUE_CAPACITY
+            println(
+                message
+            )
+        }
+    }
+
+    private val audioPlayback by lazy {
+
+        WalkieAudioPlayback(
+            audioPlayer = audioPlayer,
+
+            queueCapacity =
+                PLAYBACK_QUEUE_CAPACITY,
+
+            startBufferPackets =
+                PLAYBACK_START_BUFFER_PACKETS,
+
+            recoveryBufferPackets =
+                PLAYBACK_RECOVERY_BUFFER_PACKETS,
+
+            maxQueuePackets =
+                PLAYBACK_MAX_QUEUE_PACKETS,
+
+            latencyProvider = {
+                networkLatencyMs
+            },
+
+            lossProvider = {
+                networkLossPercent
+            },
+
+            jitterProvider = {
+                networkJitterMs
+            },
+
+            recoveryPacketsProvider = {
+                adaptivePlaybackRecoveryPackets
+            },
+
+            logger = { message ->
+
+                println(
+                    message
+                )
+            }
         )
-
-    private val audioTrackLock =
-        Any()
-
-    private val playbackWorkerLock =
-        Any()
-
-    private var playbackWorkerStarting =
-        false
-
-    private var playbackRecoveryRequested =
-        false
-
-    private var lastUnderrunCount =
-        0
+    }
 
     /*
      * ============================================================
@@ -1618,10 +1646,19 @@ private var consecutiveDecodeFailures =
                     it.userId
                 }
                 .sortedWith(
-                    compareBy<UserInfo> {
-                        it.userId != myUserId
-                    }.thenBy {
-                        it.username
+                    Comparator { left, right ->
+                        val leftPriority =
+                            if (left.userId == myUserId) 0 else 1
+                        val rightPriority =
+                            if (right.userId == myUserId) 0 else 1
+
+                        when {
+                            leftPriority != rightPriority ->
+                                leftPriority.compareTo(rightPriority)
+
+                            else ->
+                                left.username.compareTo(right.username)
+                        }
                     }
                 )
 
@@ -1730,11 +1767,11 @@ private var consecutiveDecodeFailures =
      * ============================================================
      */
 
-        /*
-     * ============================================================
-     * V23.1 构建音频包
-     * ============================================================
-     */
+    /*
+ * ============================================================
+ * V23.1 构建音频包
+ * ============================================================
+ */
 
     private fun buildV231AudioPacket(
         opusData: ByteArray
@@ -2093,7 +2130,7 @@ private var consecutiveDecodeFailures =
 
             if (
                 now -
-                        audioV231GapStartTime >=
+                audioV231GapStartTime >=
                 AUDIO_V231_MAX_WAIT_MS
             ) {
 
@@ -2145,7 +2182,7 @@ private var consecutiveDecodeFailures =
         }
     }
 
-private fun initializeOpus() {
+    private fun initializeOpus() {
 
         try {
 
@@ -2222,7 +2259,7 @@ private fun initializeOpus() {
                                 "connected=$isConnected " +
                                 "keepalive=$udpKeepAliveCount " +
                                 "rx=$udpReceiveCount " +
-                                "queue=${playbackQueue.size} " +
+                                "queue=${audioPlayback.queueSize()} " +
                                 "users=${currentUserList.size} " +
                                 "socketPort=${udpSocket?.localPort ?: -1} " +
                                 "generation=$connectionGeneration " +
@@ -2384,214 +2421,158 @@ private fun initializeOpus() {
 
     private fun registerNetworkCallback() {
 
+        if (networkMonitor != null) {
+            return
+        }
+
+        networkMonitor =
+            WalkieNetworkMonitor(
+                context = applicationContext,
+                onAvailable = { network ->
+                    handleNetworkAvailable(network)
+                },
+                onLost = { network ->
+                    handleNetworkLost(network)
+                },
+                onCapabilitiesChanged = { network, capabilities ->
+                    handleNetworkCapabilitiesChanged(
+                        network,
+                        capabilities
+                    )
+                },
+                logger = { message ->
+                    println(message)
+                }
+            )
+
+        networkMonitor?.start()
+    }
+
+    private fun unregisterNetworkCallback() {
+
+        networkMonitor?.stop()
+        networkMonitor = null
+        activeNetwork = null
+    }
+
+    private fun handleNetworkAvailable(
+        network: Network
+    ) {
+
+        val previousNetwork = activeNetwork
+
+        println(
+            "WALKIE $WALKIE_VERSION: 网络可用=$network"
+        )
+
         if (
-            networkCallback != null
+            previousNetwork != null &&
+            previousNetwork != network
+        ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "检测到网络切换 $previousNetwork -> $network，" +
+                        "立即作废旧UDP连接"
+            )
+
+            synchronized(connectionLock) {
+                connectionGeneration++
+                networkJob?.cancel()
+                networkJob = null
+            }
+
+            closeSocket()
+            clearUserList()
+            setConnected(false)
+        }
+
+        activeNetwork = network
+        isNetworkAvailable = true
+
+        val ip = serverIp
+
+        if (
+            shuttingDown ||
+            ip.isNullOrBlank()
         ) {
 
             return
         }
 
-        val connectivityManager =
-            getSystemService(
-                Context.CONNECTIVITY_SERVICE
-            ) as ConnectivityManager
+        serviceScope.launch {
 
-        networkCallback =
-            object :
-                ConnectivityManager.NetworkCallback() {
+            delay(200L)
 
-                override fun onAvailable(
-                    network: Network
-                ) {
-
-                    println(
-                        "WALKIE $WALKIE_VERSION: 网络可用=$network"
-                    )
-
-                    activeNetwork =
-                        network
-
-                    isNetworkAvailable =
-                        true
-
-                    val ip =
-                        serverIp
-
-                    if (
-                        shuttingDown ||
-                        ip.isNullOrBlank()
-                    ) {
-
-                        return
-                    }
-
-                    /*
-                     * 这里故意不closeSocket()
-                     * 不cancel旧networkJob。
-                     *
-                     * 旧连接如果已经失效，
-                     * 它自己的Socket生命周期会负责退出。
-                     *
-                     * 如果旧连接仍然健康，
-                     * 更不能重复创建新Socket。
-                     */
-
-                    serviceScope.launch {
-
-                        delay(
-                            200L
-                        )
-
-                        if (
-                            shuttingDown
-                        ) {
-
-                            return@launch
-                        }
-
-                        if (
-                            isConnected &&
-                            udpSocket?.isClosed ==
-                            false
-                        ) {
-
-                            println(
-                                "WALKIE $WALKIE_VERSION: " +
-                                        "网络恢复但现有UDP仍健康，" +
-                                        "不创建新Socket"
-                            )
-
-                            return@launch
-                        }
-
-                        startConnection(
-                            ip
-                        )
-                    }
-                }
-
-                override fun onLost(
-                    network: Network
-                ) {
-
-                    if (
-                        activeNetwork !=
-                        network
-                    ) {
-
-                        return
-                    }
-
-                    println(
-                        "WALKIE $WALKIE_VERSION: 当前网络丢失=$network"
-                    )
-
-                    activeNetwork =
-                        null
-
-                    isNetworkAvailable =
-                        false
-
-                    /*
-                     * 先让当前连接状态失效。
-                     */
-                    setConnected(
-                        false
-                    )
-
-                    /*
-                     * 使当前generation立即失效。
-                     *
-                     * 这样旧连接在finally里不会
-                     * 清理未来的新连接。
-                     */
-                    synchronized(
-                        connectionLock
-                    ) {
-
-                        connectionGeneration++
-
-                        networkJob?.cancel()
-
-                        networkJob =
-                            null
-                    }
-
-                    closeSocket()
-
-                    clearUserList()
-
-                    println(
-                        "WALKIE $WALKIE_VERSION: " +
-                                "网络断开，旧连接已作废"
-                    )
-                }
-
-                override fun onCapabilitiesChanged(
-                    network: Network,
-                    networkCapabilities: NetworkCapabilities
-                ) {
-
-                    if (
-                        activeNetwork ==
-                        network
-                    ) {
-
-                        println(
-                            "WALKIE $WALKIE_VERSION: 网络能力变化"
-                        )
-                    }
-                }
+            if (shuttingDown) {
+                return@launch
             }
 
-        try {
+            if (
+                activeNetwork != network
+            ) {
 
-            connectivityManager
-                .registerDefaultNetworkCallback(
-                    networkCallback!!
+                return@launch
+            }
+
+            if (
+                isConnected &&
+                udpSocket?.isClosed == false
+            ) {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "当前UDP仍健康，不创建重复Socket"
                 )
 
-            println(
-                "WALKIE $WALKIE_VERSION: 网络监听注册成功"
-            )
+                return@launch
+            }
 
-        } catch (e: Exception) {
-
-            println(
-                "WALKIE $WALKIE_VERSION: 网络监听失败=${e.message}"
-            )
-
-            networkCallback =
-                null
+            startConnection(ip)
         }
     }
 
-    private fun unregisterNetworkCallback() {
+    private fun handleNetworkLost(
+        network: Network
+    ) {
 
-        val callback =
-            networkCallback
-                ?: return
-
-        try {
-
-            val connectivityManager =
-                getSystemService(
-                    Context.CONNECTIVITY_SERVICE
-                ) as ConnectivityManager
-
-            connectivityManager
-                .unregisterNetworkCallback(
-                    callback
-                )
-
-        } catch (_: Exception) {
+        if (activeNetwork != network) {
+            return
         }
 
-        networkCallback =
-            null
+        println(
+            "WALKIE $WALKIE_VERSION: 当前网络丢失=$network"
+        )
 
-        activeNetwork =
-            null
+        activeNetwork = null
+        isNetworkAvailable = false
+
+        setConnected(false)
+
+        synchronized(connectionLock) {
+            connectionGeneration++
+            networkJob?.cancel()
+            networkJob = null
+        }
+
+        closeSocket()
+        clearUserList()
+
+        println(
+            "WALKIE $WALKIE_VERSION: 网络断开，旧连接已作废"
+        )
+    }
+
+    private fun handleNetworkCapabilitiesChanged(
+        network: Network,
+        capabilities: NetworkCapabilities
+    ) {
+
+        if (activeNetwork == network) {
+            println(
+                "WALKIE $WALKIE_VERSION: 网络能力变化=$capabilities"
+            )
+        }
     }
 
     /*
@@ -3000,7 +2981,18 @@ private fun initializeOpus() {
 
         try {
 
-            createAudioPlayer()
+            /*
+             * ============================================================
+             * V24.9.1
+             * AudioTrack不再由WalkieService直接创建。
+             *
+             * 新的WalkieAudioPlayback会在收到PCM后，
+             * 自动通过WalkieAudioPlayer创建并管理AudioTrack。
+             *
+             * 这里不要提前创建播放器，
+             * 避免连接建立时AudioTrack提前初始化。
+             * ============================================================
+             */
 
             /*
              * HELLO只发送一次。
@@ -3597,6 +3589,29 @@ private fun initializeOpus() {
                         continue
                     }
 
+                    if (
+                        opusPayload.isEmpty()
+                    ) {
+
+                        println(
+                            "WALKIE AUDIO: drop empty Opus payload"
+                        )
+
+                        continue
+                    }
+
+                    if (
+                        opusPayload.size >
+                        MAX_OPUS_PACKET_SIZE
+                    ) {
+
+                        println(
+                            "WALKIE AUDIO: drop oversized Opus payload=${opusPayload.size}"
+                        )
+
+                        continue
+                    }
+
                     val pcmData =
                         try {
 
@@ -3639,8 +3654,7 @@ private fun initializeOpus() {
                             consecutiveDecodeFailures >= 3
                         ) {
 
-                            playbackRecoveryRequested =
-                                true
+                            audioPlayback.requestRecovery()
 
                             println(
                                 "WALKIE AUDIO: " +
@@ -5598,21 +5612,21 @@ private fun initializeOpus() {
                         try {
 
                             val framedAudio =
-                            buildV231AudioPacket(
-                                opus
-                            )
+                                buildV231AudioPacket(
+                                    opus
+                                )
 
-                        val packet =
-                            DatagramPacket(
-                                framedAudio,
-                                framedAudio.size,
-                                address,
-                                SERVER_PORT
-                            )
+                            val packet =
+                                DatagramPacket(
+                                    framedAudio,
+                                    framedAudio.size,
+                                    address,
+                                    SERVER_PORT
+                                )
 
-                        socket.send(
-                            packet
-                        )
+                            socket.send(
+                                packet
+                            )
 
                             recordAudioTransmit(
                                 opus.size
@@ -6076,501 +6090,71 @@ private fun initializeOpus() {
 
     private fun resetNetworkStats() {
 
-        synchronized(networkStatsLock) {
-
-            pingPending.clear()
-            pingResults.clear()
-            pingSequence = 0L
-        }
-
-        networkLatencyMs = -1L
-        networkJitterMs = -1L
-
-        /*
-         * 没有任何探测样本时：
-         *
-         * 不能显示 100% 丢包。
-         *
-         * 100% 代表“已经统计到全部失败”。
-         *
-         * 当前没有样本应该是：
-         * 检测中
-         */
-        networkLossPercent = 0f
-
-        networkBitrateKbps = 0f
-        networkDownloadBitrateKbps = 0f
-
-        networkQuality =
-            if (isConnected) {
-                "检测中"
-            } else {
-                "离线"
-            }
-
-        txAudioWindowBytes = 0L
-        txAudioWindowStart =
+        networkStats.reset(
             System.currentTimeMillis()
-
-        rxAudioWindowBytes = 0L
-        rxAudioWindowStart =
-            txAudioWindowStart
-
-        adaptivePlaybackRecoveryPackets =
-            PLAYBACK_RECOVERY_BUFFER_PACKETS
-
-        broadcastNetworkStatus(true)
-    }
-
-    private fun sendNetworkPing(now: Long) {
-
-        val seq =
-            synchronized(networkStatsLock) {
-
-                pingSequence =
-                    (
-                        pingSequence + 1L
-                    ) and
-                    0x7FFF_FFFFL
-
-                pingPending[
-                    pingSequence
-                ] = now
-
-                pingSequence
-            }
-
-        val message =
-            "$MSG_NET_PING:$seq:$now"
-
-        /*
-         * V23.3：
-         *
-         * 网络探测不能再通过 coroutine
-         * 异步排队发送。
-         *
-         * 当前 receive loop 本身就是 UDP
-         * 连接核心线程。
-         *
-         * 直接发送可以保证：
-         *
-         * 发送时间
-         * =
-         * 真正 socket.send() 时间
-         *
-         * 这样 RTT 才可靠。
-         */
-
-        val socket =
-            udpSocket
-
-        val address =
-            serverAddress
-
-        if (
-            socket == null ||
-            socket.isClosed ||
-            address == null
-        ) {
-
-            synchronized(networkStatsLock) {
-                pingPending.remove(seq)
-            }
-
-            println(
-                "WALKIE $WALKIE_VERSION: " +
-                        "NET PING 发送失败：Socket不可用 seq=$seq"
-            )
-
-            addPingResult(false)
-
-            updateNetworkQuality()
-            broadcastNetworkStatus(false)
-
-            return
-        }
-
-        try {
-
-            val data =
-                message.toByteArray(
-                    Charsets.UTF_8
-                )
-
-            val packet =
-                DatagramPacket(
-                    data,
-                    data.size,
-                    address,
-                    SERVER_PORT
-                )
-
-            socket.send(
-                packet
-            )
-
-            println(
-                "WALKIE $WALKIE_VERSION: " +
-                        "NET PING 发送 seq=$seq"
-            )
-
-        } catch (
-            e: Throwable
-        ) {
-
-            synchronized(networkStatsLock) {
-                pingPending.remove(seq)
-            }
-
-            println(
-                "WALKIE $WALKIE_VERSION: " +
-                        "NET PING 发送异常 " +
-                        "seq=$seq error=${e.message}"
-            )
-
-            addPingResult(false)
-
-            updateNetworkQuality()
-            broadcastNetworkStatus(false)
-        }
-    }
-
-    private fun handleNetworkPong(text: String) {
-
-        val payload =
-            text.substringAfter(
-                "$MSG_NET_PONG:",
-                ""
-            )
-
-        val parts =
-            payload.split(":")
-
-        val sequence =
-            parts
-                .getOrNull(0)
-                ?.toLongOrNull()
-                ?: return
-
-        val sentAt =
-            synchronized(networkStatsLock) {
-
-                pingPending.remove(
-                    sequence
-                )
-
-            } ?: return
-
-        val now =
-            System.currentTimeMillis()
-
-        val rtt =
-            (
-                now - sentAt
-            ).coerceIn(
-                0L,
-                60000L
-            )
-
-        val previous =
-            networkLatencyMs
-
-        networkLatencyMs =
-            if (
-                previous < 0L
-            ) {
-
-                rtt
-
-            } else {
-
-                (
-                    (previous * 0.70) +
-                            (rtt * 0.30)
-                    )
-                    .toLong()
-            }
-
-        if (
-            previous >= 0L
-        ) {
-
-            val diff =
-                abs(
-                    rtt - previous
-                ).toDouble()
-
-            networkJitterMs =
-                if (
-                    networkJitterMs < 0L
-                ) {
-
-                    diff.toLong()
-
-                } else {
-
-                    (
-                        (networkJitterMs * 0.75) +
-                                (diff * 0.25)
-                        )
-                        .toLong()
-                }
-
-        } else {
-
-            networkJitterMs =
-                0L
-        }
-
-        addPingResult(true)
-
-        updateNetworkQuality()
-
-        adaptPlaybackBuffer()
-
-        println(
-            "WALKIE $WALKIE_VERSION: " +
-                    "NET PONG seq=$sequence " +
-                    "rtt=${rtt}ms " +
-                    "loss=${networkLossPercent}% " +
-                    "jitter=${networkJitterMs}ms"
         )
-
-        broadcastNetworkStatus(false)
     }
 
-    private fun expireNetworkPings(now: Long) {
+    private fun sendNetworkPing(
+        now: Long
+    ) {
 
-        val expired = ArrayList<Long>()
-
-        synchronized(networkStatsLock) {
-            val iterator = pingPending.entries.iterator()
-            while (iterator.hasNext()) {
-                val entry = iterator.next()
-                if (now - entry.value >= NETWORK_PING_TIMEOUT) {
-                    expired.add(entry.key)
-                    iterator.remove()
-                }
-            }
-        }
-
-        if (expired.isNotEmpty()) {
-            repeat(expired.size) {
-                addPingResult(false)
-            }
-            updateNetworkQuality()
-            adaptPlaybackBuffer()
-            broadcastNetworkStatus(false)
-        }
+        networkStats.sendPing(now)
     }
 
-    private fun addPingResult(success: Boolean) {
+    private fun handleNetworkPong(
+        text: String
+    ) {
 
-        synchronized(networkStatsLock) {
+        networkStats.handlePong(
+            text,
+            System.currentTimeMillis()
+        )
+    }
 
-            pingResults.addLast(
-                success
-            )
+    private fun expireNetworkPings(
+        now: Long
+    ) {
 
-            while (
-                pingResults.size >
-                NETWORK_PING_WINDOW
-            ) {
-
-                pingResults.removeFirst()
-            }
-
-            val total =
-                pingResults.size
-
-            if (
-                total <= 0
-            ) {
-
-                networkLossPercent =
-                    0f
-
-            } else {
-
-                val lost =
-                    pingResults.count {
-                        !it
-                    }
-
-                networkLossPercent =
-                    lost *
-                            100f /
-                            total.toFloat()
-            }
-        }
+        networkStats.expirePings(now)
     }
 
     private fun updateNetworkQuality() {
 
-        val latency =
-            networkLatencyMs
-
-        val loss =
-            networkLossPercent
-
-        val jitter =
-            networkJitterMs.coerceAtLeast(
-                0L
-            )
-
-        val sampleCount =
-            synchronized(
-                networkStatsLock
-            ) {
-                pingResults.size
-            }
-
-        networkQuality =
-            when {
-
-                !isConnected ->
-                    "离线"
-
-                sampleCount < 3 ||
-                        latency < 0L ->
-                    "检测中"
-
-                loss >= 20f ||
-                        latency >= 300L ||
-                        jitter >= 100L ->
-                    "较差"
-
-                loss >= 8f ||
-                        latency >= 180L ||
-                        jitter >= 50L ->
-                    "一般"
-
-                loss >= 3f ||
-                        latency >= 100L ||
-                        jitter >= 25L ->
-                    "良好"
-
-                else ->
-                    "优秀"
-            }
+        networkStats.updateQuality()
     }
 
     private fun adaptPlaybackBuffer() {
 
-        val loss = networkLossPercent
-        val latency = networkLatencyMs
-        val jitter = networkJitterMs
-
-        adaptivePlaybackRecoveryPackets = when {
-            loss >= 12f || latency >= 250L || jitter >= 70L -> 6
-            loss >= 5f || latency >= 150L || jitter >= 35L -> 4
-            else -> PLAYBACK_RECOVERY_BUFFER_PACKETS
-        }.coerceIn(3, 6)
+        networkStats.adaptPlaybackBuffer()
     }
 
-    private fun recordAudioTransmit(bytes: Int) {
+    private fun recordAudioTransmit(
+        bytes: Int
+    ) {
 
-        val now = System.currentTimeMillis()
-
-        if (txAudioWindowStart <= 0L) {
-            txAudioWindowStart = now
-        }
-
-        txAudioWindowBytes += bytes.toLong()
-
-        updateNetworkBitrate(now)
+        networkStats.recordAudioTransmit(bytes)
     }
 
-    private fun recordAudioReceive(bytes: Int) {
+    private fun recordAudioReceive(
+        bytes: Int
+    ) {
 
-        val now = System.currentTimeMillis()
-
-        if (rxAudioWindowStart <= 0L) {
-            rxAudioWindowStart = now
-        }
-
-        rxAudioWindowBytes += bytes.toLong()
-
-        updateNetworkBitrate(now)
+        networkStats.recordAudioReceive(bytes)
     }
 
-    private fun updateNetworkBitrate(now: Long) {
+    private fun updateNetworkBitrate(
+        now: Long
+    ) {
 
-        val txStart = txAudioWindowStart
-        val rxStart = rxAudioWindowStart
-        val windowStart = minOf(
-            if (txStart > 0L) txStart else now,
-            if (rxStart > 0L) rxStart else now
-        )
-        val elapsed = now - windowStart
-
-        if (elapsed < NETWORK_BITRATE_WINDOW) {
-            return
-        }
-
-        if (txStart > 0L) {
-            val txElapsed = (now - txStart).coerceAtLeast(1L)
-            networkBitrateKbps =
-                (txAudioWindowBytes * 8.0 / (txElapsed / 1000.0) / 1000.0).toFloat()
-            txAudioWindowBytes = 0L
-            txAudioWindowStart = now
-        }
-
-        if (rxStart > 0L) {
-            val rxElapsed = (now - rxStart).coerceAtLeast(1L)
-            networkDownloadBitrateKbps =
-                (rxAudioWindowBytes * 8.0 / (rxElapsed / 1000.0) / 1000.0).toFloat()
-            rxAudioWindowBytes = 0L
-            rxAudioWindowStart = now
-        }
-
-        broadcastNetworkStatus(false)
+        networkStats.updateBitrate(now)
     }
 
-    private fun broadcastNetworkStatus(force: Boolean) {
+    private fun broadcastNetworkStatus(
+        force: Boolean
+    ) {
 
-        val now = System.currentTimeMillis()
-
-        if (!force &&
-            now - lastNetworkBroadcastTime < NETWORK_STATUS_MIN_INTERVAL) {
-            return
-        }
-
-        lastNetworkBroadcastTime = now
-
-        val intent =
-            Intent(ACTION_NETWORK_STATUS)
-                .setPackage(packageName)
-                .putExtra(
-                    EXTRA_NETWORK_LATENCY,
-                    networkLatencyMs
-                )
-                .putExtra(
-                    EXTRA_NETWORK_LOSS,
-                    networkLossPercent
-                )
-                .putExtra(
-                    EXTRA_NETWORK_QUALITY,
-                    networkQuality
-                )
-                .putExtra(
-                    EXTRA_NETWORK_BITRATE,
-                    networkBitrateKbps
-                )
-                .putExtra(
-                    EXTRA_NETWORK_UPLOAD_BITRATE,
-                    networkBitrateKbps
-                )
-                .putExtra(
-                    EXTRA_NETWORK_DOWNLOAD_BITRATE,
-                    networkDownloadBitrateKbps
-                )
-                .putExtra(
-                    EXTRA_NETWORK_JITTER,
-                    networkJitterMs
-                )
-
-        sendBroadcast(intent)
+        networkStats.broadcastStatus(force)
     }
 
     /*
@@ -6607,1516 +6191,53 @@ private fun initializeOpus() {
     ) {
 
         /*
-         * ========================================================
-         * 基础数据安全检查
-         * ========================================================
+         * ============================================================
+         * V24.9.1
+         * PCM进入独立音频播放模块。
+         *
+         * WalkieService：
+         *      负责 UDP / W23A / Opus 解码
+         *
+         * WalkieAudioPlayback：
+         *      负责播放队列 / 缓冲 / 播放线程
+         *
+         * WalkieAudioPlayer：
+         *      负责 AudioTrack 生命周期
+         * ============================================================
          */
 
         if (
             data.isEmpty() ||
             data.size % 2 != 0
         ) {
-
             return
         }
 
         if (
             data.size > 8192
         ) {
-
             return
         }
 
-        /*
-         * ========================================================
-         * 根据网络状态动态确定最大播放队列
-         * ========================================================
-         *
-         * 大约按照：
-         *
-         * 8包  ≈ 160ms
-         * 12包 ≈ 240ms
-         * 16包 ≈ 320ms
-         * 20包 ≈ 400ms
-         *
-         * 仍然保留实时对讲优先。
-         */
+        try {
 
-        val latency =
-            networkLatencyMs
-
-        val loss =
-            networkLossPercent
-
-        val jitter =
-            networkJitterMs
-
-        val dynamicMaxQueue =
-            when {
-
-                /*
-                 * 严重弱网：
-                 * 稍微增加缓冲，避免频繁断音。
-                 */
-                loss >= 12f ||
-                        latency >= 250L ||
-                        jitter >= 70L -> {
-
-                    20
-                }
-
-                /*
-                 * 中等弱网。
-                 */
-                loss >= 5f ||
-                        latency >= 150L ||
-                        jitter >= 35L -> {
-
-                    16
-                }
-
-                /*
-                 * 网络良好。
-                 */
-                loss >= 3f ||
-                        latency >= 100L ||
-                        jitter >= 25L -> {
-
-                    12
-                }
-
-                /*
-                 * 优秀网络：
-                 * 低延迟优先。
-                 */
-                else -> {
-
-                    8
-                }
-            }
-                .coerceIn(
-                    8,
-                    PLAYBACK_MAX_QUEUE_PACKETS
-                )
-
-        /*
-         * ========================================================
-         * 队列限流
-         * ========================================================
-         *
-         * 队列过长以后，
-         * 不继续无限堆积。
-         *
-         * 删除最旧的数据，
-         * 保留最新到达的语音。
-         */
-        while (
-            playbackQueue.size >=
-            dynamicMaxQueue
-        ) {
-
-            val removed =
-                playbackQueue.poll()
-
-            if (
-                removed ==
-                null
-            ) {
-
-                break
-            }
-        }
-
-        /*
-         * ========================================================
-         * 尝试加入最新语音
-         * ========================================================
-         */
-
-        if (
-            !playbackQueue.offer(
+            audioPlayback.enqueue(
                 data
             )
+
+        } catch (
+            throwable: Throwable
         ) {
-
-            /*
-             * 极端情况下队列刚好在并发线程中
-             * 被填满，再主动淘汰最旧的一包。
-             */
-            playbackQueue.poll()
-
-            playbackQueue.offer(
-                data
-            )
-        }
-
-        /*
-  * ========================================================
-  * V21：
-  * 收到新语音时确认 AudioTrack 是否仍然可用。
-  *
-  * 如果后台长时间运行过程中 AudioTrack 已经失效，
-  * 立即标记恢复，让 playbackLoop 自动重新创建。
-  * ========================================================
-  */
-
-        val currentTrack =
-            synchronized(
-                audioTrackLock
-            ) {
-
-                audioTrack
-            }
-
-        if (
-            currentTrack != null
-        ) {
-
-            val trackState =
-                try {
-
-                    currentTrack.state
-
-                } catch (
-                    _: Throwable
-                ) {
-
-                    AudioTrack.STATE_UNINITIALIZED
-                }
-
-            if (
-                trackState !=
-                AudioTrack.STATE_INITIALIZED
-            ) {
-
-                println(
-                    "WALKIE AUDIO: " +
-                            "收到语音时发现AudioTrack失效，" +
-                            "请求自动恢复"
-                )
-
-                playbackRecoveryRequested =
-                    true
-
-            } else {
-
-                /*
-                 * AudioTrack 本身正常。
-                 */
-            }
-        } else {
-
-            /*
-             * 没有 AudioTrack：
-             * 让 playbackLoop 自动创建。
-             */
-            playbackRecoveryRequested =
-                true
-        }
-
-        startPlaybackWorker()
-    }
-
-    private fun applyPlaybackGain(
-        input: ByteArray
-    ): ByteArray {
-
-        if (
-            PLAYBACK_GAIN <=
-            1.0f
-        ) {
-
-            return input
-        }
-
-        if (
-            input.isEmpty() ||
-            input.size % 2 != 0
-        ) {
-
-            return input
-        }
-
-        val output =
-            ByteArray(
-                input.size
-            )
-
-        var index =
-            0
-
-        while (
-            index <
-            input.size
-        ) {
-
-            val low =
-                input[index]
-                    .toInt() and
-                        0xff
-
-            val high =
-                input[index + 1]
-                    .toInt()
-
-            var sample =
-                (high shl 8) or
-                        low
-
-            if (
-                sample >
-                32767
-            ) {
-
-                sample -=
-                    65536
-            }
-
-            val amplified =
-                (
-                        sample.toFloat() *
-                                PLAYBACK_GAIN
-                        )
-                    .toInt()
-                    .coerceIn(
-                        -32768,
-                        32767
-                    )
-
-            output[index] =
-                (
-                        amplified and
-                                0xff
-                        ).toByte()
-
-            output[index + 1] =
-                (
-                        (amplified shr 8) and
-                                0xff
-                        ).toByte()
-
-            index +=
-                2
-        }
-
-        return output
-    }
-
-    private fun requeueFront(
-        frames: List<ByteArray>
-    ) {
-
-        if (
-            frames.isEmpty()
-        ) {
-
-            return
-        }
-
-        val existing =
-            ArrayList<ByteArray>()
-
-        while (true) {
-
-            val item =
-                playbackQueue.poll()
-                    ?: break
-
-            existing.add(
-                item
-            )
-        }
-
-        val merged =
-            ArrayList<ByteArray>(
-                frames.size +
-                        existing.size
-            )
-
-        merged.addAll(
-            frames
-        )
-
-        merged.addAll(
-            existing
-        )
-
-        val maxItems =
-            min(
-                merged.size,
-                PLAYBACK_QUEUE_CAPACITY
-            )
-
-        var index =
-            0
-
-        while (
-            index <
-            maxItems
-        ) {
-
-            playbackQueue.offer(
-                merged[index]
-            )
-
-            index++
-        }
-    }
-
-    /*
-     * ============================================================
-     * 播放线程
-     * ============================================================
-     */
-
-    private fun startPlaybackWorker() {
-
-        synchronized(
-            playbackWorkerLock
-        ) {
-
-            if (
-                playbackJob?.isActive ==
-                true
-            ) {
-
-                return
-            }
-
-            if (
-                playbackWorkerStarting
-            ) {
-
-                return
-            }
-
-            playbackWorkerStarting =
-                true
-
-            playbackJob =
-                serviceScope.launch {
-
-                    try {
-
-                        playbackLoop()
-
-                    } finally {
-
-                        synchronized(
-                            playbackWorkerLock
-                        ) {
-
-                            playbackWorkerStarting =
-                                false
-                        }
-                    }
-                }
-        }
-    }
-
-    private suspend fun playbackLoop() {
-
-        var firstStart =
-            true
-
-        while (
-            serviceScope.isActive &&
-            !shuttingDown
-        ) {
-
-            val recovering =
-                playbackRecoveryRequested
-
-            val requiredPackets =
-                if (
-                    firstStart
-                ) {
-
-                    PLAYBACK_START_BUFFER_PACKETS
-
-                } else if (
-                    recovering
-                ) {
-
-                    adaptivePlaybackRecoveryPackets
-
-                } else {
-
-                    1
-                }
-
-            /*
-  * V21：
-  * 播放缓冲等待不要每 4ms 一直唤醒。
-  *
-  * 正常播放：
-  *      8ms 检查一次
-  *
-  * recovery：
-  *      4ms 检查一次
-  *
-  * 这样正常后台等待时减少无意义 CPU 唤醒，
-  * 同时恢复播放时仍保持较快响应。
-  */
-            val waitIntervalMs =
-                if (
-                    recovering
-                ) {
-
-                    4L
-
-                } else {
-
-                    8L
-                }
-
-            while (
-                serviceScope.isActive &&
-                !shuttingDown &&
-                playbackQueue.size <
-                requiredPackets
-            ) {
-
-                delay(
-                    waitIntervalMs
-                )
-            }
-
-            if (
-                !serviceScope.isActive ||
-                shuttingDown
-            ) {
-
-                break
-            }
-
-            ensureAudioPlayer()
-
-            val track =
-                synchronized(
-                    audioTrackLock
-                ) {
-
-                    audioTrack
-                }
-
-            if (
-                track == null ||
-                track.state !=
-                AudioTrack.STATE_INITIALIZED
-            ) {
-
-                delay(
-                    25L
-                )
-
-                continue
-            }
-
-            if (
-                firstStart ||
-                recovering ||
-                track.playState !=
-                AudioTrack.PLAYSTATE_PLAYING
-            ) {
-
-                /*
- * ============================================================
- * V21 恢复播放：优先保留最新语音
- * ============================================================
- *
- * recovery 时，如果队列里已经积压很多旧语音，
- * 不能把所有旧数据全部重新播放。
- *
- * 否则：
- *
- * 网络恢复
- * ↓
- * 播放历史积压
- * ↓
- * 延迟越来越大
- *
- * 所以：
- *
- * recovery 模式下，
- * 只取恢复所需要的最近几包数据。
- */
-
-                val frames =
-                    ArrayList<ByteArray>()
-
-                /*
-                 * 如果恢复时队列特别大，
-                 * 先淘汰一部分最旧语音。
-                 *
-                 * 保留最多：
-                 *
-                 * requiredPackets + 2
-                 *
-                 * 这样可以快速回到实时状态，
-                 * 又不会因为一次网络抖动直接把所有语音清空。
-                 */
-                val recoveryLimit =
-                    (
-                            requiredPackets + 2
-                            )
-                        .coerceAtMost(
-                            adaptivePlaybackRecoveryPackets + 2
-                        )
-
-                while (
-                    playbackQueue.size >
-                    recoveryLimit
-                ) {
-
-                    playbackQueue.poll()
-                }
-
-                /*
-                 * 重新取当前最新的一小段语音。
-                 */
-                repeat(
-                    requiredPackets
-                ) {
-
-                    val frame =
-                        playbackQueue.poll()
-
-                    if (
-                        frame != null
-                    ) {
-
-                        frames.add(
-                            frame
-                        )
-                    }
-                }
-
-                if (
-                    frames.isEmpty()
-                ) {
-
-                    continue
-                }
-
-                val combined =
-                    combineFrames(
-                        frames
-                    )
-
-                var writeSuccess =
-                    false
-
-                synchronized(
-                    audioTrackLock
-                ) {
-
-                    val current =
-                        audioTrack
-
-                    if (
-                        current == null ||
-                        current !== track ||
-                        current.state !=
-                        AudioTrack.STATE_INITIALIZED
-                    ) {
-
-                        writeSuccess =
-                            false
-
-                    } else {
-
-                        try {
-
-                            setTrackSpeaker(
-                                current
-                            )
-
-                            val result =
-                                current.write(
-                                    applyPlaybackGain(
-                                        combined
-                                    ),
-                                    0,
-                                    combined.size,
-                                    AudioTrack.WRITE_BLOCKING
-                                )
-
-                            if (
-                                result > 0
-                            ) {
-
-                                current.play()
-
-                                writeSuccess =
-                                    true
-
-                                println(
-                                    "WALKIE AUDIO: " +
-                                            "★V20.2起播★ " +
-                                            "packets=${frames.size} " +
-                                            "queue=${playbackQueue.size}"
-                                )
-                            }
-
-                        } catch (
-                            e: Throwable
-                        ) {
-
-                            println(
-                                "WALKIE AUDIO: " +
-                                        "起播/恢复异常=${e.message}"
-                            )
-
-                            writeSuccess =
-                                false
-                        }
-                    }
-                }
-
-                if (
-                    !writeSuccess
-                ) {
-
-                    requeueFront(
-                        frames
-                    )
-
-                    handlePlaybackFailure(
-                        track
-                    )
-
-                    playbackRecoveryRequested =
-                        true
-
-                    delay(
-                        30L
-                    )
-
-                    continue
-                }
-
-                playbackRecoveryRequested =
-                    false
-
-                firstStart =
-                    false
-
-                lastUnderrunCount =
-                    getUnderrunCount(
-                        track
-                    )
-
-                continue
-            }
-
-            val first =
-                try {
-
-                    playbackQueue.poll(
-                        90L,
-                        TimeUnit.MILLISECONDS
-                    )
-
-                } catch (
-                    _: InterruptedException
-                ) {
-
-                    null
-                }
-
-            if (
-                first == null
-            ) {
-
-                continue
-            }
-
-            val second =
-                playbackQueue.poll()
-
-            val frames =
-                if (
-                    second != null
-                ) {
-
-                    listOf(
-                        first,
-                        second
-                    )
-
-                } else {
-
-                    listOf(
-                        first
-                    )
-                }
-
-            val combined =
-                combineFrames(
-                    frames
-                )
-
-            var failed =
-                false
-
-            synchronized(
-                audioTrackLock
-            ) {
-
-                val current =
-                    audioTrack
-
-                if (
-                    current == null ||
-                    current !== track ||
-                    current.state !=
-                    AudioTrack.STATE_INITIALIZED
-                ) {
-
-                    failed =
-                        true
-
-                } else {
-
-                    try {
-
-                        if (
-                            current.playState !=
-                            AudioTrack.PLAYSTATE_PLAYING
-                        ) {
-
-                            val result =
-                                current.write(
-                                    applyPlaybackGain(
-                                        combined
-                                    ),
-                                    0,
-                                    combined.size,
-                                    AudioTrack.WRITE_BLOCKING
-                                )
-
-                            if (
-                                result > 0
-                            ) {
-
-                                setTrackSpeaker(
-                                    current
-                                )
-
-                                current.play()
-
-                                println(
-                                    "WALKIE AUDIO: " +
-                                            "★AudioTrack恢复播放★ " +
-                                            "queue=${playbackQueue.size}"
-                                )
-
-                            } else {
-
-                                failed =
-                                    true
-                            }
-
-                        } else {
-
-                            /*
-                             * ========================================================
-                             * V21：
-                             * 每次正常写入语音之前，
-                             * 重新确认当前 AudioTrack 的首选输出设备。
-                             *
-                             * 主要应对：
-                             *
-                             * 锁屏
-                             * 蓝牙连接/断开
-                             * 系统音频路由变化
-                             * 前后台切换
-                             *
-                             * 不重新创建 AudioTrack，
-                             * 只重新确认输出设备。
-                             * ========================================================
-                             */
-                            try {
-
-                                setTrackSpeaker(
-                                    current
-                                )
-
-                            } catch (
-                                e: Throwable
-                            ) {
-
-                                println(
-                                    "WALKIE AUDIO: " +
-                                            "播放前刷新扬声器失败=${e.message}"
-                                )
-                            }
-
-                            val result =
-                                current.write(
-                                    applyPlaybackGain(
-                                        combined
-                                    ),
-                                    0,
-                                    combined.size,
-                                    AudioTrack.WRITE_BLOCKING
-                                )
-
-                            if (
-                                result <= 0
-                            ) {
-
-                                println(
-                                    "WALKIE AUDIO: " +
-                                            "AudioTrack.write失败=$result"
-                                )
-
-                                failed =
-                                    true
-                            }
-                        }
-
-                    } catch (
-                        e: Throwable
-                    ) {
-
-                        println(
-                            "WALKIE AUDIO: " +
-                                    "正常播放异常=${e.message}"
-                        )
-
-                        failed =
-                            true
-                    }
-                }
-            }
-
-            if (
-                failed
-            ) {
-
-                requeueFront(
-                    frames
-                )
-
-                handlePlaybackFailure(
-                    track
-                )
-
-                playbackRecoveryRequested =
-                    true
-
-                delay(
-                    25L
-                )
-
-                continue
-            }
-
-            /*
- * ============================================================
- * V21 underrun 恢复
- * ============================================================
- *
- * underrun 表示 AudioTrack 一时没有足够 PCM 数据。
- *
- * 发生后：
- *
- * 1. 记录 underrun
- * 2. 请求恢复缓冲
- * 3. 根据当前队列实际情况决定是否需要继续恢复
- *
- * 不无限扩大播放延迟。
- */
-            val currentUnderrun =
-                getUnderrunCount(
-                    track
-                )
-
-            if (
-                currentUnderrun >
-                lastUnderrunCount
-            ) {
-
-                val delta =
-                    currentUnderrun -
-                            lastUnderrunCount
-
-                println(
-                    "WALKIE AUDIO: " +
-                            "★underrun +$delta " +
-                            "total=$currentUnderrun " +
-                            "queue=${playbackQueue.size} " +
-                            "recoveryTarget=$adaptivePlaybackRecoveryPackets★"
-                )
-
-                lastUnderrunCount =
-                    currentUnderrun
-
-                /*
-                 * 只有当前队列明显低于恢复目标时，
-                 * 才需要真正进入 recovery。
-                 *
-                 * 如果队列已经有足够数据，
-                 * 就不要反复进入恢复流程。
-                 */
-                if (
-                    playbackQueue.size <
-                    adaptivePlaybackRecoveryPackets
-                ) {
-
-                    playbackRecoveryRequested =
-                        true
-
-                } else {
-
-                    /*
-                     * 队列已经足够，
-                     * 直接继续正常播放。
-                     */
-                    playbackRecoveryRequested =
-                        false
-                }
-            }
-        }
-    }
-
-    private fun combineFrames(
-        frames: List<ByteArray>
-    ): ByteArray {
-
-        if (
-            frames.isEmpty()
-        ) {
-
-            return ByteArray(0)
-        }
-
-        if (
-            frames.size == 1
-        ) {
-
-            return frames[0]
-        }
-
-        var total =
-            0
-
-        for (
-        frame in frames
-        ) {
-
-            total +=
-                frame.size
-        }
-
-        val combined =
-            ByteArray(
-                total
-            )
-
-        var offset =
-            0
-
-        for (
-        frame in frames
-        ) {
-
-            System.arraycopy(
-                frame,
-                0,
-                combined,
-                offset,
-                frame.size
-            )
-
-            offset +=
-                frame.size
-        }
-
-        return combined
-    }
-
-    private fun getUnderrunCount(
-        track: AudioTrack?
-    ): Int {
-
-        if (
-            track == null
-        ) {
-
-            return 0
-        }
-
-        if (
-            Build.VERSION.SDK_INT <
-            Build.VERSION_CODES.N
-        ) {
-
-            return 0
-        }
-
-        return try {
-
-            track.underrunCount
-
-        } catch (_: Exception) {
-
-            0
-        }
-    }
-
-    /*
-  * ============================================================
-  * V21 AudioTrack 安全恢复
-  * ============================================================
-  *
-  * 播放过程中如果 AudioTrack 出现：
-  *
-  * 1. 状态失效
-  * 2. play() 异常
-  * 3. write() 失败后无法继续播放
-  *
-  * 不直接让整个播放线程退出。
-  *
-  * 当前实例失效：
-  *     ↓
-  * 安全释放
-  *     ↓
-  * 清空全局引用
-  *     ↓
-  * 标记需要恢复
-  *     ↓
-  * 下一轮 playbackLoop 自动重建 AudioTrack
-  */
-    private fun handlePlaybackFailure(
-    track: AudioTrack
-) {
-
-    synchronized(
-        audioTrackLock
-    ) {
-
-        if (
-            audioTrack !==
-            track
-        ) {
-
-            return
-        }
-
-        /*
-         * ============================================================
-         * V22.2 AudioTrack 自动重建
-         * ============================================================
-         *
-         * 当 AudioTrack 因为：
-         *
-         * 1. underrun
-         * 2. write失败
-         * 3. 系统音频状态异常
-         * 4. Harmony 后台调度变化
-         *
-         * 导致播放器进入不可正常工作的状态时，
-         * 不再只执行 play()。
-         *
-         * 直接彻底释放当前 Track。
-         *
-         * 下一轮 playbackLoop()
-         * 会通过 ensureAudioPlayer()
-         * 自动创建新的 AudioTrack。
-         */
-
-        audioTrack =
-            null
-
-        try {
-
-            if (
-                track.playState ==
-                AudioTrack.PLAYSTATE_PLAYING
-            ) {
-
-                track.pause()
-            }
-
-        } catch (_: Throwable) {
-        }
-
-        try {
-
-            track.flush()
-
-        } catch (_: Throwable) {
-        }
-
-        try {
-
-            track.release()
-
-        } catch (_: Throwable) {
-        }
-
-        lastUnderrunCount =
-            0
-
-        println(
-            "WALKIE AUDIO: " +
-                    "V22.2 AudioTrack已彻底释放，准备自动重建"
-        )
-    }
-}
-private fun ensureAudioPlayer() {
-
-        val current =
-            synchronized(
-                audioTrackLock
-            ) {
-
-                audioTrack
-            }
-
-        if (
-            current != null &&
-            current.state ==
-            AudioTrack.STATE_INITIALIZED
-        ) {
-
-            return
-        }
-
-        createAudioPlayer()
-    }
-
-    private fun createAudioPlayer() {
-
-        synchronized(
-            audioTrackLock
-        ) {
-
-            val oldTrack =
-                audioTrack
-
-            if (
-                oldTrack != null &&
-                oldTrack.state ==
-                AudioTrack.STATE_INITIALIZED
-            ) {
-
-                return
-            }
-
-            audioTrack =
-                null
-
-            try {
-
-                oldTrack?.release()
-
-            } catch (_: Exception) {
-            }
-
-            val channelConfig =
-                AudioFormat.CHANNEL_OUT_MONO
-
-            val encoding =
-                AudioFormat.ENCODING_PCM_16BIT
-
-            val minBuffer =
-                AudioTrack.getMinBufferSize(
-                    SAMPLE_RATE,
-                    channelConfig,
-                    encoding
-                )
-
-            if (
-                minBuffer <= 0
-            ) {
-
-                println(
-                    "WALKIE AUDIO: " +
-                            "getMinBufferSize失败=$minBuffer"
-                )
-
-                return
-            }
-
-            val bufferSize =
-                maxOf(
-                    minBuffer * 4,
-                    AUDIO_PACKET_SIZE * 16
-                )
-
-            /*
-  * ============================================================
-  * V21：
-  * AudioTrack 明确使用语音通信属性。
-  *
-  * 后台/锁屏场景下，
-  * 系统更明确知道这是实时语音通信输出，
-  * 不把它当普通音乐播放。
-  * ============================================================
-  */
-            val attributes =
-                AudioAttributes.Builder()
-                    .setUsage(
-                        AudioAttributes.USAGE_VOICE_COMMUNICATION
-                    )
-                    .setContentType(
-                        AudioAttributes.CONTENT_TYPE_SPEECH
-                    )
-                    .setFlags(
-                        AudioAttributes.FLAG_LOW_LATENCY
-                    )
-                    .build()
-
-            val format =
-                AudioFormat.Builder()
-                    .setSampleRate(
-                        SAMPLE_RATE
-                    )
-                    .setEncoding(
-                        encoding
-                    )
-                    .setChannelMask(
-                        channelConfig
-                    )
-                    .build()
-
-            val track =
-                try {
-
-                    AudioTrack.Builder()
-                        .setAudioAttributes(
-                            attributes
-                        )
-                        .setAudioFormat(
-                            format
-                        )
-                        .setBufferSizeInBytes(
-                            bufferSize
-                        )
-                        .setTransferMode(
-                            AudioTrack.MODE_STREAM
-                        )
-                        .build()
-
-                } catch (e: Exception) {
-
-                    println(
-                        "WALKIE AUDIO: " +
-                                "AudioTrack创建失败=${e.message}"
-                    )
-
-                    return
-                }
-
-            if (
-                track.state !=
-                AudioTrack.STATE_INITIALIZED
-            ) {
-
-                println(
-                    "WALKIE AUDIO: " +
-                            "AudioTrack状态异常=${track.state}"
-                )
-
-                try {
-
-                    track.release()
-
-                } catch (_: Exception) {
-                }
-
-                return
-            }
-
-            setTrackSpeaker(
-                track
-            )
-
-            try {
-
-                track.setVolume(
-                    1.0f
-                )
-
-            } catch (_: Exception) {
-            }
-
-            /*
-  * ============================================================
-  * V21：
-  * AudioTrack 创建成功以后立即确认播放状态。
-  *
-  * 不直接强制播放数据，
-  * 但先把 Track 切换到 PLAYING 状态。
-  *
-  * 后续真正的 PCM 仍然由 playbackLoop 写入。
-  * ============================================================
-  */
-            audioTrack =
-                track
-
-            try {
-
-                track.play()
-
-                println(
-                    "WALKIE AUDIO: " +
-                            "AudioTrack创建后已进入PLAYING状态"
-                )
-
-            } catch (
-                e: Throwable
-            ) {
-
-                /*
-                 * play() 失败：
-                 * 当前 Track 不应继续作为有效播放器使用。
-                 */
-                audioTrack =
-                    null
-
-                try {
-
-                    track.release()
-
-                } catch (_: Throwable) {
-                }
-
-                println(
-                    "WALKIE AUDIO: " +
-                            "AudioTrack创建后PLAY失败=${e.message}"
-                )
-
-                return
-            }
-
-            lastUnderrunCount =
-                getUnderrunCount(
-                    track
-                )
 
             println(
                 "WALKIE AUDIO: " +
-                        "AudioTrack创建成功 " +
-                        "buffer=$bufferSize " +
-                        "speaker=${findBuiltInSpeaker() != null}"
+                        "独立播放模块加入PCM失败: " +
+                        throwable.message
             )
         }
     }
 
-    private fun setTrackSpeaker(
-        track: AudioTrack
-    ) {
 
-        if (
-            track.state !=
-            AudioTrack.STATE_INITIALIZED
-        ) {
-
-            return
-        }
-
-        val speaker =
-            findBuiltInSpeaker()
-
-        if (
-            speaker == null
-        ) {
-
-            return
-        }
-
-        try {
-
-            val result =
-                track.setPreferredDevice(
-                    speaker
-                )
-
-            if (
-                result
-            ) {
-
-                println(
-                    "WALKIE AUDIO: 首选输出=内置扬声器"
-                )
-            }
-
-        } catch (e: Exception) {
-
-            println(
-                "WALKIE AUDIO: " +
-                        "设置AudioTrack扬声器失败=${e.message}"
-            )
-        }
-    }
-
-    /*
-     * ============================================================
-     * 释放播放
-     * ============================================================
-     */
-
-    private fun releaseAudioPlayer() {
-
-        synchronized(
-            playbackWorkerLock
-        ) {
-
-            playbackJob?.cancel()
-
-            playbackJob =
-                null
-
-            playbackWorkerStarting =
-                false
-        }
-
-        playbackQueue.clear()
-
-        playbackRecoveryRequested =
-            false
-
-        synchronized(
-            audioTrackLock
-        ) {
-
-            val track =
-                audioTrack
-
-            audioTrack =
-                null
-
-            if (
-                track != null
-            ) {
-
-                try {
-                    track.pause()
-                } catch (_: Exception) {
-                }
-
-                try {
-                    track.flush()
-                } catch (_: Exception) {
-                }
-
-                try {
-                    track.stop()
-                } catch (_: Exception) {
-                }
-
-                try {
-                    track.release()
-                } catch (_: Exception) {
-                }
-            }
-        }
-    }
 
     /*
      * ============================================================
@@ -8298,32 +6419,24 @@ private fun ensureAudioPlayer() {
          * 重连时不播放旧语音。
          */
         /*
- * ============================================================
- * V21：连接断开后彻底清理旧播放状态
- * ============================================================
- *
- * 断线之前已经进入播放队列的语音，
- * 在重新连接以后已经没有实时意义。
- *
- * 必须全部清掉。
- */
-        playbackQueue.clear()
+       * ============================================================
+       * V24.9.1：连接断开后清理独立播放模块
+       * ============================================================
+       *
+       * 断线之前已经进入播放队列的语音，
+       * 在重新连接以后已经没有实时意义。
+       *
+       * 由新的 WalkieAudioPlayback 统一负责清空。
+       * ============================================================
+       */
+
+        audioPlayback.clearQueue()
 
         /*
          * 下一次收到新语音后，
-         * 播放线程重新按照起播缓冲策略工作。
+         * 播放模块按照自己的恢复缓冲策略重新开始。
          */
-        playbackRecoveryRequested =
-            true
-
-        /*
-         * 重置 underrun 基准。
-         *
-         * 避免新连接建立后，
-         * 把旧连接的 underrun 次数当成新的异常。
-         */
-        lastUnderrunCount =
-            0
+        audioPlayback.requestRecovery()
 
         /*
   * V21：
@@ -8473,7 +6586,7 @@ private fun ensureAudioPlayer() {
 
         closeSocket()
 
-        releaseAudioPlayer()
+        audioPlayback.release()
 
         talkRequesting =
             false
