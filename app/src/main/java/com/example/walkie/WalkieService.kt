@@ -444,6 +444,46 @@ class WalkieService : Service() {
                     Dispatchers.IO
         )
 
+    /*
+     * ============================================================
+     * V24.9.2 UDP Manager
+     * ============================================================
+     *
+     * 这一步先只把 Manager 接入 Service。
+     *
+     * 原来的 udpSocket 暂时继续保留。
+     *
+     * 后续步骤会再逐步把：
+     *
+     * 1. 创建 Socket
+     * 2. UDP 接收
+     * 3. UDP 发送
+     * 4. 网络切换迁移
+     *
+     * 移交给 WalkieUdpManager。
+     *
+     * 采用边改边拆：
+     *
+     * 改一步
+     *   ↓
+     * 编译一次
+     *   ↓
+     * 没问题再继续
+     * ============================================================
+     */
+    private val udpManager by lazy {
+        WalkieUdpManager(
+            scope = serviceScope,
+            receiveTimeoutMs =
+                SOCKET_RECEIVE_TIMEOUT,
+            oldSocketGraceMs =
+                3000L,
+            logger = { message ->
+                println(message)
+            }
+        )
+    }
+
     private lateinit var devicePreferences:
             SharedPreferences
 
@@ -498,6 +538,43 @@ class WalkieService : Service() {
     private var activeNetwork:
             Network? =
         null
+
+    /*
+ * ============================================================
+ * V24.9.2 网络无缝迁移
+ * ============================================================
+ *
+ * 参考 HarmonyOS 已验证方案：
+ *
+ * 旧 Socket 不立即关闭
+ *      ↓
+ * 新 Socket 绑定新 Network
+ *      ↓
+ * 切换 udpSocket
+ *      ↓
+ * HELLO × 5
+ *      ↓
+ * PING
+ *      ↓
+ * KEEPALIVE
+ *      ↓
+ * 旧 Socket 延迟 3 秒关闭
+ *
+ * 迁移期间：
+ *
+ * connected 不变
+ * playback 不停止
+ * channel 不清空
+ * user list 不清空
+ */
+    private var networkMigrationJob:
+            Job? =
+        null
+
+    private var handoffOldSocket:
+            DatagramSocket? =
+        null
+
 
     /*
      * ============================================================
@@ -904,7 +981,43 @@ class WalkieService : Service() {
                 shuttingDown =
                     false
 
+                /*
+                 * ========================================================
+                 * V24.9.2 调试：
+                 *
+                 * 手动测试UDP无缝迁移。
+                 *
+                 * 不需要实际切换WiFi / 手机流量。
+                 *
+                 * 测试内容：
+                 *
+                 * 当前Socket
+                 *      ↓
+                 * 新Socket
+                 *      ↓
+                 * 新Socket接管
+                 *      ↓
+                 * HELLO × 5
+                 *      ↓
+                 * PING
+                 *      ↓
+                 * 旧Socket延迟关闭
+                 * ========================================================
+                 */
+                if (
+                    intent.getBooleanExtra(
+                        "TEST_NETWORK_MIGRATION",
+                        false
+                    )
+                ) {
+
+                    testNetworkMigration()
+
+                    return START_STICKY
+                }
+
                 val incomingIp =
+
                     intent.getStringExtra(
                         EXTRA_SERVER_IP
                     )
@@ -958,6 +1071,16 @@ class WalkieService : Service() {
                         incomingIp
                     )
                 }
+            }
+
+            "TEST_NETWORK_MIGRATION" -> {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "收到手动UDP迁移测试命令"
+                )
+
+                testNetworkMigration()
             }
 
             ACTION_STOP -> {
@@ -1975,10 +2098,62 @@ class WalkieService : Service() {
         ) {
 
             /*
+             * ============================================================
+             * V24.9.1 音频流重新同步策略
+             * ============================================================
+             *
+             * 正常情况：
+             *
+             * sequence == expected
+             *        ↓
+             * 直接播放
+             *
+             * 少量乱序 / 少量丢包：
+             *
+             * sequence领先expected几个包
+             *        ↓
+             * 暂存抖动缓存
+             *        ↓
+             * 等待缺失包
+             *
+             * 但是：
+             *
+             * 网络断开
+             *      ↓
+             * 自动重连
+             *      ↓
+             * 发送端sequence已经继续增长
+             *      ↓
+             * 接收端expected仍停留在很旧的位置
+             *
+             * 这时不能继续等待旧sequence。
+             *
+             * 否则会出现：
+             *
+             * seq=190 lost=918
+             * seq=191 lost=922
+             * seq=192 lost=927
+             *
+             * 这种“假性疯狂丢包”。
+             *
+             * 所以这里增加：
+             *
+             * 大跨度sequence自动重新同步。
+             * ============================================================
+             */
+
+            /*
+             * ============================================================
              * 新音频流：
              *
-             * 新说话人
-             * 或Service重新启动
+             * 可能是：
+             *
+             * 1. 新说话人
+             * 2. Service重新启动
+             * 3. 网络重新建立后服务器开始新的音频流
+             *
+             * 第一包直接作为新的播放起点。
+             * ============================================================
              */
             if (
                 audioV231RxStreamId !=
@@ -1991,7 +2166,11 @@ class WalkieService : Service() {
                     streamId
 
                 audioV231ExpectedSequence =
-                    sequence
+                    (
+                            sequence +
+                                    1L
+                            ) and
+                            0xFFFF_FFFFL
 
                 audioV231GapStartTime =
                     0L
@@ -1999,8 +2178,100 @@ class WalkieService : Service() {
                 println(
                     "WALKIE AUDIO: " +
                             "V23.1 新音频流 " +
-                            "stream=$streamId"
+                            "stream=$streamId " +
+                            "seq=$sequence"
                 )
+
+                return opusData
+            }
+
+            /*
+             * 当前已经存在有效的expected。
+             */
+            val expected =
+                audioV231ExpectedSequence and
+                        0xFFFF_FFFFL
+
+            /*
+             * ============================================================
+             * 正常连续包
+             * ============================================================
+             */
+            if (
+                sequence ==
+                expected
+            ) {
+
+                audioV231ExpectedSequence =
+                    (
+                            expected +
+                                    1L
+                            ) and
+                            0xFFFF_FFFFL
+
+                audioV231GapStartTime =
+                    0L
+
+                return opusData
+            }
+
+            /*
+             * ============================================================
+             * 计算sequence向前距离
+             *
+             * 只在 sequence 被判断为“领先”时才使用。
+             * ============================================================
+             */
+            val forwardDiff =
+                (
+                        sequence -
+                                expected
+                        ) and
+                        0xFFFF_FFFFL
+
+            /*
+             * ============================================================
+             * V24.9.1关键修复：
+             *
+             * 大跨度跳跃直接重新同步。
+             *
+             * 8是当前抖动缓存大小。
+             *
+             * 如果一次领先已经超过：
+             *
+             * 8 * 4 = 32包
+             *
+             * 基本可以认为不是普通乱序，
+             * 而是网络切换/断线恢复造成的sequence断层。
+             *
+             * 此时：
+             *
+             * 旧expected
+             *      ↓
+             * 直接放弃
+             *
+             * 当前sequence
+             *      ↓
+             * 作为新的播放起点
+             * ============================================================
+             */
+            val largeGapThreshold =
+                AUDIO_V231_JITTER_CAPACITY * 4
+
+            if (
+                forwardDiff >
+                largeGapThreshold.toLong() &&
+                forwardDiff <
+                0x8000_0000L
+            ) {
+
+                val skippedPackets =
+                    forwardDiff - 1L
+
+                audioV231LostPackets +=
+                    skippedPackets
+
+                audioV231JitterBuffer.clear()
 
                 audioV231ExpectedSequence =
                     (
@@ -2009,160 +2280,112 @@ class WalkieService : Service() {
                             ) and
                             0xFFFF_FFFFL
 
-                return opusData
-            }
-
-            /*
-             * 正常连续包。
-             */
-            if (
-                sequence ==
-                audioV231ExpectedSequence
-            ) {
-
-                audioV231ExpectedSequence =
-                    (
-                            audioV231ExpectedSequence +
-                                    1L
-                            ) and
-                            0xFFFF_FFFFL
-
                 audioV231GapStartTime =
                     0L
-
-                return opusData
-            }
-
-            /*
-             * 已经过期/重复。
-             */
-            if (
-                !isV231SequenceAhead(
-                    sequence,
-                    audioV231ExpectedSequence
-                )
-            ) {
-
-                audioV231DuplicatePackets++
-
-                return null
-            }
-
-            /*
-             * 重复缓存包。
-             */
-            if (
-                audioV231JitterBuffer.containsKey(
-                    sequence
-                )
-            ) {
-
-                audioV231DuplicatePackets++
-
-                return null
-            }
-
-            /*
-             * 缓冲区满了：
-             * 淘汰最早未来包。
-             */
-            if (
-                audioV231JitterBuffer.size >=
-                AUDIO_V231_JITTER_CAPACITY
-            ) {
-
-                audioV231JitterBuffer.pollFirstEntry()
-
-                audioV231LostPackets++
-            }
-
-            audioV231JitterBuffer[
-                sequence
-            ] =
-                opusData
-
-            audioV231ReorderedPackets++
-
-            if (
-                audioV231GapStartTime ==
-                0L
-            ) {
-
-                audioV231GapStartTime =
-                    System.currentTimeMillis()
-            }
-
-            /*
-             * 缺的包刚好补到。
-             */
-            val expectedPacket =
-                audioV231JitterBuffer[
-                    audioV231ExpectedSequence
-                ]
-
-            if (
-                expectedPacket != null
-            ) {
-
-                audioV231JitterBuffer.remove(
-                    audioV231ExpectedSequence
-                )
-
-                audioV231ExpectedSequence =
-                    (
-                            audioV231ExpectedSequence +
-                                    1L
-                            ) and
-                            0xFFFF_FFFFL
-
-                audioV231GapStartTime =
-                    0L
-
-                return expectedPacket
-            }
-
-            /*
-             * 缺包等待时间达到60ms：
-             * 判定缺失。
-             */
-            val now =
-                System.currentTimeMillis()
-
-            if (
-                now -
-                audioV231GapStartTime >=
-                AUDIO_V231_MAX_WAIT_MS
-            ) {
-
-                val lostSequence =
-                    audioV231ExpectedSequence
-
-                audioV231LostPackets++
-
-                audioV231ExpectedSequence =
-                    (
-                            audioV231ExpectedSequence +
-                                    1L
-                            ) and
-                            0xFFFF_FFFFL
-
-                audioV231GapStartTime =
-                    now
 
                 println(
                     "WALKIE AUDIO: " +
-                            "V23.1 丢包 seq=$lostSequence " +
+                            "V23.1 检测到大跨度序号，" +
+                            "立即重新同步 " +
+                            "expected=$expected " +
+                            "current=$sequence " +
+                            "skip=$skippedPackets " +
                             "lost=$audioV231LostPackets"
                 )
 
-                val nextPacket =
+                return opusData
+            }
+
+            /*
+             * ============================================================
+             * 已经过期 / 重复包
+             *
+             * forwardDiff >= 0x80000000
+             * 表示sequence实际上落后于expected。
+             * ============================================================
+             */
+            if (
+                forwardDiff >=
+                0x8000_0000L
+            ) {
+
+                audioV231DuplicatePackets++
+
+                return null
+            }
+
+            /*
+             * ============================================================
+             * 少量领先：
+             *
+             * 认为是正常乱序 / 少量丢包。
+             * ============================================================
+             */
+            if (
+                forwardDiff <=
+                AUDIO_V231_JITTER_CAPACITY.toLong()
+            ) {
+
+                /*
+                 * 重复缓存包。
+                 */
+                if (
+                    audioV231JitterBuffer.containsKey(
+                        sequence
+                    )
+                ) {
+
+                    audioV231DuplicatePackets++
+
+                    return null
+                }
+
+                /*
+                 * 缓冲区已经满了。
+                 *
+                 * 淘汰最早未来包。
+                 */
+                if (
+                    audioV231JitterBuffer.size >=
+                    AUDIO_V231_JITTER_CAPACITY
+                ) {
+
+                    audioV231JitterBuffer.pollFirstEntry()
+
+                    audioV231LostPackets++
+                }
+
+                audioV231JitterBuffer[
+                    sequence
+                ] =
+                    opusData
+
+                audioV231ReorderedPackets++
+
+                if (
+                    audioV231GapStartTime ==
+                    0L
+                ) {
+
+                    audioV231GapStartTime =
+                        System.currentTimeMillis()
+                }
+
+                /*
+                 * 缺失包刚好已经在缓存里。
+                 */
+                val expectedPacket =
+                    audioV231JitterBuffer[
+                        audioV231ExpectedSequence
+                    ]
+
+                if (
+                    expectedPacket != null
+                ) {
+
                     audioV231JitterBuffer.remove(
                         audioV231ExpectedSequence
                     )
-
-                if (
-                    nextPacket != null
-                ) {
 
                     audioV231ExpectedSequence =
                         (
@@ -2174,13 +2397,100 @@ class WalkieService : Service() {
                     audioV231GapStartTime =
                         0L
 
-                    return nextPacket
+                    return expectedPacket
                 }
+
+                /*
+                 * ========================================================
+                 * 缺包等待60ms。
+                 * ========================================================
+                 */
+                val now =
+                    System.currentTimeMillis()
+
+                if (
+                    now -
+                    audioV231GapStartTime >=
+                    AUDIO_V231_MAX_WAIT_MS
+                ) {
+
+                    val lostSequence =
+                        audioV231ExpectedSequence
+
+                    audioV231LostPackets++
+
+                    audioV231ExpectedSequence =
+                        (
+                                lostSequence +
+                                        1L
+                                ) and
+                                0xFFFF_FFFFL
+
+                    audioV231GapStartTime =
+                        now
+
+                    println(
+                        "WALKIE AUDIO: " +
+                                "V23.1 丢包 seq=$lostSequence " +
+                                "lost=$audioV231LostPackets"
+                    )
+
+                    val nextPacket =
+                        audioV231JitterBuffer.remove(
+                            audioV231ExpectedSequence
+                        )
+
+                    if (
+                        nextPacket != null
+                    ) {
+
+                        audioV231ExpectedSequence =
+                            (
+                                    audioV231ExpectedSequence +
+                                            1L
+                                    ) and
+                                    0xFFFF_FFFFL
+
+                        audioV231GapStartTime =
+                            0L
+
+                        return nextPacket
+                    }
+                }
+
+                return null
             }
 
-            return null
+            /*
+             * ============================================================
+             * 这里理论上是一个非常特殊的中间情况。
+             *
+             * 为了避免重排器长期卡死：
+             *
+             * 直接重新同步到当前sequence。
+             * ============================================================
+             */
+            audioV231JitterBuffer.clear()
+
+            audioV231ExpectedSequence =
+                (
+                        sequence +
+                                1L
+                        ) and
+                        0xFFFF_FFFFL
+
+            audioV231GapStartTime =
+                0L
+
+            println(
+                "WALKIE AUDIO: " +
+                        "V23.1 异常序号状态，" +
+                        "强制重新同步 seq=$sequence"
+            )
+
+            return opusData
         }
-    }
+}
 
     private fun initializeOpus() {
 
@@ -2458,78 +2768,399 @@ class WalkieService : Service() {
     private fun handleNetworkAvailable(
         network: Network
     ) {
-
         val previousNetwork = activeNetwork
 
         println(
-            "WALKIE $WALKIE_VERSION: 网络可用=$network"
+            "WALKIE $WALKIE_VERSION: " +
+                    "网络可用=$network"
         )
 
+        /*
+         * ========================================================
+         * 网络没有发生变化
+         * ========================================================
+         */
         if (
-            previousNetwork != null &&
-            previousNetwork != network
+            previousNetwork == null ||
+            previousNetwork == network
         ) {
+            activeNetwork = network
+            isNetworkAvailable = true
 
-            println(
-                "WALKIE $WALKIE_VERSION: " +
-                        "检测到网络切换 $previousNetwork -> $network，" +
-                        "立即作废旧UDP连接"
-            )
-
-            synchronized(connectionLock) {
-                connectionGeneration++
-                networkJob?.cancel()
-                networkJob = null
+            val ip = serverIp
+            if (
+                shuttingDown ||
+                ip.isNullOrBlank()
+            ) {
+                return
             }
 
-            closeSocket()
-            clearUserList()
-            setConnected(false)
+            networkMigrationJob?.cancel()
+
+            networkMigrationJob =
+                serviceScope.launch {
+
+                    if (shuttingDown) {
+                        return@launch
+                    }
+
+                    if (activeNetwork != network) {
+                        return@launch
+                    }
+
+                    if (
+                        isConnected &&
+                        udpManager.isOpen()
+                    ) {
+                        println(
+                            "WALKIE $WALKIE_VERSION: " +
+                                    "当前UDP仍健康，不创建重复Socket"
+                        )
+                        return@launch
+                    }
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "网络恢复，立即启动自动重连"
+                    )
+
+                    startConnection(ip)
+                }
+
+            return
         }
+
+        /*
+         * ========================================================
+         * 检测到网络切换
+         *
+         * 这里开始使用“无缝迁移”：
+         *
+         * 1. 不关闭旧Socket
+         * 2. 不清空用户列表
+         * 3. 不修改 connected=false
+         * 4. 不停止播放
+         * 5. 新Socket建立成功后再切换
+         * ========================================================
+         */
+        println(
+            "WALKIE $WALKIE_VERSION: " +
+                    "检测到网络切换 " +
+                    "$previousNetwork -> $network，" +
+                    "开始无缝迁移UDP"
+        )
 
         activeNetwork = network
         isNetworkAvailable = true
 
         val ip = serverIp
-
         if (
             shuttingDown ||
             ip.isNullOrBlank()
         ) {
-
             return
         }
 
         serviceScope.launch {
-
-            delay(200L)
-
             if (shuttingDown) {
                 return@launch
             }
 
-            if (
-                activeNetwork != network
-            ) {
-
+            if (activeNetwork != network) {
                 return@launch
             }
 
-            if (
-                isConnected &&
-                udpSocket?.isClosed == false
-            ) {
+            try {
+                /*
+                 * ====================================================
+                 * 新Socket建立
+                 * ====================================================
+                 */
+                udpManager.migrate(
+                    ip = ip,
+                    port = SERVER_PORT,
+                    network = network
+                )
+
+                val newSocket =
+                    udpManager.currentSocket()
+
+                if (newSocket == null) {
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "UDP无缝迁移失败：新Socket为空"
+                    )
+                    return@launch
+                }
+
+                synchronized(connectionLock) {
+                    udpSocket = newSocket
+                }
+
+                /*
+                 * ====================================================
+                 * 网络切换期间：
+                 *
+                 * connected保持原状态
+                 * 不clearUserList()
+                 * 不stop playback
+                 * 不发送GOODBYE
+                 * ====================================================
+                 */
 
                 println(
                     "WALKIE $WALKIE_VERSION: " +
-                            "当前UDP仍健康，不创建重复Socket"
+                            "新UDP Socket接管成功，" +
+                            "开始发送迁移HELLO"
                 )
 
-                return@launch
-            }
+                /*
+                 * ====================================================
+                 * HELLO连续发送5次
+                 *
+                 * 与HarmonyOS迁移逻辑保持一致
+                 * ====================================================
+                 */
+                repeat(5) { index ->
 
-            startConnection(ip)
+                    if (
+                        shuttingDown ||
+                        activeNetwork != network
+                    ) {
+                        return@launch
+                    }
+
+                    sendMessageNow(
+                        "$MSG_HELLO:$deviceId"
+                    )
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "网络迁移HELLO " +
+                                "${index + 1}/5"
+                    )
+
+                    delay(80L)
+                }
+
+                /*
+                 * ====================================================
+                 * HELLO完成后发送PING
+                 * ====================================================
+                 */
+                sendNetworkPing(
+                    System.currentTimeMillis()
+                )
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "网络迁移PING已发送"
+                )
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "UDP无缝迁移完成，" +
+                            "旧Socket将在宽限期后关闭"
+                )
+
+            } catch (e: Throwable) {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "UDP无缝迁移失败=${e.message}"
+                )
+
+                /*
+                 * 只有迁移失败才允许进入正常重连
+                 */
+                if (
+                    !shuttingDown &&
+                    activeNetwork == network
+                ) {
+                    synchronized(connectionLock) {
+                        connectionGeneration++
+                        networkJob?.cancel()
+                        networkJob = null
+                    }
+
+                    closeSocket()
+
+                    setConnected(false)
+
+                    startConnection(ip)
+                }
+
+            } finally {
+
+                if (
+                    networkMigrationJob ===
+                    this
+                ) {
+                    networkMigrationJob = null
+                }
+            }
         }
+    }
+
+    private fun testNetworkMigration() {
+
+        val ip =
+            serverIp
+
+        val network =
+            activeNetwork
+
+        if (
+            shuttingDown
+        ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "TEST_NETWORK_MIGRATION：当前正在关闭"
+            )
+
+            return
+        }
+
+        if (
+            ip.isNullOrBlank()
+        ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "TEST_NETWORK_MIGRATION：服务器IP为空"
+            )
+
+            return
+        }
+
+        if (
+            network == null
+        ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "TEST_NETWORK_MIGRATION：当前Network为空"
+            )
+
+            return
+        }
+
+        println(
+            "WALKIE $WALKIE_VERSION: " +
+                    "★★★★ 开始手动UDP迁移测试 ★★★★"
+        )
+
+        println(
+            "WALKIE $WALKIE_VERSION: " +
+                    "测试Network=$network " +
+                    "server=$ip:$SERVER_PORT"
+        )
+
+        networkMigrationJob?.cancel()
+
+        networkMigrationJob =
+            serviceScope.launch {
+
+                try {
+
+                    udpManager.migrate(
+                        ip = ip,
+                        port = SERVER_PORT,
+                        network = network
+                    )
+
+                    val newSocket =
+                        udpManager.currentSocket()
+
+                    if (
+                        newSocket == null ||
+                        newSocket.isClosed
+                    ) {
+
+                        println(
+                            "WALKIE $WALKIE_VERSION: " +
+                                    "TEST_NETWORK_MIGRATION：新Socket创建失败"
+                        )
+
+                        return@launch
+                    }
+
+                    synchronized(
+                        connectionLock
+                    ) {
+
+                        udpSocket =
+                            newSocket
+                    }
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "TEST_NETWORK_MIGRATION：★★★★ 新Socket已接管 ★★★★ " +
+                                "newPort=${newSocket.localPort}"
+                    )
+
+                    repeat(
+                        5
+                    ) { index ->
+
+                        if (
+                            shuttingDown
+                        ) {
+
+                            return@launch
+                        }
+
+                        sendMessageNow(
+                            "$MSG_HELLO:$deviceId"
+                        )
+
+                        println(
+                            "WALKIE $WALKIE_VERSION: " +
+                                    "TEST_NETWORK_MIGRATION：HELLO " +
+                                    "${index + 1}/5"
+                        )
+
+                        delay(
+                            80L
+                        )
+                    }
+
+                    sendNetworkPing(
+                        System.currentTimeMillis()
+                    )
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "TEST_NETWORK_MIGRATION：PING已发送"
+                    )
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "★★★★ 手动UDP迁移测试完成 ★★★★"
+                    )
+
+                } catch (
+                    e: Throwable
+                ) {
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "TEST_NETWORK_MIGRATION失败=${e.message}"
+                    )
+
+                } finally {
+
+                    if (
+                        networkMigrationJob ===
+                        this
+                    ) {
+
+                        networkMigrationJob =
+                            null
+                    }
+                }
+            }
     }
 
     private fun handleNetworkLost(
@@ -2546,6 +3177,9 @@ class WalkieService : Service() {
 
         activeNetwork = null
         isNetworkAvailable = false
+
+        networkMigrationJob?.cancel()
+        networkMigrationJob = null
 
         setConnected(false)
 
@@ -2712,6 +3346,9 @@ class WalkieService : Service() {
             )
         ) {
 
+            var connectionSucceeded =
+                false
+
             try {
 
                 connectOnce(
@@ -2719,8 +3356,51 @@ class WalkieService : Service() {
                     generation
                 )
 
-                reconnectDelay =
-                    INITIAL_RECONNECT_INTERVAL
+                /*
+                 * ==================================================
+                 * connectOnce() 正常返回。
+                 *
+                 * 如果此时：
+                 *
+                 * 1. 当前Manager仍然打开
+                 * 2. 当前Socket确实还是本代Socket
+                 * 3. connected=true
+                 *
+                 * 说明可能是正常的迁移接管后继续运行。
+                 *
+                 * 这里不立即cleanup。
+                 * ==================================================
+                 */
+                connectionSucceeded =
+                    udpManager.isOpen() &&
+                            isConnected &&
+                            isConnectionGenerationCurrent(
+                                generation
+                            )
+
+                if (
+                    connectionSucceeded
+                ) {
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "connectOnce正常返回，" +
+                                "当前连接仍然有效 " +
+                                "generation=$generation"
+                    )
+
+                    reconnectDelay =
+                        INITIAL_RECONNECT_INTERVAL
+
+                    /*
+                     * 给connectOnce/Manager一次短暂恢复检查机会。
+                     *
+                     * 不再无限continue。
+                     */
+                    delay(
+                        SOCKET_RECEIVE_TIMEOUT.toLong()
+                    )
+                }
 
             } catch (
                 e: Exception
@@ -2741,6 +3421,11 @@ class WalkieService : Service() {
                 }
             }
 
+            /*
+             * ==================================================
+             * 生命周期检查
+             * ==================================================
+             */
             if (
                 !serviceScope.isActive ||
                 shuttingDown ||
@@ -2752,10 +3437,52 @@ class WalkieService : Service() {
                 break
             }
 
-            cleanupConnection(
-                generation
-            )
+            /*
+             * ==================================================
+             * 关键修复
+             *
+             * 不再简单根据：
+             *
+             * udpManager.isOpen()
+             *
+             * 判断“连接正常”。
+             *
+             * Socket open != 网络正常。
+             *
+             * 真正断网后，Android 可能仍然保持
+             * DatagramSocket open。
+             *
+             * 所以发生异常以后：
+             *
+             * 必须进入 cleanupConnection()
+             *      ↓
+             * 关闭失效Socket
+             *      ↓
+             * 等待
+             *      ↓
+             * 重新创建Socket
+             *
+             * 这样才能真正恢复。
+             * ==================================================
+             */
 
+            if (
+                !connectionSucceeded
+            ) {
+
+                cleanupConnection(
+                    generation
+                )
+            }
+
+            /*
+             * ==================================================
+             * 无网络：
+             *
+             * 不立即疯狂重连。
+             * 等待NetworkCallback通知新网络。
+             * ==================================================
+             */
             if (
                 !isNetworkAvailable
             ) {
@@ -2767,31 +3494,66 @@ class WalkieService : Service() {
                 continue
             }
 
-            delay(
-                reconnectDelay
-            )
-
+            /*
+             * ==================================================
+             * 如果网络已经恢复，
+             * 但当前Manager没有有效Socket，
+             * 继续进入自动重连。
+             * ==================================================
+             */
             if (
-                !isConnectionGenerationCurrent(
-                    generation
-                )
+                !udpManager.isOpen()
             ) {
 
-                break
-            }
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "UDP Manager无有效Socket，" +
+                            "准备自动重连 " +
+                            "generation=$generation"
+                )
 
-            reconnectDelay =
+                delay(
+                    reconnectDelay
+                )
+
                 if (
-                    reconnectDelay * 2L >
-                    MAX_RECONNECT_INTERVAL
+                    !isConnectionGenerationCurrent(
+                        generation
+                    )
                 ) {
 
-                    MAX_RECONNECT_INTERVAL
-
-                } else {
-
-                    reconnectDelay * 2L
+                    break
                 }
+
+                reconnectDelay =
+                    if (
+                        reconnectDelay * 2L >
+                        MAX_RECONNECT_INTERVAL
+                    ) {
+
+                        MAX_RECONNECT_INTERVAL
+
+                    } else {
+
+                        reconnectDelay * 2L
+                    }
+
+                continue
+            }
+
+            /*
+             * ==================================================
+             * 当前连接仍然有效。
+             *
+             * 重连等待时间重置。
+             * ==================================================
+             */
+            reconnectDelay =
+                INITIAL_RECONNECT_INTERVAL
+
+            delay(
+                SOCKET_RECEIVE_TIMEOUT.toLong()
+            )
         }
     }
 
@@ -2801,7 +3563,7 @@ class WalkieService : Service() {
      * ============================================================
      */
 
-    private fun connectOnce(
+    private suspend fun connectOnce(
         ip: String,
         generation: Long
     ) {
@@ -2832,57 +3594,84 @@ class WalkieService : Service() {
         serverAddress =
             address
 
-        val socket =
-            DatagramSocket()
         /*
- * ============================================================
- * V21：
- * 将 UDP Socket 绑定到当前 Android Network。
- *
- * 这样在 Wi-Fi / 5G 切换时，
- * 当前连接生命周期可以明确知道自己使用的是哪一张网卡。
- *
- * 如果当前没有可用 activeNetwork，
- * 则保持系统默认路由。
- * ============================================================
- */
+         * ========================================================
+         * V24.9.2
+         *
+         * UDP Socket 的创建统一交给 WalkieUdpManager。
+         *
+         * Manager负责：
+         *
+         * 创建Socket
+         *      ↓
+         * 绑定当前Network
+         *      ↓
+         * 持有当前Socket
+         *      ↓
+         * 网络切换时执行无缝迁移
+         * ========================================================
+         */
+
         val network =
             activeNetwork
 
+        udpManager.open(
+            ip = ip,
+            port = SERVER_PORT,
+            network = network
+        )
+
+        /*
+         * Manager创建成功以后，
+         * 取出当前Socket。
+         *
+         * 注意：
+         *
+         * 这里使用var。
+         *
+         * 因为网络切换以后，
+         * 当前接收循环需要：
+         *
+         * 旧Socket
+         *      ↓
+         * 新Socket
+         *
+         * 无缝切换。
+         */
+        val firstSocket =
+            udpManager.currentSocket()
+                ?: run {
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "UDP Manager创建Socket失败"
+                    )
+
+                    return
+                }
+
+        var socket: DatagramSocket =
+            firstSocket
+
         if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.M &&
-            network != null
+            socket.isClosed
         ) {
 
-            try {
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "UDP Manager创建Socket失败"
+            )
 
-                network.bindSocket(
-                    socket
-                )
-
-                println(
-                    "WALKIE $WALKIE_VERSION: " +
-                            "UDP Socket 已绑定当前Network=$network " +
-                            "localPort=${socket.localPort}"
-                )
-
-            } catch (
-                e: Exception
-            ) {
-
-                println(
-                    "WALKIE $WALKIE_VERSION: " +
-                            "绑定当前Network失败=${e.message}"
-                )
-            }
+            return
         }
 
         /*
-         * 创建Socket以后再次检查generation。
+         * 再次检查generation。
          *
-         * 防止刚创建完Socket，
-         * 网络就已经切换。
+         * 防止：
+         *
+         * 创建完Socket以后，
+         * 网络已经发生新的变化。
          */
         if (
             !isConnectionGenerationCurrent(
@@ -2892,15 +3681,28 @@ class WalkieService : Service() {
         ) {
 
             try {
-                socket.close()
+                udpManager.close()
             } catch (_: Exception) {
             }
 
             return
         }
 
-        socket.soTimeout =
-            SOCKET_RECEIVE_TIMEOUT
+        /*
+         * ========================================================
+         * 与原代码保持一致：
+         *
+         * Socket参数继续在Service侧保持。
+         * ========================================================
+         */
+
+        try {
+
+            socket.soTimeout =
+                SOCKET_RECEIVE_TIMEOUT
+
+        } catch (_: Exception) {
+        }
 
         try {
 
@@ -2920,40 +3722,17 @@ class WalkieService : Service() {
 
         /*
          * ========================================================
-         * 唯一Socket注册
+         * 记录到旧字段。
+         *
+         * 当前业务其他地方仍然可以继续使用：
+         *
+         * udpSocket
+         * serverAddress
          * ========================================================
          */
-
         synchronized(
             connectionLock
         ) {
-
-            /*
-             * 理论上这里不应该存在另一个Socket。
-             *
-             * 如果真的存在，绝不覆盖。
-             */
-            val existing =
-                udpSocket
-
-            if (
-                existing != null &&
-                !existing.isClosed
-            ) {
-
-                try {
-                    socket.close()
-                } catch (_: Exception) {
-                }
-
-                println(
-                    "WALKIE $WALKIE_VERSION: " +
-                            "检测到已有UDP Socket，" +
-                            "拒绝创建第二个Socket"
-                )
-
-                return
-            }
 
             if (
                 connectionGeneration !=
@@ -2962,7 +3741,7 @@ class WalkieService : Service() {
             ) {
 
                 try {
-                    socket.close()
+                    udpManager.close()
                 } catch (_: Exception) {
                 }
 
@@ -2975,27 +3754,31 @@ class WalkieService : Service() {
 
         println(
             "WALKIE $WALKIE_VERSION: " +
-                    "UDP localPort=${socket.localPort} " +
+                    "UDP Manager创建Socket成功 " +
+                    "localPort=${socket.localPort} " +
                     "generation=$generation"
         )
 
         try {
 
             /*
-             * ============================================================
+             * ====================================================
              * V24.9.1
+             *
              * AudioTrack不再由WalkieService直接创建。
              *
-             * 新的WalkieAudioPlayback会在收到PCM后，
-             * 自动通过WalkieAudioPlayer创建并管理AudioTrack。
-             *
-             * 这里不要提前创建播放器，
-             * 避免连接建立时AudioTrack提前初始化。
-             * ============================================================
+             * 连接建立时不提前初始化播放器。
+             * ====================================================
              */
 
             /*
              * HELLO只发送一次。
+             *
+             * 网络迁移成功时，
+             * handleNetworkAvailable()
+             * 会另外发送5次迁移HELLO。
+             *
+             * 这里不重复发送。
              */
             sendMessageNow(
                 "$MSG_HELLO:$deviceId:$WALKIE_VERSION"
@@ -3005,7 +3788,9 @@ class WalkieService : Service() {
                 System.currentTimeMillis()
 
             resetNetworkStats()
-            lastNetworkPingTime = now
+
+            lastNetworkPingTime =
+                now
 
             lastKeepAliveTime =
                 now
@@ -3018,34 +3803,124 @@ class WalkieService : Service() {
                     4096
                 )
 
+            /*
+             * ====================================================
+             * V24.9.2
+             *
+             * 关键修改：
+             *
+             * 这里不能再使用：
+             *
+             * !socket.isClosed
+             *
+             * 因为网络迁移时：
+             *
+             * 旧Socket会正常关闭
+             *
+             * 但Manager已经有新Socket。
+             *
+             * 所以连接循环应该判断：
+             *
+             * Manager当前是否还有有效Socket。
+             * ====================================================
+             */
             while (
                 serviceScope.isActive &&
                 !shuttingDown &&
-                !socket.isClosed &&
+                udpManager.isOpen() &&
                 isConnectionGenerationCurrent(
                     generation
                 )
             ) {
 
+                /*
+                 * =================================================
+                 * V24.9.2 网络迁移接管检测
+                 *
+                 * 如果：
+                 *
+                 * 旧Socket
+                 *      ↓
+                 * Manager切换
+                 *      ↓
+                 * 新Socket
+                 *
+                 * 那么这里把本地socket引用
+                 * 同步到新的当前Socket。
+                 *
+                 * 这样：
+                 *
+                 * 后面的日志
+                 * KEEPALIVE
+                 * 连接状态
+                 * finally判断
+                 *
+                 * 都能够正确对应新Socket。
+                 * =================================================
+                 */
+                val currentManagerSocket =
+                    udpManager.currentSocket()
+
+                if (
+                    currentManagerSocket == null
+                ) {
+
+                    throw SocketException(
+                        "UDP Manager当前Socket为空"
+                    )
+                }
+
+                if (
+                    currentManagerSocket !== socket
+                ) {
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "★★★ UDP网络迁移接管 ★★★ " +
+                                "oldPort=${socket.localPort} " +
+                                "newPort=${currentManagerSocket.localPort}"
+                    )
+
+                    socket =
+                        currentManagerSocket
+
+                    synchronized(
+                        connectionLock
+                    ) {
+
+                        udpSocket =
+                            currentManagerSocket
+                    }
+                }
+
                 val currentTime =
                     System.currentTimeMillis()
 
-                expireNetworkPings(currentTime)
+                expireNetworkPings(
+                    currentTime
+                )
 
                 if (
                     isConnected &&
-                    currentTime - lastNetworkPingTime >= NETWORK_PING_INTERVAL
+                    currentTime -
+                    lastNetworkPingTime >=
+                    NETWORK_PING_INTERVAL
                 ) {
-                    sendNetworkPing(currentTime)
-                    lastNetworkPingTime = currentTime
+
+                    sendNetworkPing(
+                        currentTime
+                    )
+
+                    lastNetworkPingTime =
+                        currentTime
                 }
 
-                updateNetworkBitrate(currentTime)
+                updateNetworkBitrate(
+                    currentTime
+                )
 
                 /*
                  * KEEPALIVE。
-                 *
-                 * 必须使用当前socket。
                  */
                 if (
                     currentTime -
@@ -3102,7 +3977,13 @@ class WalkieService : Service() {
                     packet.length =
                         buffer.size
 
-                    socket.receive(
+                    /*
+                     * 接收统一由Manager处理。
+                     *
+                     * Manager每次都会使用
+                     * 当前activeSocket。
+                     */
+                    udpManager.receive(
                         packet
                     )
 
@@ -3252,7 +4133,9 @@ class WalkieService : Service() {
                         )
                     ) {
 
-                        handleNetworkPong(text)
+                        handleNetworkPong(
+                            text
+                        )
 
                         continue
                     }
@@ -3408,21 +4291,19 @@ class WalkieService : Service() {
                         ) {
 
                             /*
-  * ============================================================
-  * V21：抢麦成功提示
-  * ============================================================
-  *
-  * 服务器明确返回 TALK_OK 后：
-  *
-  * 1. 结束 REQUESTING
-  * 2. 设置 ALLOWED
-  * 3. 更新界面
-  * 4. 播放一声短提示音
-  * 5. 再开始录音
-  *
-  * 这样用户能明确知道：
-  * “已经抢到麦，可以开始说话了。”
-  */
+                             * ============================================================
+                             * V21：抢麦成功提示
+                             * ============================================================
+                             *
+                             * 服务器明确返回 TALK_OK 后：
+                             *
+                             * 1. 结束 REQUESTING
+                             * 2. 设置 ALLOWED
+                             * 3. 更新界面
+                             * 4. 播放一声短提示音
+                             * 5. 再开始录音
+                             */
+
                             talkRequesting =
                                 false
 
@@ -3436,8 +4317,7 @@ class WalkieService : Service() {
                             /*
                              * 抢麦成功提示音。
                              *
-                             * 必须在开始录音之前播放，
-                             * 避免提示音被麦克风采集后又通过网络发出去。
+                             * 必须在开始录音之前播放。
                              */
                             playTalkGrantedTone()
 
@@ -3549,6 +4429,7 @@ class WalkieService : Service() {
                     /*
                      * ==================================================
                      * V23.1：
+                     *
                      * 新协议：
                      *
                      * W23A + StreamID + Sequence + Opus
@@ -3634,14 +4515,6 @@ class WalkieService : Service() {
                         pcmData.isEmpty()
                     ) {
 
-                        /*
-                         * V21：
-                         * 记录连续解码失败。
-                         *
-                         * 单个坏包直接丢弃；
-                         * 连续多个失败时，
-                         * 请求播放器进入恢复模式。
-                         */
                         consecutiveDecodeFailures =
                             (
                                     consecutiveDecodeFailures + 1
@@ -3667,10 +4540,6 @@ class WalkieService : Service() {
                         continue
                     }
 
-                    /*
-                     * 当前 Opus 已经成功解码，
-                     * 连续失败计数恢复。
-                     */
                     consecutiveDecodeFailures =
                         0
 
@@ -3687,17 +4556,16 @@ class WalkieService : Service() {
                         continue
                     }
 
-                    /*
-                     * 解码后的PCM必须是偶数样本对应的有效16bit数据。
-                     * 同时过滤极端异常长度，避免异常包把播放器拖死。
-                     */
                     if (
                         pcmData.size < 80 ||
-                        pcmData.size > SAMPLE_RATE / 5
+                        pcmData.size >
+                        SAMPLE_RATE / 5
                     ) {
+
                         println(
                             "WALKIE AUDIO: drop abnormal PCM=${pcmData.size}"
                         )
+
                         continue
                     }
 
@@ -3741,12 +4609,75 @@ class WalkieService : Service() {
                     _: SocketTimeoutException
                 ) {
 
+                    /*
+                     * 正常超时。
+                     *
+                     * 下一轮循环会重新检查
+                     * Manager当前Socket。
+                     */
                     continue
                 }
 
                 catch (
                     e: SocketException
                 ) {
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "★★★ connectOnce收到SocketException ★★★ " +
+                                "socketPort=${socket.localPort} " +
+                                "reason=${e.message} " +
+                                "generation=$generation"
+                    )
+
+                    val currentManagerSocket =
+                        udpManager.currentSocket()
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "迁移检查：旧Socket=${socket.localPort} " +
+                                "当前ManagerSocket=" +
+                                "${currentManagerSocket?.localPort ?: -1} " +
+                                "managerOpen=${udpManager.isOpen()}"
+                    )
+
+                    if (
+                        !shuttingDown &&
+                        currentManagerSocket != null &&
+                        !currentManagerSocket.isClosed &&
+                        currentManagerSocket !== socket &&
+                        udpManager.isOpen() &&
+                        isConnectionGenerationCurrent(
+                            generation
+                        )
+                    ) {
+
+                        println(
+                            "WALKIE $WALKIE_VERSION: " +
+                                    "★★★★ 确认是旧Socket正常退场 ★★★★ " +
+                                    "oldPort=${socket.localPort} " +
+                                    "newPort=${currentManagerSocket.localPort}"
+                        )
+
+                        socket =
+                            currentManagerSocket
+
+                        synchronized(
+                            connectionLock
+                        ) {
+
+                            udpSocket =
+                                currentManagerSocket
+                        }
+
+                        println(
+                            "WALKIE $WALKIE_VERSION: " +
+                                    "★★★★ connectOnce已经切换到新Socket ★★★★ " +
+                                    "port=${socket.localPort}"
+                        )
+
+                        continue
+                    }
 
                     if (
                         !shuttingDown &&
@@ -3781,20 +4712,6 @@ class WalkieService : Service() {
                         )
                     }
 
-                    /*
-                     * V21：
-                     * 非预期 UDP 异常不再继续复用当前连接。
-                     *
-                     * 直接抛出，让 connectOnce() 的 finally
-                     * 安全释放当前 Socket，
-                     * 再由 runConnectionLoop() 负责自动重连。
-                     *
-                     * 这样比：
-                     *
-                     * 异常 -> continue -> 坏Socket继续运行
-                     *
-                     * 更可靠。
-                     */
                     throw SocketException(
                         "UDP receive processing failed: ${e.message}"
                     )
@@ -3803,15 +4720,70 @@ class WalkieService : Service() {
 
         } finally {
 
-            /*
-             * 只有当前generation的Socket
-             * 才能被清理。
-             *
-             * 防止旧Socket把新Socket置空。
-             */
-            cleanupSocket(
-                socket
+            val currentSocket =
+                synchronized(
+                    connectionLock
+                ) {
+                    udpSocket
+                }
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "connectOnce进入finally " +
+                        "socketPort=${socket.localPort} " +
+                        "currentPort=${currentSocket?.localPort ?: -1} " +
+                        "managerOpen=${udpManager.isOpen()} " +
+                        "generation=$generation"
             )
+
+            if (
+                currentSocket === socket
+            ) {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "connectOnce确认当前Socket仍是自己，" +
+                            "准备关闭UDP Manager " +
+                            "port=${socket.localPort}"
+                )
+
+                try {
+
+                    udpManager.close()
+
+                } catch (
+                    e: Throwable
+                ) {
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "关闭UDP Manager异常=${e.message}"
+                    )
+                }
+
+                synchronized(
+                    connectionLock
+                ) {
+
+                    if (
+                        udpSocket === socket
+                    ) {
+
+                        udpSocket =
+                            null
+                    }
+                }
+
+            } else {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "★★★★ finally确认已被新Socket接管，" +
+                            "绝不关闭新Socket ★★★★ " +
+                            "oldPort=${socket.localPort} " +
+                            "newPort=${currentSocket?.localPort ?: -1}"
+                )
+            }
         }
     }
 
@@ -4807,38 +5779,18 @@ class WalkieService : Service() {
         message: String
     ) {
 
-        val socket =
-            udpSocket
-
-        val address =
-            serverAddress
-
         if (
-            socket == null ||
-            socket.isClosed ||
-            address == null
+            shuttingDown &&
+            message != MSG_GOODBYE &&
+            message != MSG_TALK_STOP
         ) {
-
             return
         }
 
         try {
 
-            val data =
-                message.toByteArray(
-                    Charsets.UTF_8
-                )
-
-            val packet =
-                DatagramPacket(
-                    data,
-                    data.size,
-                    address,
-                    SERVER_PORT
-                )
-
-            socket.send(
-                packet
+            udpManager.send(
+                message
             )
 
         } catch (
@@ -4851,50 +5803,8 @@ class WalkieService : Service() {
 
                 println(
                     "WALKIE $WALKIE_VERSION: " +
-                            "UDP发送失败=${e.message}，" +
-                            "当前Socket将进入自动恢复"
+                            "UDP Manager发送失败=${e.message}"
                 )
-            }
-
-            /*
-             * ====================================================
-             * V21：
-             * 只有当前全局 Socket 还是刚才发送失败的这个实例，
-             * 才允许关闭它。
-             *
-             * 防止：
-             *
-             * 旧 Socket 发送失败
-             *        ↓
-             * 新 Socket 已经建立
-             *        ↓
-             * 旧任务误把新 Socket 关闭
-             * ====================================================
-             */
-            synchronized(
-                connectionLock
-            ) {
-
-                if (
-                    udpSocket ===
-                    socket
-                ) {
-
-                    try {
-
-                        socket.close()
-
-                    } catch (_: Throwable) {
-                    }
-
-                    udpSocket =
-                        null
-
-                    println(
-                        "WALKIE $WALKIE_VERSION: " +
-                                "发送失败，当前UDP Socket已失效"
-                    )
-                }
             }
         }
     }
@@ -5594,21 +6504,6 @@ class WalkieService : Service() {
                             continue
                         }
 
-                        val socket =
-                            udpSocket
-
-                        val address =
-                            serverAddress
-
-                        if (
-                            socket == null ||
-                            socket.isClosed ||
-                            address == null
-                        ) {
-
-                            break
-                        }
-
                         try {
 
                             val framedAudio =
@@ -5616,16 +6511,9 @@ class WalkieService : Service() {
                                     opus
                                 )
 
-                            val packet =
-                                DatagramPacket(
-                                    framedAudio,
-                                    framedAudio.size,
-                                    address,
-                                    SERVER_PORT
-                                )
 
-                            socket.send(
-                                packet
+                            udpManager.send(
+                                framedAudio
                             )
 
                             recordAudioTransmit(
@@ -6378,7 +7266,9 @@ class WalkieService : Service() {
     ) {
 
         /*
+         * ============================================================
          * 旧generation没有权限清理当前状态。
+         * ============================================================
          */
         if (
             !isConnectionGenerationCurrent(
@@ -6389,6 +7279,14 @@ class WalkieService : Service() {
             return
         }
 
+        /*
+         * ============================================================
+         * 保存当前频道。
+         *
+         * 真正断线以后重新连接，
+         * 需要恢复原来的频道。
+         * ============================================================
+         */
         if (
             currentChannel.isNotBlank() &&
             currentChannel !=
@@ -6399,6 +7297,11 @@ class WalkieService : Service() {
                 currentChannel
         }
 
+        /*
+         * ============================================================
+         * 停止当前讲话状态
+         * ============================================================
+         */
         talkRequesting =
             false
 
@@ -6410,47 +7313,89 @@ class WalkieService : Service() {
 
         stopRecording()
 
+        /*
+         * ============================================================
+         * 关闭已经失效的UDP连接
+         * ============================================================
+         */
         closeSocket()
 
         serverAddress =
             null
 
         /*
-         * 重连时不播放旧语音。
+         * ============================================================
+         * V24.9.1关键修复：
+         *
+         * 真正发生“断线 -> 自动重连”时，
+         * V23.1音频接收状态必须全部重新开始。
+         *
+         * 否则：
+         *
+         * 断线前：
+         * expectedSequence = 1000
+         *
+         * 重连后：
+         * 第一个包可能已经是1200
+         *
+         * 重排器会认为1200是未来包，
+         * 一直等待旧的1001，
+         * 最终导致：
+         *
+         * UDP收到了音频
+         *       ↓
+         * W23A重排卡住
+         *       ↓
+         * 不输出opusPayload
+         *       ↓
+         * 没有声音
+         *
+         * 手动完全重连之所以能恢复，
+         * 就是因为Service重新初始化了这些状态。
+         *
+         * 这里直接模拟同样的“音频接收状态重建”。
+         * ============================================================
          */
-        /*
-       * ============================================================
-       * V24.9.1：连接断开后清理独立播放模块
-       * ============================================================
-       *
-       * 断线之前已经进入播放队列的语音，
-       * 在重新连接以后已经没有实时意义。
-       *
-       * 由新的 WalkieAudioPlayback 统一负责清空。
-       * ============================================================
-       */
+        resetV231AudioJitter()
 
+        /*
+         * 连续解码失败计数也必须清零。
+         */
+        consecutiveDecodeFailures =
+            0
+
+        println(
+            "WALKIE $WALKIE_VERSION: " +
+                    "V23.1音频接收状态已重置，" +
+                    "等待自动重连后的新音频流"
+        )
+
+        /*
+         * ============================================================
+         * 清理断线前残留的旧语音。
+         *
+         * 这些PCM已经没有实时意义。
+         * ============================================================
+         */
         audioPlayback.clearQueue()
 
         /*
-         * 下一次收到新语音后，
-         * 播放模块按照自己的恢复缓冲策略重新开始。
+         * 下一次真正收到新语音以后，
+         * 重新按照弱网恢复缓冲策略开始播放。
          */
         audioPlayback.requestRecovery()
 
         /*
-  * V21：
-  * 断线清理时不要把当前频道强制改成 public。
-  *
-  * reconnectChannel 已经保存了上一次正常使用的频道，
-  * 等重新连接成功后，由连接恢复流程重新加入该频道。
-  *
-  * 这样 Service 内部的频道状态不会在重连期间
-  * 突然跳回 public。
-  */
+         * ============================================================
+         * 断线以后保留原频道。
+         *
+         * 只有没有恢复频道时才回到public。
+         * ============================================================
+         */
         if (
             reconnectChannel.isBlank() ||
-            reconnectChannel == "public"
+            reconnectChannel ==
+            "public"
         ) {
 
             currentChannel =
@@ -6496,36 +7441,26 @@ class WalkieService : Service() {
 
     private fun closeSocket() {
 
-        val socket =
-            synchronized(
-                connectionLock
-            ) {
-
-                val current =
-                    udpSocket
-
-                udpSocket =
-                    null
-
-                current
-            }
-
-        if (
-            socket != null
-        ) {
-
-            try {
-
-                socket.close()
-
-            } catch (_: Exception) {
-            }
-
+        try {
+            udpManager.close()
+        } catch (e: Throwable) {
             println(
                 "WALKIE $WALKIE_VERSION: " +
-                        "UDP Socket 已关闭"
+                        "关闭UDP Manager异常=${e.message}"
             )
         }
+
+        synchronized(
+            connectionLock
+        ) {
+            udpSocket =
+                null
+        }
+
+        println(
+            "WALKIE $WALKIE_VERSION: " +
+                    "UDP Manager 已关闭"
+        )
     }
 
     /*
