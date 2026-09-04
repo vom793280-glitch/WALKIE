@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.walkie.ui.theme.WalkieTheme
 
-private const val WALKIE_VERSION = "V23.3"
+private const val WALKIE_VERSION = "V24.9.1"
 
 private const val DEFAULT_SERVER_IP =
     "38.146.29.169"
@@ -169,15 +169,6 @@ class MainActivity : ComponentActivity() {
     /*
      * ============================================================
      * 网络质量
-     *
-     * networkBaseType：
-     * 只保存 Wi-Fi / 移动数据 / 无网络。
-     *
-     * networkType：
-     * 对 UI 显示完整网络摘要。
-     *
-     * 这样刷新频道或者重新检测网络类型时，
-     * 不会把已经得到的延迟、丢包、抖动清掉。
      * ============================================================
      */
 
@@ -325,9 +316,6 @@ class MainActivity : ComponentActivity() {
                             !connected
                         ) {
 
-                            /*
-                             * 真正断线才清空实时网络统计。
-                             */
                             onlineUsers =
                                 emptyList()
 
@@ -373,12 +361,9 @@ class MainActivity : ComponentActivity() {
 
                                     "$networkBaseType · 离线"
                                 }
+
                         } else {
 
-                            /*
-                             * 重新连接时不要把旧网络数据清掉。
-                             * 等新的 NET PONG 到来后自动更新。
-                             */
                             refreshNetworkDisplay()
                         }
 
@@ -478,10 +463,6 @@ class MainActivity : ComponentActivity() {
                         connectionState =
                             true
 
-                        /*
-                         * 这里只重新检测“网络类型”，
-                         * 不清除服务器返回的网络质量数据。
-                         */
                         updateNetworkType()
 
                         println(
@@ -601,15 +582,8 @@ class MainActivity : ComponentActivity() {
                                     -1L
                                 )
 
-                        /*
-                         * 获取手机当前网络类型。
-                         * 不再覆盖已有统计数据。
-                         */
                         updateNetworkType()
 
-                        /*
-                         * 网络检测成功后组合完整 UI 文本。
-                         */
                         refreshNetworkDisplay()
 
                         println(
@@ -649,9 +623,6 @@ class MainActivity : ComponentActivity() {
                             )
                                 ?: ""
 
-                        /*
-                         * 不清除网络数据。
-                         */
                         updateNetworkType()
 
                         println(
@@ -718,9 +689,6 @@ class MainActivity : ComponentActivity() {
             systemBackCallback
         )
 
-        /*
-         * 读取本地昵称。
-         */
         nickname =
             getSharedPreferences(
                 UI_PREFS,
@@ -737,9 +705,6 @@ class MainActivity : ComponentActivity() {
         nicknameInput =
             nickname
 
-        /*
-         * 第一次没有昵称，必须设置。
-         */
         nicknameDialog =
             nickname.isBlank()
 
@@ -747,19 +712,8 @@ class MainActivity : ComponentActivity() {
 
         requestPermissionsIfNeeded()
 
-        /*
- * ========================================================
- * V24.9.0 全局悬浮 PTT
- *
- * 如果没有悬浮窗权限，
- * 会自动打开系统授权页面。
- * ========================================================
- */
         startFloatingPtt()
 
-        /*
-         * 注册广播。
-         */
         val filter =
             IntentFilter().apply {
 
@@ -802,12 +756,6 @@ class MainActivity : ComponentActivity() {
             filter,
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
-
-        /*
-         * ========================================================
-         * Compose
-         * ========================================================
-         */
 
         setContent {
 
@@ -907,9 +855,6 @@ class MainActivity : ComponentActivity() {
 
                         onDismissNickname = {
 
-                            /*
-                             * 首次设置时不能关闭。
-                             */
                             if (
                                 nickname.isNotBlank()
                             ) {
@@ -1069,38 +1014,12 @@ class MainActivity : ComponentActivity() {
 
         super.onResume()
 
-        /*
-         * 检查并启动全局悬浮 PTT。
-         *
-         * 只有已经获得“显示在其他应用上层”权限时，
-         * 才会真正显示悬浮按钮。
-         */
         startFloatingPtt()
 
         updateNetworkType()
 
-        /*
-         * 不使用 connectionState 判断。
-         *
-         * 因为 Activity 可能刚刚重新创建，
-         * 此时 connectionState 还是 false，
-         * 但后台 WalkieService 可能仍然在线。
-         *
-         * 这里直接请求 Service 同步频道信息。
-         */
         requestChannelList()
 
-        /*
-         * 如果 Service 当前在线，
-         * 它会返回：
-         *
-         * CHANNEL_LIST
-         * CHANNEL_STATUS
-         * USER_LIST
-         * NETWORK_STATUS
-         *
-         * Activity 再根据这些广播恢复界面。
-         */
         println(
             "WALKIE $WALKIE_VERSION: " +
                     "Activity 回到前台，主动请求 Service 同步状态"
@@ -1115,15 +1034,6 @@ class MainActivity : ComponentActivity() {
 
     private fun startFloatingPtt() {
 
-        /*
-         * Android 要求：
-         *
-         * SYSTEM_ALERT_WINDOW
-         * +
-         * 用户在系统设置里手动授权
-         *
-         * 才能显示全局悬浮窗。
-         */
         if (
             !android.provider.Settings.canDrawOverlays(
                 this
@@ -1166,10 +1076,6 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        /*
-         * 已经有悬浮窗权限，
-         * 启动悬浮 PTT 服务。
-         */
         try {
 
             val intent =
@@ -1252,11 +1158,6 @@ class MainActivity : ComponentActivity() {
     /*
      * ============================================================
      * 网络类型
-     *
-     * 只更新 networkBaseType。
-     *
-     * 不再把 networkType 直接覆盖成 Wi-Fi / 移动数据，
-     * 防止已有延迟、丢包等数据消失。
      * ============================================================
      */
 
@@ -1306,15 +1207,13 @@ class MainActivity : ComponentActivity() {
                         "网络已连接"
                 }
 
-            /*
-             * 只有已经有网络质量数据时才重新组合。
-             */
             if (
                 connectionState ||
                 networkQuality != "检测中"
             ) {
 
                 refreshNetworkDisplay()
+
             } else {
 
                 networkType =
@@ -1426,6 +1325,12 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
+
+    /*
+     * ============================================================
+     * 断开
+     * ============================================================
+     */
 
     private fun disconnectServer() {
 
@@ -2775,12 +2680,6 @@ private fun HomePage(
             )
     ) {
 
-        /*
-         * ========================================================
-         * 顶部
-         * ========================================================
-         */
-
         Row(
 
             modifier =
@@ -2828,14 +2727,6 @@ private fun HomePage(
                     connected
             )
         }
-
-        /*
-         * ========================================================
-         * 服务器
-         *
-         * 连接 / 断开固定保留在一级首页。
-         * ========================================================
-         */
 
         Card(
 
@@ -2979,12 +2870,6 @@ private fun HomePage(
             }
         }
 
-        /*
-         * ========================================================
-         * 当前频道
-         * ========================================================
-         */
-
         Card(
 
             modifier =
@@ -3094,14 +2979,6 @@ private fun HomePage(
             }
         }
 
-        /*
-         * ========================================================
-         * 网络状态
-         * ========================================================
-         *
-         * 不再使用“打开”按钮。
-         */
-
         Card(
 
             modifier =
@@ -3192,18 +3069,6 @@ private fun HomePage(
                 }
             }
         }
-
-        /*
-         * ========================================================
-         * 在线人员
-         *
-         * 一级首页直接显示。
-         *
-         * 固定高度：
-         * 人少 → 直接看到。
-         * 人多 → 这个区域内部上下滑动。
-         * ========================================================
-         */
 
         Card(
 
@@ -3352,12 +3217,6 @@ private fun HomePage(
                 }
             }
         }
-
-        /*
-         * ========================================================
-         * 底部入口
-         * ========================================================
-         */
 
         Row(
 
@@ -3557,10 +3416,6 @@ private fun UsersPage(
                 onBack
         )
 
-        /*
-         * 人数
-         */
-
         Card(
 
             modifier =
@@ -3635,12 +3490,6 @@ private fun UsersPage(
                 )
             }
         }
-
-        /*
-         * 小列表
-         *
-         * 人多时内部滚动。
-         */
 
         if (
             !connected
@@ -4107,9 +3956,6 @@ private fun ChannelsPage(
 /*
  * ================================================================
  * 设置
- *
- * 注意：
- * 连接 / 断开已经移回一级首页。
  * ================================================================
  */
 
@@ -4153,10 +3999,6 @@ private fun SettingsPage(
             onBack =
                 onBack
         )
-
-        /*
-         * 昵称
-         */
 
         Card(
 
@@ -4262,10 +4104,6 @@ private fun SettingsPage(
             }
         }
 
-        /*
-         * 网络
-         */
-
         Card(
 
             modifier =
@@ -4336,10 +4174,6 @@ private fun SettingsPage(
             }
         }
 
-        /*
-         * 用户 ID
-         */
-
         Card(
 
             modifier =
@@ -4386,10 +4220,6 @@ private fun SettingsPage(
             }
         }
 
-        /*
-         * 应用
-         */
-
         Card(
 
             modifier =
@@ -4421,7 +4251,7 @@ private fun SettingsPage(
 
                 Text(
 
-                    "V23.3",
+                    "V24.9.1",
 
                     fontSize =
                         12.sp,
@@ -4735,9 +4565,6 @@ private fun PttBottomBar(
 /*
  * ================================================================
  * FeatureCard
- *
- * 保留，避免影响原项目结构。
- * 一级首页已经不再调用它。
  * ================================================================
  */
 

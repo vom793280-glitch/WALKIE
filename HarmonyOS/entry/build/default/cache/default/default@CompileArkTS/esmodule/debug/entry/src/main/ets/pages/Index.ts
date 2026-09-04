@@ -4,6 +4,7 @@ if (!("finalizeConstruction" in ViewPU.prototype)) {
 interface Index_Params {
     walkieClient?: WalkieClient;
     walkieTone?: WalkieTone;
+    floatingPttEventsRegistered?: boolean;
     connected?: boolean;
     appStateCheckTimer?: number | null;
     lastAppActive?: boolean;
@@ -41,6 +42,8 @@ import { WalkieClient } from "@normalized:N&&&entry/src/main/ets/WalkieClient&";
 import type { WalkieClientState, WalkieChannel, WalkieUser } from "@normalized:N&&&entry/src/main/ets/WalkieClient&";
 import { WalkieTone } from "@normalized:N&&&entry/src/main/ets/WalkieTone&";
 import preferences from "@ohos:data.preferences";
+import emitter from "@ohos:events.emitter";
+import { WALKIE_FLOAT_PTT_DOWN_ID, WALKIE_FLOAT_PTT_UP_ID, WALKIE_FLOAT_PTT_CONNECTED_ID, WALKIE_FLOAT_PTT_DISCONNECTED_ID, WALKIE_FLOAT_PTT_IDLE_ID, WALKIE_FLOAT_PTT_REQUESTING_ID, WALKIE_FLOAT_PTT_TALKING_ID, WALKIE_FLOAT_PTT_BUSY_ID } from "@normalized:N&&&entry/src/main/ets/pages/WalkieFloatingPtt&";
 class Index extends ViewPU {
     constructor(parent, params, __localStorage, elmtId = -1, paramsLambda = undefined, extraInfo) {
         super(parent, __localStorage, elmtId, extraInfo);
@@ -49,6 +52,7 @@ class Index extends ViewPU {
         }
         this.walkieClient = new WalkieClient();
         this.walkieTone = new WalkieTone();
+        this.floatingPttEventsRegistered = false;
         this.__connected = new ObservedPropertySimplePU(false, this, "connected");
         this.appStateCheckTimer = null;
         this.lastAppActive = false;
@@ -141,6 +145,9 @@ class Index extends ViewPU {
         }
         if (params.walkieTone !== undefined) {
             this.walkieTone = params.walkieTone;
+        }
+        if (params.floatingPttEventsRegistered !== undefined) {
+            this.floatingPttEventsRegistered = params.floatingPttEventsRegistered;
         }
         if (params.connected !== undefined) {
             this.connected = params.connected;
@@ -305,6 +312,10 @@ class Index extends ViewPU {
     // ============================================================
     private walkieClient: WalkieClient;
     private walkieTone: WalkieTone;
+    // ============================================================
+    // 悬浮 PTT 事件注册状态
+    // ============================================================
+    private floatingPttEventsRegistered: boolean;
     // ============================================================
     // 首页状态
     // ============================================================
@@ -544,13 +555,7 @@ class Index extends ViewPU {
     aboutToAppear(): void {
         /*
          * ============================================================
-         * 先注册 WalkieClient 回调。
-         *
-         * WalkieClient.setStateCallback()
-         * 会立即发送一次当前状态。
-         *
-         * 所以必须先注册，再读取本地昵称，
-         * 防止 WalkieClient 的空昵称覆盖本地保存的昵称。
+         * 先注册 WalkieClient 回调
          * ============================================================
          */
         this.walkieClient.setStateCallback((state: WalkieClientState): void => {
@@ -558,20 +563,26 @@ class Index extends ViewPU {
         });
         /*
          * ============================================================
-         * 读取本地保存的昵称
+         * 注册悬浮 PTT 事件
+         *
+         * 只注册一次。
+         *
+         * 这里不创建新的 WalkieClient。
+         * ============================================================
+         */
+        this.registerFloatingPttEvents();
+        /*
+         * ============================================================
+         * 读取本地保存的 DeviceID / 昵称
          * ============================================================
          */
         const hostContext = this.getUIContext()
             .getHostContext();
         /*
-     * ============================================================
-     * 恢复持久化 DeviceID
-     *
-     * Android 的 DeviceID 是长期保存的。
-     *
-     * HarmonyOS 这里也保持同样行为。
-     * ============================================================
-     */
+         * ============================================================
+         * 恢复持久化 DeviceID
+         * ============================================================
+         */
         if (hostContext !== undefined) {
             try {
                 this.devicePreferences =
@@ -580,20 +591,12 @@ class Index extends ViewPU {
                     });
                 const savedDeviceId: string = this.devicePreferences.getSync('device_id', '') as string;
                 if (savedDeviceId.length > 0) {
-                    /*
-                     * 已有 DeviceID：
-                     * 使用永久保存的身份。
-                     */
                     this.walkieClient
                         .setDeviceId(savedDeviceId);
                     console.info('WALKIE: 已恢复 DeviceID=' +
                         savedDeviceId);
                 }
                 else {
-                    /*
-                     * 第一次运行：
-                     * 保存当前生成的 DeviceID。
-                     */
                     const newDeviceId: string = this.walkieClient
                         .getDeviceId();
                     this.devicePreferences
@@ -665,6 +668,64 @@ class Index extends ViewPU {
                 null;
         }
         console.info('WALKIE UI: 页面离开，保持 UDP 与后台恢复机制');
+    }
+    // ============================================================
+    // 悬浮 PTT 事件
+    // ============================================================
+    private registerFloatingPttEvents(): void {
+        if (this.floatingPttEventsRegistered) {
+            return;
+        }
+        this.floatingPttEventsRegistered =
+            true;
+        /*
+         * ------------------------------------------------------------
+         * 悬浮按钮按下
+         * ------------------------------------------------------------
+         */
+        const downEvent: emitter.InnerEvent = {
+            eventId: WALKIE_FLOAT_PTT_DOWN_ID
+        };
+        emitter.on(downEvent, () => {
+            if (!this.connected) {
+                return;
+            }
+            if (this.talkStatus ===
+                'BUSY') {
+                return;
+            }
+            if (this.talkStatus ===
+                'REQUESTING') {
+                return;
+            }
+            if (this.talkStatus ===
+                'ALLOWED') {
+                return;
+            }
+            this.pressing =
+                true;
+            console.info('WALKIE FLOAT PTT: 开始申请抢麦');
+            void this.walkieClient
+                .startTalking();
+        });
+        /*
+         * ------------------------------------------------------------
+         * 悬浮按钮松开
+         * ------------------------------------------------------------
+         */
+        const upEvent: emitter.InnerEvent = {
+            eventId: WALKIE_FLOAT_PTT_UP_ID
+        };
+        emitter.on(upEvent, () => {
+            if (!this.pressing) {
+                return;
+            }
+            this.pressing =
+                false;
+            console.info('WALKIE FLOAT PTT: 停止讲话');
+            void this.walkieClient
+                .stopTalking();
+        });
     }
     // ============================================================
     // 系统返回 / 侧滑返回
@@ -789,17 +850,8 @@ class Index extends ViewPU {
             Column.height('100%');
         }, Column);
         this.observeComponentCreation2((elmtId, isInitialRender) => {
-            // --------------------------------------------------------
-            // 顶部
-            // --------------------------------------------------------
             Row.create();
-            // --------------------------------------------------------
-            // 顶部
-            // --------------------------------------------------------
             Row.width('100%');
-            // --------------------------------------------------------
-            // 顶部
-            // --------------------------------------------------------
             Row.padding({
                 left: 16,
                 right: 16,
@@ -820,7 +872,7 @@ class Index extends ViewPU {
         }, Text);
         Text.pop();
         this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create('V23.3');
+            Text.create('V24.9.0');
             Text.fontSize(13);
             Text.fontColor('#777E87');
             Text.margin({
@@ -830,18 +882,9 @@ class Index extends ViewPU {
         Text.pop();
         Column.pop();
         this.statusPill.bind(this)();
-        // --------------------------------------------------------
-        // 顶部
-        // --------------------------------------------------------
         Row.pop();
         this.observeComponentCreation2((elmtId, isInitialRender) => {
-            // --------------------------------------------------------
-            // 主体
-            // --------------------------------------------------------
             Scroll.create();
-            // --------------------------------------------------------
-            // 主体
-            // --------------------------------------------------------
             Scroll.layoutWeight(1);
         }, Scroll);
         this.observeComponentCreation2((elmtId, isInitialRender) => {
@@ -865,13 +908,7 @@ class Index extends ViewPU {
         }, Blank);
         Blank.pop();
         Column.pop();
-        // --------------------------------------------------------
-        // 主体
-        // --------------------------------------------------------
         Scroll.pop();
-        // --------------------------------------------------------
-        // PTT
-        // --------------------------------------------------------
         this.pttBar.bind(this)();
         Column.pop();
     }
@@ -1995,7 +2032,7 @@ class Index extends ViewPU {
             ? this.myUserId
             : '连接后由服务器分配');
         this.infoCard.bind(this)('服务器', '兄弟服务器');
-        this.infoCard.bind(this)('版本', 'V23.3');
+        this.infoCard.bind(this)('版本', 'V24.9.0');
         Column.pop();
         Scroll.pop();
         Column.pop();
@@ -2500,16 +2537,6 @@ class Index extends ViewPU {
             return;
         }
         const name: string = this.nickname.trim();
-        /*
-         * ============================================================
-         * 连接前先把 UI 当前显示的昵称同步到 WalkieClient。
-         *
-         * 这样即使 APP 是重新打开的，
-         * 本地恢复出来的昵称也会进入 WalkieClient.state.nickname。
-         *
-         * 后面的 WALKIE_LOGIN 就会携带正确昵称。
-         * ============================================================
-         */
         if (name.length > 0) {
             console.info('WALKIE CONNECT: 准备同步昵称=' +
                 name);
@@ -2518,11 +2545,6 @@ class Index extends ViewPU {
             console.info('WALKIE CONNECT: 昵称同步完成=' +
                 name);
         }
-        /*
-         * 没有昵称时仍然允许连接。
-         *
-         * VPS 会按 deviceId 创建默认用户名。
-         */
         await this.walkieClient.connect(name);
     }
     // ============================================================
@@ -2545,9 +2567,6 @@ class Index extends ViewPU {
             value;
         this.showNicknameDialog =
             false;
-        /*
-         * 保存到手机本地。
-         */
         if (this.nicknamePreferences !== null) {
             try {
                 this.nicknamePreferences.putSync('nickname', value);
@@ -2560,9 +2579,6 @@ class Index extends ViewPU {
                     JSON.stringify(error));
             }
         }
-        /*
-         * 同步服务器。
-         */
         await this.walkieClient
             .setNickname(value);
     }
@@ -2683,9 +2699,6 @@ class Index extends ViewPU {
     // 应用 WalkieClient 状态
     // ============================================================
     private applyClientState(state: WalkieClientState): void {
-        /*
-         * UI 状态全部以 WalkieClient 为准。
-         */
         this.connected =
             state.connected;
         if (state.nickname.length > 0 &&
@@ -2697,21 +2710,6 @@ class Index extends ViewPU {
             state.userId;
         this.currentChannel =
             state.currentChannel;
-        /*
-         * ============================================================
-         * 在线人员过滤
-         *
-         * 服务器 USER_LIST 在重连过程中可能先到，
-         * 此时 state.userId 还没有被 USER_OK 更新。
-         *
-         * 因此：
-         *
-         * 1. UserID 与自己相同 → 排除
-         * 2. 昵称与当前自己的昵称相同 → 排除
-         *
-         * 两层判断，避免重连后把自己再次显示出来。
-         * ============================================================
-         */
         this.onlineUsers =
             state.onlineUsers;
         this.currentOnlineCount =
@@ -2735,10 +2733,9 @@ class Index extends ViewPU {
                 state.message;
         }
         /*
-         * 网络类型目前 UDP 层没有直接返回。
-         * 先根据连接状态显示。
-         *
-         * 后面接 HarmonyOS 网络能力 API。
+         * ============================================================
+         * 网络类型
+         * ============================================================
          */
         if (this.connected) {
             this.networkType =
@@ -2750,13 +2747,7 @@ class Index extends ViewPU {
         }
         /*
          * ============================================================
-         * 频道人数
-         *
-         * Android / HarmonyOS 在线人员页面只显示
-         * 当前频道的“其他用户”。
-         *
-         * 所以这里不能再使用服务器返回的
-         * channel.onlineCount，否则会把自己重新算进去。
+         * 当前频道人数
          * ============================================================
          */
         for (let index = 0; index < this.channels.length; index++) {
@@ -2768,6 +2759,69 @@ class Index extends ViewPU {
                 break;
             }
         }
+        /*
+         * ============================================================
+         * 同步悬浮 PTT 状态
+         *
+         * 不发送对象参数。
+         *
+         * 只发送明确的数字事件，
+         * 避免 ArkTS 的未类型化对象问题。
+         * ============================================================
+         */
+        this.updateFloatingPttState();
+    }
+    // ============================================================
+    // 更新悬浮 PTT 状态
+    // ============================================================
+    private updateFloatingPttState(): void {
+        if (this.connected) {
+            const connectedEvent: emitter.InnerEvent = {
+                eventId: WALKIE_FLOAT_PTT_CONNECTED_ID
+            };
+            emitter.emit(connectedEvent);
+        }
+        else {
+            const disconnectedEvent: emitter.InnerEvent = {
+                eventId: WALKIE_FLOAT_PTT_DISCONNECTED_ID
+            };
+            emitter.emit(disconnectedEvent);
+        }
+        /*
+         * ------------------------------------------------------------
+         * 通话状态
+         * ------------------------------------------------------------
+         */
+        if (this.talkStatus ===
+            'REQUESTING') {
+            const event: emitter.InnerEvent = {
+                eventId: WALKIE_FLOAT_PTT_REQUESTING_ID
+            };
+            emitter.emit(event);
+            return;
+        }
+        if (this.talkStatus ===
+            'ALLOWED' ||
+            this.talkStatus ===
+                'TALKING') {
+            const event: emitter.InnerEvent = {
+                eventId: WALKIE_FLOAT_PTT_TALKING_ID
+            };
+            emitter.emit(event);
+            return;
+        }
+        if (this.talkStatus ===
+            'BUSY') {
+            const event: emitter.InnerEvent = {
+                eventId: WALKIE_FLOAT_PTT_BUSY_ID
+            };
+            emitter.emit(event);
+            return;
+        }
+        const idleEvent: emitter.InnerEvent = {
+            eventId: WALKIE_FLOAT_PTT_IDLE_ID
+        };
+        emitter.emit(idleEvent);
     }
     rerender() {
         this.updateDirtyElements();

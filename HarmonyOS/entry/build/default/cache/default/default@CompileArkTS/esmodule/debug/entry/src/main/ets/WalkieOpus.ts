@@ -3,13 +3,16 @@ import walkieOpus from "@normalized:Y&&&libwalkieopus.so&";
  * ============================================================
  * WALKIE Native Opus / Native OHAudio
  *
+ * V24.0
+ *
  * HarmonyOS 7.0 / API 26
  *
  * 同一个 libwalkieopus.so 同时提供：
  *
- *   Opus Encoder
- *   Opus Decoder
- *   Native OHAudio Capturer
+ *   1. Opus Encoder
+ *   2. Opus Decoder
+ *   3. Opus PLC
+ *   4. Native OHAudio Capturer
  * ============================================================
  */
 export class WalkieOpus {
@@ -48,7 +51,8 @@ export class WalkieOpus {
                 return null;
             }
         }
-        if (pcm.byteLength !== 640) {
+        if (pcm.byteLength !==
+            640) {
             console.error('WALKIE OPUS: PCM大小错误=' +
                 pcm.byteLength);
             return null;
@@ -110,10 +114,12 @@ export class WalkieOpus {
                 return null;
             }
         }
-        if (opusData.byteLength <= 0) {
+        if (opusData.byteLength <=
+            0) {
             return null;
         }
-        if (opusData.byteLength > 1208) {
+        if (opusData.byteLength >
+            1208) {
             return null;
         }
         try {
@@ -122,6 +128,36 @@ export class WalkieOpus {
         }
         catch {
             console.error('WALKIE OPUS: 解码失败');
+            return null;
+        }
+    }
+    // ============================================================
+    // V24.0 Opus PLC
+    //
+    // 只在上层已经确认：
+    //
+    //     missing == 1
+    //
+    // 时调用。
+    //
+    // 输出：
+    //
+    //     320 samples
+    //     640 bytes PCM
+    // ============================================================
+    public decodePlc(): ArrayBuffer | null {
+        if (!this.decoderReady) {
+            const ready: boolean = this.createDecoder();
+            if (!ready) {
+                return null;
+            }
+        }
+        try {
+            const result: ArrayBuffer | null = walkieOpus.decodePlc();
+            return result;
+        }
+        catch {
+            console.error('WALKIE OPUS: PLC 解码失败');
             return null;
         }
     }
@@ -153,14 +189,16 @@ export class WalkieOpus {
             if (result) {
                 this.captureReady =
                     true;
-                console.info('WALKIE OHAUDIO: ★Native Capturer 启动成功★');
+                console.info('WALKIE OHAUDIO: ' +
+                    '★Native Capturer 启动成功★');
                 return true;
             }
         }
         catch {
             // 统一返回 false
         }
-        console.error('WALKIE OHAUDIO: Native Capturer 启动失败');
+        console.error('WALKIE OHAUDIO: ' +
+            'Native Capturer 启动失败');
         return false;
     }
     // ============================================================
@@ -178,7 +216,8 @@ export class WalkieOpus {
         }
         this.captureReady =
             false;
-        console.info('WALKIE OHAUDIO: Native Capturer 已停止');
+        console.info('WALKIE OHAUDIO: ' +
+            'Native Capturer 已停止');
     }
     // ============================================================
     // Native OHAudio Release

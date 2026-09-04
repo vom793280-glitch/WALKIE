@@ -1,399 +1,393 @@
 import type AbilityConstant from "@ohos:app.ability.AbilityConstant";
-import ConfigurationConstant from "@ohos:app.ability.ConfigurationConstant";
 import UIAbility from "@ohos:app.ability.UIAbility";
 import type Want from "@ohos:app.ability.Want";
 import abilityAccessCtrl from "@ohos:abilityAccessCtrl";
-import type { PermissionRequestResult } from "@ohos:abilityAccessCtrl";
-import wantAgent from "@ohos:app.ability.wantAgent";
-import type { WantAgent } from "@ohos:app.ability.wantAgent";
-import hilog from "@ohos:hilog";
-import type window from "@ohos:window";
+import window from "@ohos:window";
 import type { BusinessError } from "@ohos:base";
-import backgroundTaskManager from "@ohos:resourceschedule.backgroundTaskManager";
-const DOMAIN: number = 0x0000;
+import notificationManager from "@ohos:notificationManager";
+import { WalkieBackgroundTask } from "@normalized:N&&&entry/src/main/ets/WalkieBackgroundTask&";
 /*
  * ============================================================
- * WALKIE HarmonyOS EntryAbility
+ * WALKIE HarmonyOS
  *
- * 当前阶段：
+ * V24.9.0
  *
- *   1. 后台长时任务
- *   2. 锁屏后台运行
- *   3. 后台 UDP / 音频保持
- *   4. 自动重连
+ * EntryAbility
  *
- * 当前已经验证成功：
+ * 本版本：
  *
- *   DeviceID
- *   昵称恢复
- *   当前频道恢复
- *   在线人员准确
- *   Opus
- *   AudioRenderer
- *   SPEAKER
- *   VOICE_COMMUNICATION
+ * 1. 保留 V24.8.6 后台长时任务
+ * 2. 保留锁屏后台运行
+ * 3. 保留通知权限
+ * 4. 保留全局悬浮 PTT
+ * 5. 修复麦克风权限声明后没有运行时授权弹窗的问题
+ *
+ * HarmonyOS 7.0 / API 26
  *
  * ============================================================
  */
-/*
- * ============================================================
- * APP 前后台状态
- * ============================================================
- */
-AppStorage.setOrCreate('walkie_app_active', false);
 export default class EntryAbility extends UIAbility {
-    /*
-     * ==========================================================
-     * 本地状态：
-     *
-     * 仅用于记录“我们最近一次申请是否成功”。
-     *
-     * ★注意：
-     *
-     * 这个变量不再作为系统任务是否存在的唯一依据。
-     * ==========================================================
-     */
-    private backgroundTaskStarted: boolean = false;
-    /*
-     * 防止同一时间多次申请。
-     */
-    private backgroundTaskStarting: boolean = false;
-    // ============================================================
+    // ==========================================================
+    // V24.9.0
+    // 全局悬浮 PTT 窗口
+    // ==========================================================
+    private floatingPttWindow: window.Window | null = null;
+    // ==========================================================
     // Ability 创建
-    // ============================================================
+    // ==========================================================
     onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-        hilog.info(DOMAIN, 'WALKIE', '%{public}s', 'Ability onCreate');
+        console.info('WALKIE V24.9.0: EntryAbility.onCreate');
         /*
          * ========================================================
-         * APP 第一次启动时申请后台长时任务。
+         * 启动后台长时任务
+         *
+         * 原 V24.8.6 逻辑保持不变。
          * ========================================================
          */
-        void this.ensureWalkieBackgroundTask();
+        void WalkieBackgroundTask.start(this.context);
     }
-    // ============================================================
-    // Ability 销毁
-    // ============================================================
-    onDestroy(): void {
-        hilog.info(DOMAIN, 'WALKIE', '%{public}s', 'Ability onDestroy');
-        /*
-         * Ability 真正销毁时释放连续任务。
-         */
-        void this.stopWalkieBackgroundTask();
-    }
-    // ============================================================
+    // ==========================================================
     // WindowStage 创建
-    // ============================================================
+    // ==========================================================
     onWindowStageCreate(windowStage: window.WindowStage): void {
-        hilog.info(DOMAIN, 'WALKIE', '%{public}s', 'Ability onWindowStageCreate');
-        // ==========================================================
-        // 加载主页面
-        // ==========================================================
+        console.info('WALKIE V24.9.0: WindowStage 创建');
+        /*
+         * ========================================================
+         * 加载主页面
+         * ========================================================
+         */
         windowStage.loadContent('pages/Index', (err: BusinessError): void => {
             if (err.code) {
-                hilog.error(DOMAIN, 'WALKIE', 'Failed to load content. ' +
-                    'Cause: %{public}s', JSON.stringify(err));
+                console.error('WALKIE V24.9.0: ' +
+                    '主页面加载失败 ' +
+                    `code=${err.code} ` +
+                    `message=${err.message}`);
                 return;
             }
-            hilog.info(DOMAIN, 'WALKIE', '%{public}s', 'Succeeded in loading content.');
+            console.info('WALKIE V24.9.0: ' +
+                '主页面加载成功');
+            /*
+             * ====================================================
+             * 请求麦克风权限
+             *
+             * 必须在主页面加载后主动申请。
+             *
+             * module.json5 负责声明权限，
+             * 这里负责真正向用户弹出授权框。
+             * ====================================================
+             */
+            void EntryAbility
+                .requestMicrophonePermission(this.context);
+            /*
+             * ====================================================
+             * 请求通知权限
+             * ====================================================
+             */
+            void EntryAbility
+                .requestNotificationPermission(this.context);
+            /*
+             * ====================================================
+             * 创建全局悬浮 PTT
+             *
+             * 主页面加载成功以后再创建。
+             * ====================================================
+             */
+            this.createFloatingPttWindow();
         });
-        // ==========================================================
-        // 颜色模式
-        // ==========================================================
-        try {
-            this.context
-                .getApplicationContext()
-                .setColorMode(ConfigurationConstant.ColorMode
-                .COLOR_MODE_NOT_SET);
-        }
-        catch (error) {
-            const businessError: BusinessError = error as BusinessError;
-            hilog.error(DOMAIN, 'WALKIE', 'Failed to set colorMode. ' +
-                'code=%{public}s ' +
-                'message=%{public}s', `${businessError.code}`, businessError.message);
-        }
-        // ==========================================================
-        // 请求麦克风权限
-        // ==========================================================
-        void this.requestMicrophonePermission();
     }
-    // ============================================================
-    // ★核心★
-    //
-    // 确保 WALKIE 后台任务存在
-    // ============================================================
-    private async ensureWalkieBackgroundTask(): Promise<void> {
-        /*
-         * ========================================================
-         * 正在申请中：
-         *
-         * 不重复执行。
-         * ========================================================
-         */
-        if (this.backgroundTaskStarting) {
-            hilog.info(DOMAIN, 'WALKIE_BG', '%{public}s', '后台任务正在申请中，跳过重复申请');
-            return;
-        }
-        /*
-         * ========================================================
-         * 进入申请状态。
-         * ========================================================
-         */
-        this.backgroundTaskStarting =
-            true;
+    // ==========================================================
+    // 麦克风权限
+    // ==========================================================
+    private static async requestMicrophonePermission(context: import('@kit.AbilityKit').common.UIAbilityContext): Promise<void> {
         try {
-            // ======================================================
-            // 创建通知点击后的 WantAgent
-            // ======================================================
-            const wantAgentInfo: wantAgent.WantAgentInfo = {
-                wants: [
-                    {
-                        bundleName: this.context
-                            .abilityInfo
-                            .bundleName,
-                        abilityName: this.context
-                            .abilityInfo
-                            .name
-                    }
-                ],
-                operationType: wantAgent.OperationType
-                    .START_ABILITY,
-                requestCode: 1001,
-                wantAgentFlags: [
-                    wantAgent.WantAgentFlags
-                        .UPDATE_PRESENT_FLAG
-                ]
-            };
-            // ======================================================
-            // 获取 WantAgent
-            // ======================================================
-            const wantAgentObj: WantAgent = await wantAgent.getWantAgent(wantAgentInfo);
-            // ======================================================
-            // WALKIE 长时任务类型
-            //
-            // audioPlayback
-            // audioRecording
-            // dataTransfer
-            // ======================================================
-            const bgModes: Array<string> = [
-                'audioPlayback',
-                'audioRecording',
-                'dataTransfer'
-            ];
-            // ======================================================
-            // 申请 Continuous Task
-            // ======================================================
-            const notification: backgroundTaskManager.ContinuousTaskNotification = await backgroundTaskManager
-                .startBackgroundRunning(this.context, bgModes, wantAgentObj);
-            /*
-             * ========================================================
-             * ★申请成功★
-             * ========================================================
-             */
-            this.backgroundTaskStarted =
-                true;
-            hilog.info(DOMAIN, 'WALKIE_BG', '★后台长时任务重新确认成功★ ' +
-                'notificationId=%{public}s', `${notification.notificationId}`);
-            hilog.info(DOMAIN, 'WALKIE_BG', 'backgroundModes=%{public}s', bgModes.join(','));
-        }
-        catch (error) {
-            const businessError: BusinessError = error as BusinessError;
-            /*
-             * ========================================================
-             * 9800005
-             *
-             * 官方含义：
-             *
-             * Continuous task verification failed
-             *
-             * 我们这里重点处理：
-             *
-             * 应用已经存在一个 Continuous Task。
-             *
-             * 这不是 fatal error。
-             *
-             * 如果系统原来的任务还在：
-             *
-             *     保持不动。
-             *
-             * 如果系统任务已经失效：
-             *
-             *     下一次进入后台时再申请。
-             * ========================================================
-             */
-            if (businessError.code ===
-                9800005) {
-                hilog.info(DOMAIN, 'WALKIE_BG', '%{public}s', 'Continuous Task 已存在，跳过重复创建');
-            }
-            else if (businessError.code ===
-                9800006) {
-                /*
-                 * 9800006：
-                 *
-                 * Notification verification failed.
-                 *
-                 * 这个错误与通知本身有关。
-                 */
-                hilog.error(DOMAIN, 'WALKIE_BG', '后台通知校验失败 ' +
-                    'code=%{public}s ' +
-                    'message=%{public}s', `${businessError.code}`, businessError.message);
-            }
-            else {
-                hilog.error(DOMAIN, 'WALKIE_BG', '★后台长时任务申请失败★ ' +
-                    'code=%{public}s ' +
-                    'message=%{public}s', `${businessError.code}`, businessError.message);
-            }
-        }
-        finally {
-            /*
-             * 允许下一次进入后台重新检查。
-             */
-            this.backgroundTaskStarting =
-                false;
-        }
-    }
-    // ============================================================
-    // 停止 WALKIE 后台任务
-    // ============================================================
-    private async stopWalkieBackgroundTask(): Promise<void> {
-        /*
-         * 只有我们确认曾经成功申请过，
-         * 才主动停止。
-         */
-        if (!this.backgroundTaskStarted) {
-            return;
-        }
-        try {
-            await backgroundTaskManager
-                .stopBackgroundRunning(this.context);
-            hilog.info(DOMAIN, 'WALKIE_BG', '%{public}s', '后台长时任务已停止');
-        }
-        catch (error) {
-            const businessError: BusinessError = error as BusinessError;
-            hilog.error(DOMAIN, 'WALKIE_BG', '停止后台任务失败 ' +
-                'code=%{public}s ' +
-                'message=%{public}s', `${businessError.code}`, businessError.message);
-        }
-        this.backgroundTaskStarted =
-            false;
-    }
-    // ============================================================
-    // 麦克风运行时权限
-    // ============================================================
-    private async requestMicrophonePermission(): Promise<void> {
-        try {
+            console.info('WALKIE V24.9.0: ' +
+                '准备申请麦克风权限');
             const atManager: abilityAccessCtrl.AtManager = abilityAccessCtrl.createAtManager();
-            const permissionResult: PermissionRequestResult = await atManager
-                .requestPermissionsFromUser(this.context, [
+            const result = await atManager.requestPermissionsFromUser(context, [
                 'ohos.permission.MICROPHONE'
             ]);
-            hilog.info(DOMAIN, 'WALKIE_PERMISSION', 'permissions=%{public}s', JSON.stringify(permissionResult.permissions));
-            hilog.info(DOMAIN, 'WALKIE_PERMISSION', 'authResults=%{public}s', JSON.stringify(permissionResult.authResults));
-            hilog.info(DOMAIN, 'WALKIE_PERMISSION', 'dialogShownResults=%{public}s', JSON.stringify(permissionResult.dialogShownResults));
-            /*
-             * 0 = PERMISSION_GRANTED
-             */
-            if (permissionResult.authResults.length >
-                0 &&
-                permissionResult.authResults[0] ===
-                    0) {
-                hilog.info(DOMAIN, 'WALKIE_PERMISSION', '%{public}s', 'MICROPHONE 授权成功');
+            console.info('WALKIE V24.9.0: ' +
+                `麦克风权限申请结果=${JSON.stringify(result)}`);
+            const authResults: Array<number> = result.authResults;
+            if (authResults.length > 0 &&
+                authResults[0] ===
+                    abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
+                console.info('WALKIE V24.9.0: ' +
+                    '★★★★ 麦克风权限已授权 ★★★★');
             }
             else {
-                hilog.error(DOMAIN, 'WALKIE_PERMISSION', '%{public}s', 'MICROPHONE 未获得授权');
+                console.error('WALKIE V24.9.0: ' +
+                    '❌ 麦克风权限未授权');
             }
         }
         catch (error) {
             const businessError: BusinessError = error as BusinessError;
-            hilog.error(DOMAIN, 'WALKIE_PERMISSION', 'MICROPHONE 权限申请失败，' +
-                'code=%{public}s ' +
-                'message=%{public}s', `${businessError.code}`, businessError.message);
+            console.error('WALKIE V24.9.0: ' +
+                '申请麦克风权限失败 ' +
+                `code=${businessError.code} ` +
+                `message=${businessError.message}`);
+            console.error('WALKIE V24.9.0: ' +
+                `权限申请异常=${JSON.stringify(error)}`);
         }
     }
-    // ============================================================
+    // ==========================================================
+    // 获取 AccessTokenId
+    // ==========================================================
+    private static getAccessTokenId(context: import('@kit.AbilityKit').common.UIAbilityContext): number {
+        return context.applicationInfo.accessTokenId;
+    }
+    // ==========================================================
+    // V24.9.0
+    // 创建全局悬浮 PTT
+    // ==========================================================
+    private createFloatingPttWindow(): void {
+        /*
+         * 已经创建就不重复创建。
+         */
+        if (this.floatingPttWindow !==
+            null) {
+            return;
+        }
+        try {
+            /*
+             * ======================================================
+             * 系统悬浮窗配置
+             * ======================================================
+             */
+            const config: window.Configuration = {
+                name: 'WALKIE_FLOAT_PTT',
+                windowType: window.WindowType.TYPE_FLOAT,
+                ctx: this.context
+            };
+            /*
+             * ======================================================
+             * 创建窗口
+             * ======================================================
+             */
+            window.createWindow(config, (error: BusinessError, floatWindow: window.Window): void => {
+                if (error.code) {
+                    console.error('WALKIE FLOAT PTT: ' +
+                        '创建悬浮窗失败 ' +
+                        `code=${error.code} ` +
+                        `message=${error.message}`);
+                    return;
+                }
+                /*
+                 * 保存窗口对象。
+                 */
+                this.floatingPttWindow =
+                    floatWindow;
+                console.info('WALKIE FLOAT PTT: ' +
+                    '★悬浮窗创建成功★');
+                /*
+                 * ==================================================
+                 * 配置悬浮窗
+                 * ==================================================
+                 */
+                this.setupFloatingPttWindow(floatWindow);
+            });
+        }
+        catch (error) {
+            const businessError: BusinessError = error as BusinessError;
+            console.error('WALKIE FLOAT PTT: ' +
+                'createWindow异常 ' +
+                `code=${businessError.code} ` +
+                `message=${businessError.message}`);
+        }
+    }
+    // ==========================================================
+    // V24.9.0
+    // 配置悬浮 PTT 窗口
+    // ==========================================================
+    private setupFloatingPttWindow(floatWindow: window.Window): void {
+        /*
+         * ========================================================
+         * 窗口大小
+         *
+         * 与悬浮 PTT 页面保持 84 × 84。
+         * ========================================================
+         */
+        try {
+            floatWindow.resize(84, 84);
+        }
+        catch (error) {
+            console.warn('WALKIE FLOAT PTT: ' +
+                'resize失败 ' +
+                JSON.stringify(error));
+        }
+        /*
+         * ========================================================
+         * 初始位置
+         * ========================================================
+         */
+        try {
+            floatWindow.moveWindowTo(900, 1100);
+        }
+        catch (error) {
+            console.warn('WALKIE FLOAT PTT: ' +
+                '初始位置设置失败 ' +
+                JSON.stringify(error));
+        }
+        /*
+         * ========================================================
+         * 加载悬浮页面
+         * ========================================================
+         */
+        try {
+            floatWindow.setUIContent('pages/WalkieFloatingPtt', (error: BusinessError): void => {
+                if (error.code) {
+                    console.error('WALKIE FLOAT PTT: ' +
+                        '悬浮页面加载失败 ' +
+                        `code=${error.code} ` +
+                        `message=${error.message}`);
+                    return;
+                }
+                console.info('WALKIE FLOAT PTT: ' +
+                    '悬浮页面加载成功');
+                /*
+                 * ==================================================
+                 * 设置透明背景
+                 * ==================================================
+                 */
+                try {
+                    floatWindow
+                        .setWindowBackgroundColor('#00000000');
+                }
+                catch (error) {
+                    console.warn('WALKIE FLOAT PTT: ' +
+                        '透明背景设置失败 ' +
+                        JSON.stringify(error));
+                }
+                /*
+                 * ==================================================
+                 * 显示悬浮窗
+                 * ==================================================
+                 */
+                try {
+                    floatWindow.showWindow();
+                    console.info('WALKIE FLOAT PTT: ' +
+                        '★★★★ 悬浮 PTT 已显示 ★★★★');
+                }
+                catch (error) {
+                    console.error('WALKIE FLOAT PTT: ' +
+                        '显示悬浮窗失败 ' +
+                        JSON.stringify(error));
+                }
+            });
+        }
+        catch (error) {
+            console.error('WALKIE FLOAT PTT: ' +
+                'setUIContent异常 ' +
+                JSON.stringify(error));
+        }
+    }
+    // ==========================================================
+    // 请求通知权限
+    // ==========================================================
+    private static async requestNotificationPermission(context: import('@kit.AbilityKit').common.UIAbilityContext): Promise<void> {
+        try {
+            const enabled: boolean = await notificationManager
+                .isNotificationEnabled();
+            if (enabled) {
+                console.info('WALKIE V24.9.0: ' +
+                    '通知已经开启');
+                return;
+            }
+            console.info('WALKIE V24.9.0: ' +
+                '请求开启通知权限');
+            await notificationManager
+                .requestEnableNotification(context);
+            console.info('WALKIE V24.9.0: ' +
+                '通知权限请求完成');
+        }
+        catch (error) {
+            const businessError: BusinessError = error as BusinessError;
+            console.error('WALKIE V24.9.0: ' +
+                '请求通知权限失败 ' +
+                `code=${businessError.code} ` +
+                `message=${businessError.message}`);
+        }
+    }
+    // ==========================================================
     // WindowStage 销毁
-    // ============================================================
+    // ==========================================================
     onWindowStageDestroy(): void {
-        hilog.info(DOMAIN, 'WALKIE', '%{public}s', 'Ability onWindowStageDestroy');
+        console.info('WALKIE V24.9.0: ' +
+            'WindowStage 销毁');
     }
-    // ============================================================
-    // 前台
-    // ============================================================
+    // ==========================================================
+    // 进入前台
+    // ==========================================================
     onForeground(): void {
-        hilog.info(DOMAIN, 'WALKIE', '%{public}s', 'Ability onForeground');
+        console.info('WALKIE V24.9.0: ' +
+            '★应用进入前台★');
         /*
          * ========================================================
-         * APP 回到前台。
+         * 原 V24.8.6 后台恢复机制保持不变。
          * ========================================================
          */
-        AppStorage.setOrCreate('walkie_app_active', true);
+        void WalkieBackgroundTask.start(this.context);
         /*
          * ========================================================
-         * 这里不主动 stopBackgroundRunning。
-         *
-         * 当前 Continuous Task 如果还存在，
-         * 就让它继续存在。
-         *
-         * 如果之前因为系统策略已经失效，
-         * 下一次 onBackground() 会重新申请。
+         * 如果悬浮 PTT 不存在，则重新创建。
          * ========================================================
          */
-        hilog.info(DOMAIN, 'WALKIE_BG', '%{public}s', 'WALKIE 回到前台，保留后台任务状态');
+        if (this.floatingPttWindow ===
+            null) {
+            this.createFloatingPttWindow();
+        }
     }
-    // ============================================================
-    // ★关键★
-    //
-    // 后台
-    // ============================================================
+    // ==========================================================
+    // 进入后台
+    // ==========================================================
     onBackground(): void {
-        hilog.info(DOMAIN, 'WALKIE', '%{public}s', 'Ability onBackground');
+        console.info('WALKIE V24.9.0: ' +
+            '★应用进入后台★');
         /*
          * ========================================================
-         * APP 进入后台。
+         * 这里绝对不能关闭：
          *
-         * 不关闭：
+         * UDP
+         * KeepAlive
+         * 音频接收
+         * 音频播放
+         * 悬浮 PTT
          *
-         *   UDP
-         *   WalkieClient
-         *   AudioRenderer
-         *
+         * 原 V24.8.6 后台逻辑保持。
          * ========================================================
          */
-        AppStorage.setOrCreate('walkie_app_active', false);
-        hilog.info(DOMAIN, 'WALKIE_BG', '%{public}s', 'WALKIE 进入后台，准备重新确认 Continuous Task');
+        if (this.floatingPttWindow ===
+            null) {
+            this.createFloatingPttWindow();
+        }
+    }
+    // ==========================================================
+    // Ability 销毁
+    // ==========================================================
+    onDestroy(): void {
+        console.info('WALKIE V24.9.0: ' +
+            'EntryAbility.onDestroy');
         /*
          * ========================================================
-         * ★核心★
-         *
-         * 不再判断：
-         *
-         *   backgroundTaskStarted
-         *
-         * 是否为 true。
-         *
-         * 因为：
-         *
-         * 我们无法靠这个变量知道系统任务
-         * 是否已经被系统撤销。
-         *
-         * 每次真正进入后台：
-         *
-         *     都重新向系统申请一次。
-         *
-         * 两种结果：
-         *
-         * 1. 系统任务已经存在
-         *
-         *      → 9800005
-         *      → 说明已有任务
-         *      → 不影响现有任务
-         *
-         * 2. 系统任务已经失效
-         *
-         *      → 本次申请成功
-         *      → 通知栏重新出现
-         *
+         * 正常销毁 Ability 时关闭悬浮窗。
          * ========================================================
          */
-        void this.ensureWalkieBackgroundTask();
+        const floatWindow: window.Window | null = this.floatingPttWindow;
+        this.floatingPttWindow =
+            null;
+        if (floatWindow ===
+            null) {
+            return;
+        }
+        try {
+            floatWindow.destroyWindow();
+            console.info('WALKIE FLOAT PTT: ' +
+                '悬浮窗已销毁');
+        }
+        catch (error) {
+            console.warn('WALKIE FLOAT PTT: ' +
+                '销毁悬浮窗失败 ' +
+                JSON.stringify(error));
+        }
     }
 }

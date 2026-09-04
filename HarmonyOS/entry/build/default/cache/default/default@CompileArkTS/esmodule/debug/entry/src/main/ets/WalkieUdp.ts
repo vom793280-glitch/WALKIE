@@ -13,86 +13,231 @@ export class WalkieUdp {
     private serverPort: number = 0;
     private isBound: boolean = false;
     // ============================================================
-    // Socket 生命周期编号
-    //
-    // 每创建一个新的 UDP Socket：
-    //
-    // generation + 1
-    //
-    // 旧 Socket 即使晚一点触发 message/error，
-    // 也不能再影响新的 Socket。
+    // 无缝迁移旧 Socket
     // ============================================================
-    private socketGeneration: number = 0;
+    private handoffCloseTimer: number | null = null;
+    private handoffOldSocket: socket.UDPSocket | null = null;
     // ============================================================
-    // 消息回调
+    // 回调
     // ============================================================
     private messageCallback: ((message: WalkieUdpMessage) => void) | null = null;
-    // ============================================================
-    // 错误回调
-    // ============================================================
     private errorCallback: ((message: string) => void) | null = null;
     // ============================================================
-    // 消息回调注册
+    // 注册消息回调
     // ============================================================
     public setMessageCallback(callback: (message: WalkieUdpMessage) => void): void {
         this.messageCallback =
             callback;
     }
     // ============================================================
-    // 错误回调注册
+    // 注册错误回调
     // ============================================================
     public setErrorCallback(callback: (message: string) => void): void {
         this.errorCallback =
             callback;
     }
     // ============================================================
-    // 打开 UDP
+    // 普通打开
     // ============================================================
     public async open(serverIp: string, serverPort: number): Promise<void> {
         /*
-         * ==========================================================
-         * 先彻底关闭旧 Socket
-         * ==========================================================
+         * 普通首次连接 / 普通重连：
+         *
+         * 仍然保持：
+         *
+         * 关闭旧 Socket
+         *      ↓
+         * 创建新 Socket
+         *
+         * 不改变原有重连逻辑。
          */
         await this.close();
-        /*
-         * ==========================================================
-         * 新 Socket 生命周期编号
-         * ==========================================================
-         */
-        this.socketGeneration +=
-            1;
-        const generation: number = this.socketGeneration;
         this.serverIp =
             serverIp;
         this.serverPort =
             serverPort;
         const udp: socket.UDPSocket = socket.constructUDPSocketInstance();
-        /*
-         * 只有当前代 Socket 才能成为 active Socket。
-         */
+        await this.prepareSocket(udp);
         this.udpSocket =
             udp;
+        this.isBound =
+            true;
+        console.info('WALKIE UDP: 普通 Socket 创建成功');
+    }
+    // ============================================================
+    // V24.8.1 无缝网络迁移
+    // ============================================================
+    /*
+     * 核心原则：
+     *
+     * 1. 绝不先关闭当前 Socket
+     * 2. 先创建新 Socket
+     * 3. 新 Socket bind 成功以后才切换
+     * 4. 旧 Socket 延迟关闭
+     *
+     * 这样网络切换期间：
+     *
+     *     old socket
+     *          +
+     *     new socket
+     *          ↓
+     *       短暂重叠
+     *
+     * 防止客户端自己制造硬断。
+     */
+    public async migrate(serverIp: string, serverPort: number, oldSocketGraceMs: number = 3000): Promise<void> {
+        const previousSocket: socket.UDPSocket | null = this.udpSocket;
+        const previousBound: boolean = this.isBound;
+        this.serverIp =
+            serverIp;
+        this.serverPort =
+            serverPort;
+        /*
+         * 如果上一次迁移还有遗留旧 Socket，
+         * 先回收掉。
+         */
+        await this.finishPendingHandoff();
+        /*
+         * 创建新 Socket。
+         */
+        const newSocket: socket.UDPSocket = socket.constructUDPSocketInstance();
+        try {
+            /*
+             * 新 Socket 必须先成功 bind。
+             *
+             * 如果新 Socket 没有成功，
+             * 完全不碰旧 Socket。
+             */
+            await this.prepareSocket(newSocket);
+        }
+        catch (error) {
+            try {
+                await newSocket.close();
+            }
+            catch {
+                // 忽略
+            }
+            /*
+             * 恢复旧 Socket。
+             */
+            if (previousSocket !==
+                null &&
+                previousBound) {
+                this.udpSocket =
+                    previousSocket;
+                this.isBound =
+                    true;
+            }
+            if (error instanceof Error) {
+                throw error;
+            }
+            else {
+                throw new Error('UDP迁移 Socket 创建失败');
+            }
+        }
+        /*
+         * ========================================================
+         * 新 Socket 已经准备完成
+         * ========================================================
+         *
+         * 从这里开始：
+         *
+         * send()
+         *
+         * 会自动走新 Socket。
+         */
+        this.udpSocket =
+            newSocket;
+        this.isBound =
+            true;
+        console.info('WALKIE UDP: ★新 Socket bind 成功，开始无缝切换★');
+        /*
+         * ========================================================
+         * 旧 Socket 延迟关闭
+         * ========================================================
+         */
+        if (previousSocket !==
+            null &&
+            previousSocket !==
+                newSocket) {
+            this.handoffOldSocket =
+                previousSocket;
+            this.handoffCloseTimer =
+                setTimeout((): void => {
+                    const oldSocket: socket.UDPSocket | null = this.handoffOldSocket;
+                    this.handoffOldSocket =
+                        null;
+                    this.handoffCloseTimer =
+                        null;
+                    if (oldSocket !==
+                        null) {
+                        void this.closeSocket(oldSocket);
+                        console.info('WALKIE UDP: ★旧 Socket 延迟关闭★');
+                    }
+                }, Math.max(1000, oldSocketGraceMs)) as number;
+        }
+    }
+    // ============================================================
+    // 发送
+    // ============================================================
+    public async send(data: string | ArrayBuffer): Promise<void> {
+        const udp: socket.UDPSocket | null = this.udpSocket;
+        if (udp ===
+            null ||
+            !this.isBound) {
+            throw new Error('UDP Socket 未打开');
+        }
+        await udp.send({
+            data: data,
+            address: {
+                address: this.serverIp,
+                port: this.serverPort
+            }
+        });
+    }
+    // ============================================================
+    // 关闭
+    // ============================================================
+    public async close(): Promise<void> {
+        await this.finishPendingHandoff();
+        const udp: socket.UDPSocket | null = this.udpSocket;
+        this.udpSocket =
+            null;
+        this.isBound =
+            false;
+        if (udp ===
+            null) {
+            return;
+        }
+        await this.closeSocket(udp);
+        console.info('WALKIE UDP: Socket 已关闭');
+    }
+    // ============================================================
+    // 获取服务器 IP
+    // ============================================================
+    public getServerIp(): string {
+        return this.serverIp;
+    }
+    // ============================================================
+    // 获取服务器端口
+    // ============================================================
+    public getServerPort(): number {
+        return this.serverPort;
+    }
+    // ============================================================
+    // 获取绑定状态
+    // ============================================================
+    public getBound(): boolean {
+        return this.isBound;
+    }
+    // ============================================================
+    // Socket 准备
+    // ============================================================
+    private async prepareSocket(udp: socket.UDPSocket): Promise<void> {
         // ==========================================================
-        // UDP 消息
+        // 消息
         // ==========================================================
         udp.on('message', (value: socket.SocketMessageInfo): void => {
-            /*
-             * ========================================================
-             * 防止旧 Socket 回调污染新 Socket
-             * ========================================================
-             */
-            if (generation !==
-                this.socketGeneration) {
-                return;
-            }
-            if (this.udpSocket !==
-                udp) {
-                return;
-            }
-            if (!this.isBound) {
-                return;
-            }
             try {
                 const remoteInfo = value.remoteInfo;
                 let remoteAddress: string = '';
@@ -105,33 +250,6 @@ export class WalkieUdp {
                         remoteInfo.port;
                 }
                 const message: string | ArrayBuffer = value.message;
-                /*
-                 * ======================================================
-                 * UDP 收包诊断
-                 * ======================================================
-                 */
-                if (typeof message ===
-                    'string') {
-                    console.info('WALKIE UDP RX TEXT: ' +
-                        message);
-                }
-                else {
-                    const bytes: Uint8Array = new Uint8Array(message);
-                    let magic: string = '';
-                    if (bytes.length >=
-                        4) {
-                        magic =
-                            String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]);
-                    }
-                    console.info('WALKIE UDP RX BINARY: ' +
-                        `length=${bytes.length} ` +
-                        `magic=${magic}`);
-                }
-                /*
-                 * ======================================================
-                 * 转交 WalkieClient
-                 * ======================================================
-                 */
                 const callback = this.messageCallback;
                 if (callback !==
                     null) {
@@ -144,37 +262,19 @@ export class WalkieUdp {
                 }
             }
             catch (error) {
-                /*
-                 * 当前 Socket 才能上报错误。
-                 */
-                if (generation !==
-                    this.socketGeneration) {
-                    return;
-                }
                 this.emitError('UDP消息处理异常：' +
                     JSON.stringify(error));
             }
         });
         // ==========================================================
-        // UDP 错误
+        // 错误
         // ==========================================================
         udp.on('error', (error: Error): void => {
-            /*
-             * 忽略旧 Socket 的迟到错误。
-             */
-            if (generation !==
-                this.socketGeneration) {
-                return;
-            }
-            if (this.udpSocket !==
-                udp) {
-                return;
-            }
             this.emitError('UDP错误：' +
                 error.message);
         });
         // ==========================================================
-        // 绑定随机端口
+        // bind
         // ==========================================================
         try {
             await udp.bind({
@@ -183,17 +283,6 @@ export class WalkieUdp {
             });
         }
         catch (error) {
-            /*
-             * 绑定失败时，如果这个 Socket 仍然是当前 Socket，
-             * 清理当前状态。
-             */
-            if (this.udpSocket ===
-                udp) {
-                this.udpSocket =
-                    null;
-                this.isBound =
-                    false;
-            }
             try {
                 udp.off('message');
             }
@@ -212,77 +301,37 @@ export class WalkieUdp {
             catch {
                 // 忽略
             }
-            throw new Error('UDP bind 失败');
-        }
-        /*
-         * bind 成功以后，再次确认这个 Socket 仍然是当前 Socket。
-         *
-         * 防止极端情况下：
-         *
-         * open A
-         * ↓
-         * open B
-         * ↓
-         * A bind 晚完成
-         */
-        if (generation !==
-            this.socketGeneration ||
-            this.udpSocket !==
-                udp) {
-            try {
-                await udp.close();
+            if (error instanceof Error) {
+                throw error;
             }
-            catch {
-                // 忽略
+            else {
+                throw new Error('UDP bind 失败');
             }
-            return;
         }
-        this.isBound =
-            true;
-        console.info('WALKIE UDP: Socket 已绑定');
+        console.info('WALKIE UDP: bind 成功');
     }
     // ============================================================
-    // 发送 UDP
+    // 结束旧 Socket 迁移
     // ============================================================
-    public async send(data: string | ArrayBuffer): Promise<void> {
-        const udp: socket.UDPSocket | null = this.udpSocket;
-        if (udp === null ||
-            !this.isBound) {
-            throw new Error('UDP Socket 未打开');
+    private async finishPendingHandoff(): Promise<void> {
+        if (this.handoffCloseTimer !==
+            null) {
+            clearTimeout(this.handoffCloseTimer);
+            this.handoffCloseTimer =
+                null;
         }
-        await udp.send({
-            data: data,
-            address: {
-                address: this.serverIp,
-                port: this.serverPort
-            }
-        });
-    }
-    // ============================================================
-    // 关闭 UDP
-    // ============================================================
-    public async close(): Promise<void> {
-        /*
-         * ==========================================================
-         * 先让当前 Socket 立即失效
-         *
-         * 这样即使旧 Socket 稍后还有回调，
-         * 也会因为 generation 不匹配而被忽略。
-         * ==========================================================
-         */
-        this.socketGeneration +=
-            1;
-        const udp: socket.UDPSocket | null = this.udpSocket;
-        this.udpSocket =
+        const oldSocket: socket.UDPSocket | null = this.handoffOldSocket;
+        this.handoffOldSocket =
             null;
-        this.isBound =
-            false;
-        if (udp === null) {
-            return;
+        if (oldSocket !==
+            null) {
+            await this.closeSocket(oldSocket);
         }
-        // ==========================================================
-        // 取消消息监听
-        // ==========================================================
+    }
+    // ============================================================
+    // 真正关闭指定 Socket
+    // ============================================================
+    private async closeSocket(udp: socket.UDPSocket): Promise<void> {
         try {
             udp.off('message');
         }
@@ -290,9 +339,6 @@ export class WalkieUdp {
             this.emitError('UDP取消消息监听异常：' +
                 JSON.stringify(error));
         }
-        // ==========================================================
-        // 取消错误监听
-        // ==========================================================
         try {
             udp.off('error');
         }
@@ -300,40 +346,16 @@ export class WalkieUdp {
             this.emitError('UDP取消错误监听异常：' +
                 JSON.stringify(error));
         }
-        // ==========================================================
-        // 真正关闭
-        // ==========================================================
         try {
             await udp.close();
         }
         catch (error) {
-            /*
-             * close 失败不再让旧 Socket 继续成为当前连接。
-             */
             this.emitError('UDP关闭异常：' +
                 JSON.stringify(error));
         }
     }
     // ============================================================
-    // 获取服务器 IP
-    // ============================================================
-    public getServerIp(): string {
-        return this.serverIp;
-    }
-    // ============================================================
-    // 获取服务器端口
-    // ============================================================
-    public getServerPort(): number {
-        return this.serverPort;
-    }
-    // ============================================================
-    // 获取 Socket 状态
-    // ============================================================
-    public getBound(): boolean {
-        return this.isBound;
-    }
-    // ============================================================
-    // 错误通知
+    // 错误回调
     // ============================================================
     private emitError(message: string): void {
         const callback = this.errorCallback;

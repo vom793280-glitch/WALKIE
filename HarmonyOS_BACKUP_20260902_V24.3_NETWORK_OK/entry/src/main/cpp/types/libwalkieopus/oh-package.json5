@@ -1,0 +1,6 @@
+{
+  "name": "libwalkieopus.so",
+  "version": "1.0.0",
+  "description": "WALKIE Native Opus Codec",
+  "types": "./Index.d.ts"
+}
