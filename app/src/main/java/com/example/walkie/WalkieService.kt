@@ -4,15 +4,24 @@ import com.example.walkie.audio.WalkieAudioPlayer
 import com.example.walkie.audio.WalkieAudioPlayback
 import com.example.walkie.network.WalkieNetworkMonitor
 import com.example.walkie.network.WalkieNetworkStats
+
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.IBinder
+import android.os.Looper
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,6 +30,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketException
@@ -314,6 +324,25 @@ class WalkieService : Service() {
 
         private const val MSG_NET_PONG =
             "WALKIE_NET_PONG"
+
+        // ========================================================
+        // GPS
+        // ========================================================
+
+        private const val MSG_LOCATION =
+            "WALKIE_LOCATION"
+
+        private const val MSG_MEMBER_LOCATION =
+            "WALKIE_MEMBER_LOCATION"
+
+        private const val LOCATION_SEND_INTERVAL =
+            10000L
+
+        private const val LOCATION_UPDATE_INTERVAL =
+            5000L
+
+        private const val LOCATION_MIN_DISTANCE_METERS =
+            5.0f
     }
 
     data class ChannelInfo(
@@ -783,6 +812,77 @@ class WalkieService : Service() {
         )
     }
 
+    // ============================================================
+    // GPS 成员位置管理
+    // ============================================================
+
+    private val walkieLocationManager by lazy {
+
+        WalkieLocationManager(
+            getCurrentChannel = {
+                currentChannel
+            },
+            getMyUserId = {
+                myUserId
+            },
+            getMyLatitude = {
+                myLatitude
+            },
+            getMyLongitude = {
+                myLongitude
+            },
+            logger = { message ->
+                println(
+                    "WALKIE $WALKIE_VERSION: $message"
+                )
+            }
+        )
+    }
+
+    // ============================================================
+    // 自己的位置
+    // ============================================================
+
+    private val androidLocationManager:
+            LocationManager by lazy {
+
+        applicationContext.getSystemService(
+            Context.LOCATION_SERVICE
+        ) as LocationManager
+    }
+
+    private var locationSendJob:
+            Job? =
+        null
+
+    private var myLatitude:
+            Double? =
+        null
+
+    private var myLongitude:
+            Double? =
+        null
+
+    private var lastLocationUpdateTime =
+        0L
+
+    private val locationListener =
+        object : LocationListener {
+
+            override fun onLocationChanged(
+                location: Location
+            ) {
+
+                handleMyLocation(
+                    location
+                )
+            }
+        }
+
+    // ============================================================
+    // Message Dispatcher
+    // ============================================================
+
     private val walkieMessageDispatcher by lazy {
 
         WalkieMessageDispatcher(
@@ -900,6 +1000,11 @@ class WalkieService : Service() {
                     broadcastMyUserInfo()
 
                     broadcastUserList()
+
+                    /*
+                     * 连接成功后立即发送一次最新位置。
+                     */
+                    sendMyLocationNow()
                 }
             },
 
@@ -1215,6 +1320,11 @@ class WalkieService : Service() {
             },
             setCurrentChannel = { value ->
                 currentChannel = value
+
+                /*
+                 * 切换频道以后立即重新上报 GPS。
+                 */
+                sendMyLocationNow()
             },
             getReconnectChannel = {
                 reconnectChannel
@@ -1870,6 +1980,11 @@ class WalkieService : Service() {
 
         startBackgroundDiagnostic()
 
+        /*
+         * GPS 没有权限时不会导致 Service 崩溃。
+         */
+        startLocationUpdates()
+
         println(
             "WALKIE $WALKIE_VERSION: Service started"
         )
@@ -1929,6 +2044,13 @@ class WalkieService : Service() {
                             "nickname=$nickname " +
                             "ip=$incomingIp"
                 )
+
+                /*
+                 * 再启动一次 GPS。
+                 *
+                 * 适合用户刚授予定位权限的情况。
+                 */
+                startLocationUpdates()
 
                 if (
                     !incomingIp.isNullOrBlank()
@@ -2194,6 +2316,524 @@ class WalkieService : Service() {
             opusDecoder =
                 null
         }
+    }
+
+    // ============================================================
+    // GPS 权限
+    // ============================================================
+
+    private fun hasLocationPermission():
+            Boolean {
+
+        val fineGranted =
+            checkSelfPermission(
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+
+        val coarseGranted =
+            checkSelfPermission(
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+
+        return fineGranted ||
+                coarseGranted
+    }
+
+    // ============================================================
+    // GPS 启动
+    // ============================================================
+
+    @SuppressLint("MissingPermission")
+    private fun startLocationUpdates() {
+
+        if (
+            shuttingDown
+        ) {
+            return
+        }
+
+        if (
+            !hasLocationPermission()
+        ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "GPS未启动：没有定位权限"
+            )
+
+            return
+        }
+
+        try {
+
+            stopLocationUpdates(
+                clearLocation = false
+            )
+
+            val locationManager =
+                androidLocationManager
+
+            var startedProviders =
+                0
+
+            // ====================================================
+            // GPS_PROVIDER
+            // ====================================================
+
+            try {
+
+                if (
+                    locationManager.isProviderEnabled(
+                        LocationManager.GPS_PROVIDER
+                    )
+                ) {
+
+                    locationManager.requestLocationUpdates(
+                        LocationManager.GPS_PROVIDER,
+                        LOCATION_UPDATE_INTERVAL,
+                        LOCATION_MIN_DISTANCE_METERS,
+                        locationListener,
+                        Looper.getMainLooper()
+                    )
+
+                    startedProviders++
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "GPS_PROVIDER监听已启动"
+                    )
+                }
+
+            } catch (
+                e: SecurityException
+            ) {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "GPS_PROVIDER权限被拒绝=${e.message}"
+                )
+
+            } catch (
+                e: Throwable
+            ) {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "GPS_PROVIDER启动失败=${e.message}"
+                )
+            }
+
+            // ====================================================
+            // NETWORK_PROVIDER
+            // ====================================================
+
+            try {
+
+                if (
+                    locationManager.isProviderEnabled(
+                        LocationManager.NETWORK_PROVIDER
+                    )
+                ) {
+
+                    locationManager.requestLocationUpdates(
+                        LocationManager.NETWORK_PROVIDER,
+                        LOCATION_UPDATE_INTERVAL,
+                        LOCATION_MIN_DISTANCE_METERS,
+                        locationListener,
+                        Looper.getMainLooper()
+                    )
+
+                    startedProviders++
+
+                    println(
+                        "WALKIE $WALKIE_VERSION: " +
+                                "NETWORK_PROVIDER监听已启动"
+                    )
+                }
+
+            } catch (
+                e: SecurityException
+            ) {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "NETWORK_PROVIDER权限被拒绝=${e.message}"
+                )
+
+            } catch (
+                e: Throwable
+            ) {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "NETWORK_PROVIDER启动失败=${e.message}"
+                )
+            }
+
+            /*
+             * 尝试读取最后已知位置。
+             */
+            if (
+                startedProviders > 0
+            ) {
+
+                try {
+
+                    val providers =
+                        listOf(
+                            LocationManager.GPS_PROVIDER,
+                            LocationManager.NETWORK_PROVIDER
+                        )
+
+                    for (
+                    provider in providers
+                    ) {
+
+                        try {
+
+                            val lastKnown =
+                                locationManager
+                                    .getLastKnownLocation(
+                                        provider
+                                    )
+
+                            if (
+                                lastKnown != null
+                            ) {
+
+                                handleMyLocation(
+                                    lastKnown
+                                )
+
+                                break
+                            }
+
+                        } catch (
+                            _: Throwable
+                        ) {
+                        }
+                    }
+
+                } catch (
+                    _: Throwable
+                ) {
+                }
+            }
+
+            if (
+                startedProviders == 0
+            ) {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "没有可用的GPS定位提供者"
+                )
+            }
+
+            startLocationSendWorker()
+
+        } catch (
+            e: Throwable
+        ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "启动GPS异常=${e.message}"
+            )
+        }
+    }
+
+    // ============================================================
+    // GPS 定时主动上报
+    // ============================================================
+
+    private fun startLocationSendWorker() {
+
+        locationSendJob?.cancel()
+
+        locationSendJob =
+            serviceScope.launch {
+
+                while (
+                    isActive &&
+                    !shuttingDown
+                ) {
+
+                    delay(
+                        LOCATION_SEND_INTERVAL
+                    )
+
+                    if (
+                        isConnected
+                    ) {
+
+                        sendMyLocationNow()
+                    }
+                }
+            }
+    }
+
+    // ============================================================
+    // GPS 新位置
+    // ============================================================
+
+    private fun handleMyLocation(
+        location: Location
+    ) {
+
+        try {
+
+            if (
+                !location.latitude.isFinite()
+            ) {
+                return
+            }
+
+            if (
+                !location.longitude.isFinite()
+            ) {
+                return
+            }
+
+            if (
+                location.latitude < -90.0 ||
+                location.latitude > 90.0
+            ) {
+                return
+            }
+
+            if (
+                location.longitude < -180.0 ||
+                location.longitude > 180.0
+            ) {
+                return
+            }
+
+            myLatitude =
+                location.latitude
+
+            myLongitude =
+                location.longitude
+
+            lastLocationUpdateTime =
+                System.currentTimeMillis()
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "★GPS位置更新★ " +
+                        "lat=${formatLocationCoordinate(location.latitude)} " +
+                        "lon=${formatLocationCoordinate(location.longitude)} " +
+                        "accuracy=${location.accuracy}m " +
+                        "provider=${location.provider}"
+            )
+
+            if (
+                isConnected &&
+                !shuttingDown
+            ) {
+
+                sendMyLocationNow()
+            }
+
+        } catch (
+            e: Throwable
+        ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "处理GPS位置异常=${e.message}"
+            )
+        }
+    }
+
+    // ============================================================
+    // GPS -> VPS
+    // ============================================================
+
+    private fun sendMyLocationNow() {
+
+        if (
+            shuttingDown
+        ) {
+            return
+        }
+
+        if (
+            !isConnected
+        ) {
+            return
+        }
+
+        val latitude =
+            myLatitude
+                ?: return
+
+        val longitude =
+            myLongitude
+                ?: return
+
+        if (
+            myUserId.isBlank()
+        ) {
+            return
+        }
+
+        if (
+            currentChannel.isBlank()
+        ) {
+            return
+        }
+
+        val timestamp =
+            System.currentTimeMillis() /
+                    1000L
+
+        val message =
+            "$MSG_LOCATION:" +
+                    formatLocationCoordinate(
+                        latitude
+                    ) +
+                    ":" +
+                    formatLocationCoordinate(
+                        longitude
+                    ) +
+                    ":" +
+                    timestamp
+
+        try {
+
+            udpManager.send(
+                message
+            )
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "GPS上报VPS: " +
+                        "lat=${formatLocationCoordinate(latitude)} " +
+                        "lon=${formatLocationCoordinate(longitude)} " +
+                        "channel=$currentChannel"
+            )
+
+        } catch (
+            e: Throwable
+        ) {
+
+            if (
+                !shuttingDown
+            ) {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "GPS上报失败=${e.message}"
+                )
+            }
+        }
+    }
+
+    // ============================================================
+    // VPS -> Android 成员位置
+    // ============================================================
+
+    private fun handleMemberLocation(
+        text: String
+    ) {
+
+        if (
+            !text.startsWith(
+                "$MSG_MEMBER_LOCATION:"
+            )
+        ) {
+            return
+        }
+
+        try {
+
+            walkieLocationManager
+                .handle(
+                    text
+                )
+
+        } catch (
+            e: Throwable
+        ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "处理成员GPS异常=${e.message}"
+            )
+        }
+    }
+
+    private fun formatLocationCoordinate(
+        value: Double
+    ): String {
+
+        return String.format(
+            java.util.Locale.US,
+            "%.6f",
+            value
+        )
+    }
+
+    // ============================================================
+    // GPS 停止
+    // ============================================================
+
+    @SuppressLint("MissingPermission")
+    private fun stopLocationUpdates(
+        clearLocation: Boolean
+    ) {
+
+        locationSendJob?.cancel()
+
+        locationSendJob =
+            null
+
+        try {
+
+            if (
+                hasLocationPermission()
+            ) {
+
+                androidLocationManager
+                    .removeUpdates(
+                        locationListener
+                    )
+            }
+
+        } catch (
+            e: Throwable
+        ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "停止GPS监听异常=${e.message}"
+            )
+        }
+
+        if (
+            clearLocation
+        ) {
+
+            myLatitude =
+                null
+
+            myLongitude =
+                null
+
+            lastLocationUpdateTime =
+                0L
+        }
+    }
+
+    private fun stopLocationState() {
+
+        stopLocationUpdates(
+            clearLocation = true
+        )
+
+        walkieLocationManager
+            .clear()
     }
 
     private fun startBackgroundDiagnostic() {
@@ -2560,6 +3200,11 @@ class WalkieService : Service() {
                         udpSocket =
                             currentManagerSocket
                     }
+
+                    /*
+                     * 网络迁移后立即重新上报位置。
+                     */
+                    sendMyLocationNow()
                 }
 
                 val currentTime =
@@ -2644,6 +3289,26 @@ class WalkieService : Service() {
 
                     val length =
                         receivedLength
+
+                    /*
+                     * ==================================================
+                     * GPS 成员位置消息必须在 Dispatcher 前面处理。
+                     *
+                     * 因为 Dispatcher 对其他 WALKIE_ 消息会直接吞掉。
+                     * ==================================================
+                     */
+                    if (
+                        text.startsWith(
+                            "$MSG_MEMBER_LOCATION:"
+                        )
+                    ) {
+
+                        handleMemberLocation(
+                            text
+                        )
+
+                        continue
+                    }
 
                     val controlMessageHandled =
                         walkieMessageDispatcher
@@ -2740,6 +3405,8 @@ class WalkieService : Service() {
                                     "★★★★ connectOnce已经切换到新Socket ★★★★ " +
                                     "port=${socket.localPort}"
                         )
+
+                        sendMyLocationNow()
 
                         continue
                     }
@@ -2982,6 +3649,8 @@ class WalkieService : Service() {
 
         walkieChannelManager
             .handleChannelJoined(text)
+
+        sendMyLocationNow()
     }
 
     private fun handleChannelCreated(
@@ -2990,6 +3659,8 @@ class WalkieService : Service() {
 
         walkieChannelManager
             .handleChannelCreated(text)
+
+        sendMyLocationNow()
     }
 
     private fun handleChannelDeleted(
@@ -2998,6 +3669,8 @@ class WalkieService : Service() {
 
         walkieChannelManager
             .handleChannelDeleted(text)
+
+        sendMyLocationNow()
     }
 
     private fun handleChannelError(
@@ -3014,6 +3687,8 @@ class WalkieService : Service() {
 
         walkieChannelManager
             .handleChannelLeft(text)
+
+        sendMyLocationNow()
     }
 
     private fun updateCurrentChannelInfo() {
@@ -3426,6 +4101,7 @@ class WalkieService : Service() {
                 getCurrentChannel = {
 
                     currentChannel
+
                 },
 
                 setReconnectChannel = {
@@ -3605,6 +4281,11 @@ class WalkieService : Service() {
         println(
             "WALKIE $WALKIE_VERSION: Service destroyed"
         )
+
+        /*
+         * 先停止 GPS。
+         */
+        stopLocationState()
 
         stopAll()
 

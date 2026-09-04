@@ -46,6 +46,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -268,6 +269,13 @@ class MainActivity : ComponentActivity() {
             ) {
 
                 requestNotificationPermissionIfNeeded()
+
+            } else {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "麦克风权限未授权"
+                )
             }
         }
 
@@ -275,6 +283,64 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "通知权限申请完成"
+            )
+
+            requestLocationPermissionIfNeeded()
+        }
+
+    /*
+     * GPS 定位权限申请器
+     *
+     * 同时申请：
+     * ACCESS_FINE_LOCATION
+     * ACCESS_COARSE_LOCATION
+     */
+    private val requestLocation =
+        registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+
+            val fineGranted =
+                permissions[
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ] == true
+
+            val coarseGranted =
+                permissions[
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ] == true
+
+            val granted =
+                fineGranted ||
+                        coarseGranted
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "定位权限结果=" +
+                        "fine=$fineGranted " +
+                        "coarse=$coarseGranted"
+            )
+
+            if (
+                granted
+            ) {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "GPS定位权限已获得"
+                )
+
+            } else {
+
+                println(
+                    "WALKIE $WALKIE_VERSION: " +
+                            "GPS定位权限未获得"
+                )
+            }
         }
 
     /*
@@ -579,7 +645,7 @@ class MainActivity : ComponentActivity() {
                                 -1L
                             )
                                 .coerceAtLeast(
-                                    -1L
+                                    0L
                                 )
 
                         updateNetworkType()
@@ -1151,8 +1217,62 @@ class MainActivity : ComponentActivity() {
                 requestNotification.launch(
                     Manifest.permission.POST_NOTIFICATIONS
                 )
+
+            } else {
+
+                requestLocationPermissionIfNeeded()
             }
+
+        } else {
+
+            requestLocationPermissionIfNeeded()
         }
+    }
+
+    /*
+     * ============================================================
+     * GPS 定位权限
+     * ============================================================
+     */
+
+    private fun requestLocationPermissionIfNeeded() {
+
+        val fineGranted =
+            checkSelfPermission(
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) ==
+                    PackageManager.PERMISSION_GRANTED
+
+        val coarseGranted =
+            checkSelfPermission(
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) ==
+                    PackageManager.PERMISSION_GRANTED
+
+        if (
+            fineGranted ||
+            coarseGranted
+        ) {
+
+            println(
+                "WALKIE $WALKIE_VERSION: " +
+                        "GPS定位权限已经存在"
+            )
+
+            return
+        }
+
+        println(
+            "WALKIE $WALKIE_VERSION: " +
+                    "开始申请GPS定位权限"
+        )
+
+        requestLocation.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+        )
     }
 
     /*
@@ -1494,6 +1614,9 @@ class MainActivity : ComponentActivity() {
 
         currentOnlineCount =
             0
+
+        WalkieLocationUiStore
+            .clear()
 
         if (
             channel.isPrivate ||
@@ -1868,7 +1991,7 @@ class MainActivity : ComponentActivity() {
 
 /*
  * ================================================================
- * V23.3 SCREEN
+ * V24.9.1 SCREEN
  * ================================================================
  */
 
@@ -1917,6 +2040,17 @@ private fun WalkieV20Screen(
     onStartSpeaking: () -> Unit,
     onStopSpeaking: () -> Unit
 ) {
+
+    /*
+     * ============================================================
+     * 距离 UI 状态
+     * ============================================================
+     */
+
+    val memberDistancesMeters by
+    WalkieLocationUiStore
+        .memberDistancesMeters
+        .collectAsState()
 
     var newChannelName by remember {
         mutableStateOf("")
@@ -2478,6 +2612,12 @@ private fun WalkieV20Screen(
             page
         ) {
 
+            /*
+             * ========================================================
+             * 首页
+             * ========================================================
+             */
+
             "home" -> {
 
                 HomePage(
@@ -2490,6 +2630,18 @@ private fun WalkieV20Screen(
                     connected =
                         connected,
 
+                    nickname =
+                        nickname,
+
+                    myUserId =
+                        myUserId,
+
+                    onlineUsers =
+                        onlineUsers,
+
+                    memberDistancesMeters =
+                        memberDistancesMeters,
+
                     currentChannel =
                         currentChannel,
 
@@ -2498,9 +2650,6 @@ private fun WalkieV20Screen(
 
                     currentPrivate =
                         currentPrivate,
-
-                    onlineUsers =
-                        onlineUsers,
 
                     networkType =
                         networkType,
@@ -2534,6 +2683,12 @@ private fun WalkieV20Screen(
                 )
             }
 
+            /*
+             * ========================================================
+             * 在线人员
+             * ========================================================
+             */
+
             "users" -> {
 
                 UsersPage(
@@ -2558,6 +2713,9 @@ private fun WalkieV20Screen(
                     myUserId =
                         myUserId,
 
+                    memberDistancesMeters =
+                        memberDistancesMeters,
+
                     onBack = {
 
                         onPageChanged(
@@ -2566,6 +2724,12 @@ private fun WalkieV20Screen(
                     }
                 )
             }
+
+            /*
+             * ========================================================
+             * 频道
+             * ========================================================
+             */
 
             "channels" -> {
 
@@ -2608,6 +2772,12 @@ private fun WalkieV20Screen(
                         onOpenDelete
                 )
             }
+
+            /*
+             * ========================================================
+             * 设置
+             * ========================================================
+             */
 
             "settings" -> {
 
@@ -2652,10 +2822,13 @@ private fun WalkieV20Screen(
 private fun HomePage(
     modifier: Modifier,
     connected: Boolean,
+    nickname: String,
+    myUserId: String,
+    onlineUsers: List<OnlineUserUiInfo>,
+    memberDistancesMeters: Map<String, Double>,
     currentChannel: String,
     currentOnlineCount: Int,
     currentPrivate: Boolean,
-    onlineUsers: List<OnlineUserUiInfo>,
     networkType: String,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
@@ -2679,6 +2852,10 @@ private fun HomePage(
                 9.dp
             )
     ) {
+
+        /*
+         * 顶部
+         */
 
         Row(
 
@@ -2727,6 +2904,12 @@ private fun HomePage(
                     connected
             )
         }
+
+        /*
+         * ========================================================
+         * 服务器
+         * ========================================================
+         */
 
         Card(
 
@@ -2870,6 +3053,12 @@ private fun HomePage(
             }
         }
 
+        /*
+         * ========================================================
+         * 当前频道
+         * ========================================================
+         */
+
         Card(
 
             modifier =
@@ -2878,15 +3067,6 @@ private fun HomePage(
             shape =
                 RoundedCornerShape(
                     19.dp
-                ),
-
-            colors =
-                CardDefaults.cardColors(
-
-                    containerColor =
-                        MaterialTheme
-                            .colorScheme
-                            .surface
                 )
         ) {
 
@@ -2979,96 +3159,21 @@ private fun HomePage(
             }
         }
 
-        Card(
-
-            modifier =
-                Modifier.fillMaxWidth(),
-
-            shape =
-                RoundedCornerShape(
-                    19.dp
-                )
-        ) {
-
-            Row(
-
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = 14.dp,
-                            vertical = 10.dp
-                        ),
-
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
-
-                Box(
-
-                    modifier =
-                        Modifier
-                            .size(39.dp)
-                            .clip(
-                                CircleShape
-                            )
-                            .background(
-                                MaterialTheme
-                                    .colorScheme
-                                    .secondaryContainer
-                            ),
-
-                    contentAlignment =
-                        Alignment.Center
-                ) {
-
-                    Text(
-                        "📶",
-                        fontSize =
-                            19.sp
-                    )
-                }
-
-                Spacer(
-                    Modifier.width(
-                        10.dp
-                    )
-                )
-
-                Column(
-
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        )
-                ) {
-
-                    Text(
-
-                        "网络状态",
-
-                        fontSize =
-                            15.sp,
-
-                        fontWeight =
-                            FontWeight.Bold
-                    )
-
-                    Text(
-
-                        networkType,
-
-                        fontSize =
-                            11.sp,
-
-                        color =
-                            MaterialTheme
-                                .colorScheme
-                                .onSurfaceVariant
-                    )
-                }
-            }
-        }
+        /*
+         * ========================================================
+         * 一级首页在线人员
+         *
+         * 排序：
+         *
+         * ① 自己
+         * ② 最近成员
+         * ③ 更远成员
+         * ④ 没有 GPS 的成员
+         *
+         * 昵称缩小
+         * 每行缩小
+         * ========================================================
+         */
 
         Card(
 
@@ -3096,6 +3201,10 @@ private fun HomePage(
                         )
             ) {
 
+                /*
+                 * 标题
+                 */
+
                 Row(
 
                     modifier =
@@ -3118,7 +3227,7 @@ private fun HomePage(
                             "在线人员",
 
                             fontSize =
-                                16.sp,
+                                18.sp,
 
                             fontWeight =
                                 FontWeight.Bold
@@ -3130,7 +3239,7 @@ private fun HomePage(
                                 connected
                             ) {
 
-                                "当前频道成员"
+                                "当前频道 · $currentOnlineCount 人"
 
                             } else {
 
@@ -3169,6 +3278,12 @@ private fun HomePage(
                     )
                 )
 
+                /*
+                 * ==================================================
+                 * 在线人员
+                 * ==================================================
+                 */
+
                 if (
                     !connected
                 ) {
@@ -3187,6 +3302,66 @@ private fun HomePage(
 
                 } else {
 
+                    /*
+                     * ==================================================
+                     * 严格按照距离排序
+                     * ==================================================
+                     *
+                     * 自己：
+                     *   永远第一
+                     *
+                     * 其他成员：
+                     *   距离越小越靠前
+                     *
+                     * 没有距离：
+                     *   最后
+                     */
+
+                    val sortedOnlineUsers =
+                        onlineUsers.sortedWith(
+
+                            compareBy<OnlineUserUiInfo> {
+
+                                /*
+                                 * 自己第一
+                                 */
+                                if (
+                                    it.userId ==
+                                    myUserId &&
+                                    myUserId.isNotBlank()
+                                ) {
+
+                                    0
+
+                                } else {
+
+                                    1
+                                }
+
+                            }.thenBy { user ->
+
+                                /*
+                                 * 按距离升序。
+                                 *
+                                 * 没有 GPS：
+                                 * Double.MAX_VALUE
+                                 *
+                                 * 所以自动排最后。
+                                 */
+                                memberDistancesMeters[
+                                    user.userId
+                                ] ?: Double.MAX_VALUE
+
+                            }.thenBy { user ->
+
+                                /*
+                                 * 如果距离相同，
+                                 * 再按照昵称排序。
+                                 */
+                                user.nickname
+                            }
+                        )
+
                     Column(
 
                         modifier =
@@ -3194,7 +3369,7 @@ private fun HomePage(
                                 .fillMaxWidth()
                                 .heightIn(
                                     min = 45.dp,
-                                    max = 132.dp
+                                    max = 150.dp
                                 )
                                 .verticalScroll(
                                     rememberScrollState()
@@ -3202,21 +3377,62 @@ private fun HomePage(
 
                         verticalArrangement =
                             Arrangement.spacedBy(
-                                5.dp
+                                4.dp
                             )
                     ) {
 
-                        onlineUsers.forEach { user ->
+                        sortedOnlineUsers
+                            .take(5)
+                            .forEach { user ->
 
-                            CompactOnlineUserRow(
-                                user =
-                                    user
+                                CompactOnlineUserRow(
+
+                                    user =
+                                        user,
+
+                                    myUserId =
+                                        myUserId,
+
+                                    distanceMeters =
+                                        memberDistancesMeters[
+                                            user.userId
+                                        ]
+                                )
+                            }
+                    }
+
+                    /*
+                     * 超过 5 人
+                     */
+
+                    if (
+                        sortedOnlineUsers.size > 5
+                    ) {
+
+                        TextButton(
+
+                            onClick =
+                                onOpenUsers,
+
+                            modifier =
+                                Modifier.fillMaxWidth()
+
+                        ) {
+
+                            Text(
+                                "还有 ${sortedOnlineUsers.size - 5} 人，查看全部"
                             )
                         }
                     }
                 }
             }
         }
+
+        /*
+         * ========================================================
+         * 底部入口
+         * ========================================================
+         */
 
         Row(
 
@@ -3271,14 +3487,49 @@ private fun HomePage(
 
 /*
  * ================================================================
- * 紧凑在线人员行
+ * 一级首页在线人员行
+ *
+ * 昵称缩小
+ * 每行缩小
+ * 距离直接显示
  * ================================================================
  */
 
 @Composable
 private fun CompactOnlineUserRow(
-    user: OnlineUserUiInfo
+    user: OnlineUserUiInfo,
+    myUserId: String,
+    distanceMeters: Double?
 ) {
+
+    val isMe =
+        user.userId ==
+                myUserId &&
+                myUserId.isNotBlank()
+
+    val distanceText =
+        when {
+
+            /*
+             * 自己
+             */
+            isMe ->
+                "——"
+
+            /*
+             * 有 GPS
+             */
+            distanceMeters != null ->
+                formatDistanceForUi(
+                    distanceMeters
+                )
+
+            /*
+             * 暂时没有 GPS
+             */
+            else ->
+                "定位中…"
+        }
 
     Surface(
 
@@ -3287,7 +3538,7 @@ private fun CompactOnlineUserRow(
 
         shape =
             RoundedCornerShape(
-                12.dp
+                11.dp
             ),
 
         color =
@@ -3302,19 +3553,25 @@ private fun CompactOnlineUserRow(
                 Modifier
                     .fillMaxWidth()
                     .padding(
-                        horizontal = 10.dp,
-                        vertical = 7.dp
+                        horizontal = 9.dp,
+                        vertical = 5.dp
                     ),
 
             verticalAlignment =
                 Alignment.CenterVertically
         ) {
 
+            /*
+             * 小头像
+             */
+
             Box(
 
                 modifier =
                     Modifier
-                        .size(30.dp)
+                        .size(
+                            28.dp
+                        )
                         .clip(
                             CircleShape
                         )
@@ -3329,40 +3586,125 @@ private fun CompactOnlineUserRow(
             ) {
 
                 Text(
+
                     "👤",
+
                     fontSize =
-                        15.sp
+                        14.sp
                 )
             }
 
             Spacer(
                 Modifier.width(
-                    9.dp
+                    8.dp
                 )
             )
 
-            Text(
+            /*
+             * 昵称
+             */
 
-                user.nickname.ifBlank {
-                    "未命名用户"
-                },
-
-                fontSize =
-                    14.sp,
-
-                fontWeight =
-                    FontWeight.Medium,
+            Column(
 
                 modifier =
                     Modifier.weight(
                         1f
                     )
+            ) {
+
+                Text(
+
+                    user.nickname
+                        .ifBlank {
+                            "未命名用户"
+                        },
+
+                    fontSize =
+                        13.sp,
+
+                    fontWeight =
+                        FontWeight.Medium,
+
+                    maxLines =
+                        1
+                )
+
+                Text(
+
+                    if (
+                        isMe
+                    ) {
+
+                        "我的设备"
+
+                    } else {
+
+                        "在线"
+                    },
+
+                    fontSize =
+                        9.sp,
+
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .onSurfaceVariant
+                )
+            }
+
+            /*
+             * 距离
+             */
+
+            Column(
+
+                horizontalAlignment =
+                    Alignment.End
+            ) {
+
+                Text(
+
+                    distanceText,
+
+                    fontSize =
+                        13.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+                if (
+                    !isMe &&
+                    distanceMeters != null
+                ) {
+
+                    Text(
+
+                        "直线距离",
+
+                        fontSize =
+                            8.sp,
+
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(
+                Modifier.width(
+                    7.dp
+                )
             )
 
             Text(
+
                 "🟢",
+
                 fontSize =
-                    11.sp
+                    10.sp
             )
         }
     }
@@ -3382,6 +3724,7 @@ private fun UsersPage(
     currentOnlineCount: Int,
     onlineUsers: List<OnlineUserUiInfo>,
     myUserId: String,
+    memberDistancesMeters: Map<String, Double>,
     onBack: () -> Unit
 ) {
 
@@ -3394,13 +3737,12 @@ private fun UsersPage(
                     rememberScrollState()
                 )
                 .padding(
-                    horizontal = 15.dp,
-                    vertical = 10.dp
+                    16.dp
                 ),
 
         verticalArrangement =
             Arrangement.spacedBy(
-                9.dp
+                12.dp
             )
     ) {
 
@@ -3416,80 +3758,27 @@ private fun UsersPage(
                 onBack
         )
 
-        Card(
+        InfoCard(
 
-            modifier =
-                Modifier.fillMaxWidth(),
+            title =
+                "当前在线人数",
 
-            shape =
-                RoundedCornerShape(
-                    17.dp
-                )
-        ) {
+            value =
 
-            Row(
-
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = 14.dp,
-                            vertical = 10.dp
-                        ),
-
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
-
-                Column(
-
-                    modifier =
-                        Modifier.weight(
-                            1f
-                        )
+                if (
+                    connected
                 ) {
 
-                    Text(
+                    "$currentOnlineCount 人"
 
-                        "当前在线",
+                } else {
 
-                        fontSize =
-                            11.sp,
+                    "未连接"
+                },
 
-                        color =
-                            MaterialTheme
-                                .colorScheme
-                                .onSurfaceVariant
-                    )
-
-                    Text(
-
-                        if (
-                            connected
-                        ) {
-
-                            "$currentOnlineCount 人"
-
-                        } else {
-
-                            "未连接"
-                        },
-
-                        fontSize =
-                            20.sp,
-
-                        fontWeight =
-                            FontWeight.Bold
-                    )
-                }
-
-                Text(
-                    "👥",
-                    fontSize =
-                        25.sp
-                )
-            }
-        }
+            extra =
+                "人数来自服务器当前频道成员列表"
+        )
 
         if (
             !connected
@@ -3509,179 +3798,195 @@ private fun UsersPage(
 
         } else {
 
-            Card(
+            onlineUsers.forEach { user ->
 
-                modifier =
-                    Modifier.fillMaxWidth(),
+                val isMe =
+                    user.userId ==
+                            myUserId &&
+                            myUserId.isNotBlank()
 
-                shape =
-                    RoundedCornerShape(
-                        17.dp
-                    )
-            ) {
+                val distanceMeters =
+                    memberDistancesMeters[
+                        user.userId
+                    ]
 
-                Column(
+                val distanceText =
+                    when {
+
+                        isMe ->
+                            "——"
+
+                        distanceMeters != null ->
+                            formatDistanceForUi(
+                                distanceMeters
+                            )
+
+                        else ->
+                            "定位中…"
+                    }
+
+                Card(
 
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(
-                                min = 60.dp,
-                                max = 330.dp
-                            )
-                            .verticalScroll(
-                                rememberScrollState()
-                            )
-                            .padding(
-                                9.dp
-                            ),
+                        Modifier.fillMaxWidth(),
 
-                    verticalArrangement =
-                        Arrangement.spacedBy(
-                            5.dp
+                    shape =
+                        RoundedCornerShape(
+                            18.dp
                         )
                 ) {
 
-                    onlineUsers.forEach { user ->
+                    Row(
 
-                        CompactOnlineUserRowLarge(
-                            user =
-                                user,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = 12.dp,
+                                    vertical = 9.dp
+                                ),
 
-                            myUserId =
-                                myUserId
+                        verticalAlignment =
+                            Alignment.CenterVertically
+                    ) {
+
+                        Box(
+
+                            modifier =
+                                Modifier
+                                    .size(
+                                        38.dp
+                                    )
+                                    .clip(
+                                        CircleShape
+                                    )
+                                    .background(
+                                        MaterialTheme
+                                            .colorScheme
+                                            .primaryContainer
+                                    ),
+
+                            contentAlignment =
+                                Alignment.Center
+                        ) {
+
+                            Text(
+                                "👤",
+                                fontSize =
+                                    18.sp
+                            )
+                        }
+
+                        Spacer(
+                            Modifier.width(
+                                10.dp
+                            )
+                        )
+
+                        Column(
+
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                )
+                        ) {
+
+                            Text(
+
+                                user.nickname
+                                    .ifBlank {
+                                        "未命名用户"
+                                    },
+
+                                fontSize =
+                                    15.sp,
+
+                                fontWeight =
+                                    FontWeight.Bold,
+
+                                maxLines =
+                                    1
+                            )
+
+                            Text(
+
+                                if (
+                                    isMe
+                                ) {
+
+                                    "我的设备"
+
+                                } else {
+
+                                    "在线"
+                                },
+
+                                fontSize =
+                                    10.sp,
+
+                                color =
+                                    Color.Gray
+                            )
+                        }
+
+                        Column(
+
+                            horizontalAlignment =
+                                Alignment.End
+                        ) {
+
+                            Text(
+
+                                distanceText,
+
+                                fontSize =
+                                    14.sp,
+
+                                fontWeight =
+                                    FontWeight.Bold
+                            )
+
+                            Text(
+
+                                if (
+                                    isMe
+                                ) {
+
+                                    ""
+
+                                } else if (
+                                    distanceMeters != null
+                                ) {
+
+                                    "直线距离"
+
+                                } else {
+
+                                    "GPS"
+                                },
+
+                                fontSize =
+                                    9.sp,
+
+                                color =
+                                    Color.Gray
+                            )
+                        }
+
+                        Spacer(
+                            Modifier.width(
+                                8.dp
+                            )
+                        )
+
+                        Text(
+                            "🟢",
+                            fontSize =
+                                12.sp
                         )
                     }
                 }
             }
-        }
-    }
-}
-
-/*
- * ================================================================
- * 二级页面在线人员行
- * ================================================================
- */
-
-@Composable
-private fun CompactOnlineUserRowLarge(
-    user: OnlineUserUiInfo,
-    myUserId: String
-) {
-
-    Surface(
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        shape =
-            RoundedCornerShape(
-                13.dp
-            ),
-
-        color =
-            MaterialTheme
-                .colorScheme
-                .surfaceVariant
-    ) {
-
-        Row(
-
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = 11.dp,
-                        vertical = 8.dp
-                    ),
-
-            verticalAlignment =
-                Alignment.CenterVertically
-        ) {
-
-            Box(
-
-                modifier =
-                    Modifier
-                        .size(34.dp)
-                        .clip(
-                            CircleShape
-                        )
-                        .background(
-                            MaterialTheme
-                                .colorScheme
-                                .primaryContainer
-                        ),
-
-                contentAlignment =
-                    Alignment.Center
-            ) {
-
-                Text(
-                    "👤",
-                    fontSize =
-                        17.sp
-                )
-            }
-
-            Spacer(
-                Modifier.width(
-                    10.dp
-                )
-            )
-
-            Column(
-
-                modifier =
-                    Modifier.weight(
-                        1f
-                    )
-            ) {
-
-                Text(
-
-                    user.nickname.ifBlank {
-                        "未命名用户"
-                    },
-
-                    fontSize =
-                        15.sp,
-
-                    fontWeight =
-                        FontWeight.Bold
-                )
-
-                Text(
-
-                    if (
-                        user.userId ==
-                        myUserId &&
-                        myUserId.isNotBlank()
-                    ) {
-
-                        "我的设备"
-
-                    } else {
-
-                        "在线"
-                    },
-
-                    fontSize =
-                        10.sp,
-
-                    color =
-                        MaterialTheme
-                            .colorScheme
-                            .onSurfaceVariant
-                )
-            }
-
-            Text(
-                "🟢",
-                fontSize =
-                    11.sp
-            )
         }
     }
 }
@@ -4923,4 +5228,32 @@ private fun EmptyCard(
             )
         }
     }
+}
+
+/*
+ * ================================================================
+ * 距离格式化
+ * ================================================================
+ */
+
+private fun formatDistanceForUi(
+    distanceMeters: Double
+): String {
+
+    if (
+        distanceMeters < 1000.0
+    ) {
+
+        return String.format(
+            java.util.Locale.US,
+            "%.0f m",
+            distanceMeters
+        )
+    }
+
+    return String.format(
+        java.util.Locale.US,
+        "%.2f km",
+        distanceMeters / 1000.0
+    )
 }

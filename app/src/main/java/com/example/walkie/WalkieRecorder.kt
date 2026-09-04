@@ -18,7 +18,14 @@ import kotlin.math.min
 /**
  * WALKIE AudioRecord录音模块。
  *
- * 当前阶段只负责代码拆分，不改变原有业务逻辑。
+ * V24.9.1：
+ * 只负责录音、PCM采集、Opus编码和音频发送。
+ *
+ * 本版闪退修复重点：
+ * 1. 防止快速连续PTT同时启动多个AudioRecord。
+ * 2. stopRecording()取消旧任务后，不提前把启动状态恢复为false。
+ * 3. 只有旧录音协程真正进入finally并完成资源释放后，
+ *    才允许新的AudioRecord启动。
  */
 class WalkieRecorder(
     private val context: Context,
@@ -53,9 +60,16 @@ class WalkieRecorder(
         Any()
 
     /*
-     * V21：
-     * 防止旧录音协程尚未完全退出时，
-     * 新的PTT又启动第二个AudioRecord。
+     * V24.9.1：
+     *
+     * true：
+     *   当前正在启动、录音或者正在退出旧录音。
+     *
+     * false：
+     *   当前确认没有旧录音流程占用AudioRecord。
+     *
+     * 只有finally真正完成资源释放后，
+     * 才恢复为false。
      */
     private var recordingStarting =
         false
@@ -73,13 +87,6 @@ class WalkieRecorder(
         null
 
     fun startRecording() {
-
-        if (
-            recordJob?.isActive ==
-            true
-        ) {
-            return
-        }
 
         if (
             !isTalkAllowed()
@@ -101,35 +108,12 @@ class WalkieRecorder(
             return
         }
 
-        synchronized(
-            audioRecordLock
-        ) {
-
-            if (
-                recordingStarting
-            ) {
-
-                logger(
-                    "录音启动流程仍在进行，忽略重复请求"
-                )
-
-                return
-            }
-
-            if (
-                recordJob?.isActive ==
-                true
-            ) {
-
-                return
-            }
-
-            recordingStarting =
-                false
-        }
-
         /*
-         * 原代码中的第二次安全检查保持。
+         * 所有启动条件放在同一个锁里。
+         *
+         * 关键：
+         * recordingStarting一旦变成true，
+         * 在旧录音流程真正结束前绝不允许第二次启动。
          */
         synchronized(
             audioRecordLock
@@ -140,14 +124,26 @@ class WalkieRecorder(
             ) {
 
                 logger(
-                    "录音启动仍在进行，忽略重复启动"
+                    "录音生命周期仍在进行，忽略重复启动"
+                )
+
+                return
+            }
+
+            if (
+                recordJob?.isActive ==
+                true
+            ) {
+
+                logger(
+                    "旧录音任务仍在运行，忽略重复启动"
                 )
 
                 return
             }
 
             recordingStarting =
-                false
+                true
         }
 
         recordJob =
@@ -170,8 +166,9 @@ class WalkieRecorder(
                         minBuffer <= 0
                     ) {
 
-                        recordingStarting =
-                            false
+                        logger(
+                            "AudioRecord最小缓冲区无效=$minBuffer"
+                        )
 
                         return@launch
                     }
@@ -194,7 +191,9 @@ class WalkieRecorder(
                                 recordBuffer
                             )
 
-                        } catch (e: Exception) {
+                        } catch (
+                            e: Throwable
+                        ) {
 
                             logger(
                                 "AudioRecord创建失败=${e.message}"
@@ -207,9 +206,6 @@ class WalkieRecorder(
                         recorder == null
                     ) {
 
-                        recordingStarting =
-                            false
-
                         return@launch
                     }
 
@@ -218,12 +214,19 @@ class WalkieRecorder(
                         AudioRecord.STATE_INITIALIZED
                     ) {
 
+                        logger(
+                            "AudioRecord第一次初始化失败，尝试重新创建"
+                        )
+
                         try {
 
                             recorder.release()
 
-                        } catch (_: Exception) {
+                        } catch (_: Throwable) {
                         }
+
+                        recorder =
+                            null
 
                         recorder =
                             try {
@@ -236,27 +239,40 @@ class WalkieRecorder(
                                     recordBuffer
                                 )
 
-                            } catch (_: Exception) {
+                            } catch (
+                                e: Throwable
+                            ) {
+
+                                logger(
+                                    "AudioRecord第二次创建失败=${e.message}"
+                                )
 
                                 null
                             }
                     }
 
+                    val validRecorder =
+                        recorder
+
                     if (
-                        recorder == null ||
-                        recorder.state !=
+                        validRecorder == null ||
+                        validRecorder.state !=
                         AudioRecord.STATE_INITIALIZED
                     ) {
 
                         try {
 
-                            recorder?.release()
+                            validRecorder?.release()
 
-                        } catch (_: Exception) {
+                        } catch (_: Throwable) {
                         }
 
                         recorder =
                             null
+
+                        logger(
+                            "AudioRecord最终初始化失败"
+                        )
 
                         return@launch
                     }
@@ -265,12 +281,42 @@ class WalkieRecorder(
                         audioRecordLock
                     ) {
 
+                        /*
+                         * stopRecording()可能已经在启动过程中被调用。
+                         *
+                         * 如果此时启动流程已经被停止，
+                         * 不再把这个新创建的AudioRecord交给全局对象。
+                         */
+                        if (
+                            !recordingStarting ||
+                            recordJob?.isCancelled ==
+                            true ||
+                            isShuttingDown()
+                        ) {
+
+                            try {
+
+                                validRecorder.release()
+
+                            } catch (_: Throwable) {
+                            }
+
+                            recorder =
+                                null
+
+                            logger(
+                                "录音启动过程中收到停止请求，取消本次AudioRecord"
+                            )
+
+                            return@launch
+                        }
+
                         audioRecord =
-                            recorder
+                            validRecorder
                     }
 
                     setupAudioEffects(
-                        recorder.audioSessionId
+                        validRecorder.audioSessionId
                     )
 
                     val packetBuffer =
@@ -298,15 +344,17 @@ class WalkieRecorder(
 
                             if (
                                 audioRecord ===
-                                recorder &&
-                                recorder.state ==
+                                validRecorder &&
+                                recordingStarting &&
+                                !isShuttingDown() &&
+                                validRecorder.state ==
                                 AudioRecord.STATE_INITIALIZED
                             ) {
 
-                                recorder.startRecording()
+                                validRecorder.startRecording()
 
                                 recordingStarted =
-                                    recorder.recordingState ==
+                                    validRecorder.recordingState ==
                                             AudioRecord.RECORDSTATE_RECORDING
                             }
                         }
@@ -340,7 +388,7 @@ class WalkieRecorder(
                         )
 
                         logger(
-                            "AudioRecord 启动失败，取消本次讲话"
+                            "AudioRecord启动失败，取消本次讲话"
                         )
 
                         setTalkStatus(
@@ -356,20 +404,13 @@ class WalkieRecorder(
                         "★开始录音★"
                     )
 
-                    /*
-                     * 原代码这里连续打印两次，
-                     * 纯拆分阶段保持行为一致。
-                     */
-                    logger(
-                        "★开始录音★"
-                    )
-
                     while (
                         scope.isActive &&
                         isSpeaking() &&
                         isTalkAllowed() &&
                         isConnected() &&
-                        !isShuttingDown()
+                        !isShuttingDown() &&
+                        recordingStarting
                     ) {
 
                         var filled =
@@ -382,7 +423,8 @@ class WalkieRecorder(
                             isSpeaking() &&
                             isTalkAllowed() &&
                             isConnected() &&
-                            !isShuttingDown()
+                            !isShuttingDown() &&
+                            recordingStarting
                         ) {
 
                             val read =
@@ -392,15 +434,27 @@ class WalkieRecorder(
                                         audioRecordLock
                                     ) {
 
-                                        recorder.read(
-                                            readBuffer,
-                                            0,
-                                            readBuffer.size,
-                                            AudioRecord.READ_BLOCKING
-                                        )
+                                        if (
+                                            audioRecord !==
+                                            validRecorder
+                                        ) {
+
+                                            -1
+
+                                        } else {
+
+                                            validRecorder.read(
+                                                readBuffer,
+                                                0,
+                                                readBuffer.size,
+                                                AudioRecord.READ_BLOCKING
+                                            )
+                                        }
                                     }
 
-                                } catch (e: Exception) {
+                                } catch (
+                                    e: Throwable
+                                ) {
 
                                     logger(
                                         "AudioRecord.read异常=${e.message}"
@@ -443,9 +497,21 @@ class WalkieRecorder(
 
                             } else {
 
-                                Thread.sleep(
-                                    4L
-                                )
+                                try {
+
+                                    Thread.sleep(
+                                        4L
+                                    )
+
+                                } catch (
+                                    e: InterruptedException
+                                ) {
+
+                                    Thread.currentThread()
+                                        .interrupt()
+
+                                    break
+                                }
                             }
                         }
 
@@ -501,7 +567,9 @@ class WalkieRecorder(
                                     pcm
                                 )
 
-                            } catch (e: Throwable) {
+                            } catch (
+                                e: Throwable
+                            ) {
 
                                 logger(
                                     "Opus编码异常=${e.message}"
@@ -523,6 +591,10 @@ class WalkieRecorder(
                             maxOpusPacketSize
                         ) {
 
+                            logger(
+                                "Opus包过大=${opus.size}"
+                            )
+
                             continue
                         }
 
@@ -541,7 +613,9 @@ class WalkieRecorder(
                                 opus.size
                             )
 
-                        } catch (e: Exception) {
+                        } catch (
+                            e: Throwable
+                        ) {
 
                             logger(
                                 "OPUS发送失败=${e.message}"
@@ -561,9 +635,6 @@ class WalkieRecorder(
 
                 } finally {
 
-                    recordingStarting =
-                        false
-
                     setSpeaking(
                         false
                     )
@@ -571,6 +642,10 @@ class WalkieRecorder(
                     val currentRecorder =
                         recorder
 
+                    /*
+                     * 先停止AudioRecord，再解除全局引用，
+                     * 最后释放AudioRecord对象。
+                     */
                     if (
                         currentRecorder !=
                         null
@@ -627,6 +702,27 @@ class WalkieRecorder(
 
                     releaseAudioEffects()
 
+                    /*
+                     * 极其重要：
+                     *
+                     * 只有旧AudioRecord已经完成release，
+                     * 才解除recordingStarting。
+                     *
+                     * 这样下一次PTT不会和旧录音生命周期重叠。
+                     */
+                    synchronized(
+                        audioRecordLock
+                    ) {
+
+                        if (
+                            recordJob?.isActive !=
+                            true
+                        ) {
+                            recordingStarting =
+                                false
+                        }
+                    }
+
                     logger(
                         "录音结束"
                     )
@@ -640,18 +736,22 @@ class WalkieRecorder(
             false
         )
 
-        recordingStarting =
-            false
-
-        recordJob?.cancel()
-
-        recordJob =
-            null
-
+        /*
+         * 这里故意不再设置：
+         *
+         * recordingStarting = false
+         *
+         * 因为旧录音协程可能还没有真正退出。
+         *
+         * 必须等finally完成AudioRecord释放后，
+         * 才允许新的PTT启动。
+         */
         val recorder =
             synchronized(
                 audioRecordLock
             ) {
+
+                recordJob?.cancel()
 
                 audioRecord
             }
@@ -660,8 +760,11 @@ class WalkieRecorder(
             recorder == null
         ) {
 
-            releaseAudioEffects()
-
+            /*
+             * 如果此时AudioRecord尚未创建，
+             * 仍然保持recordingStarting=true，
+             * 等启动协程进入finally后统一解除。
+             */
             return
         }
 
@@ -696,6 +799,10 @@ class WalkieRecorder(
                 )
             }
 
+            /*
+             * 立即释放旧AudioRecord，
+             * 让阻塞中的read尽快退出。
+             */
             try {
 
                 recorder.release()
@@ -743,7 +850,9 @@ class WalkieRecorder(
                     true
             }
 
-        } catch (_: Exception) {
+        } catch (
+            _ : Throwable
+        ) {
         }
 
         try {
@@ -761,7 +870,9 @@ class WalkieRecorder(
                     true
             }
 
-        } catch (_: Exception) {
+        } catch (
+            _ : Throwable
+        ) {
         }
 
         try {
@@ -779,7 +890,9 @@ class WalkieRecorder(
                     true
             }
 
-        } catch (_: Exception) {
+        } catch (
+            _ : Throwable
+        ) {
         }
     }
 
@@ -787,17 +900,23 @@ class WalkieRecorder(
 
         try {
             noiseSuppressor?.release()
-        } catch (_: Exception) {
+        } catch (
+            _ : Throwable
+        ) {
         }
 
         try {
             automaticGainControl?.release()
-        } catch (_: Exception) {
+        } catch (
+            _ : Throwable
+        ) {
         }
 
         try {
             acousticEchoCanceler?.release()
-        } catch (_: Exception) {
+        } catch (
+            _ : Throwable
+        ) {
         }
 
         noiseSuppressor =
