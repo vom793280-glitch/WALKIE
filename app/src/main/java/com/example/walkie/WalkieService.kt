@@ -266,7 +266,7 @@ class WalkieService : Service() {
             "WALKIE_CONNECTED"
 
         private const val MSG_KEEP_ALIVE =
-            "WALKIEKEEPALIVE"
+            "WALKIE_KEEPALIVE"
 
         private const val MSG_GOODBYE =
             "WALKIE_GOODBYE"
